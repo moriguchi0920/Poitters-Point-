@@ -1,0 +1,475 @@
+﻿//---------------------------------------------------------------------------
+//! @file	HelperLib.cpp
+//! @brief	ヘルパーライブラリ
+//---------------------------------------------------------------------------
+#include "HelperLib.h"
+
+#include <string>
+#include <filesystem>
+#include <commdlg.h>
+#include <memory>
+
+#include <shlwapi.h>	// PathRelativePathToA
+#pragma comment(lib, "Shlwapi.lib")
+
+namespace HelperLib::File
+{
+	namespace fs = std::filesystem;
+
+	//! @brief FilePathからディレクトリ部分を取得する
+	//! @param filepath FilePath
+	//! @return ディレクトリ部分
+	std::string GetDirectory(std::string_view filepath)
+	{
+		fs::path p{filepath};
+		return p.parent_path().string();
+	}
+
+	//! @brief FilePathからエクステンション部分を取得する
+	//! @param filepath FilePath
+	//! @return エクステンション部分
+	std::string GetFileExtension(std::string_view filepath)
+	{
+		fs::path p{filepath};
+		return p.extension().string();
+	}
+
+	//! @brief FilePathからファイル名部分を取得する
+	//! @param filepath FilePath
+	//! @return ファイル名部分
+	std::string GetOnlyFileName(std::string_view filepath)
+	{
+		fs::path p{filepath};
+		return p.filename().string();
+	}
+
+	//! @brief FilePathからファイル名部分を取得する
+	//! @param filepath FilePath
+	//! @return ファイル名部分
+	std::string GetOnlyFileNameWithoutExtension(std::string_view filepath)
+	{
+		fs::path p{filepath};
+		return p.stem().string();
+	}
+
+	//! @brief ディレクトリパスのファイルを列挙します
+	//! @param dirname ディレクトリパス
+	//! @param ext 列挙する拡張子(ディフォルトは無視) 例:".png" ".jpg/.png/.bmp" など
+	//! @return ディレクトリに存在するファイル
+	Files_t GetFilesFromDirectory(std::string_view dirname, std::string_view ext)
+	{
+		Files_t							 vfiles;
+		fs::recursive_directory_iterator files(dirname);
+
+		auto exts = String::Split(ext, '/');
+
+		for(const auto& f : files)
+		{
+			auto path = f.path();
+			if(ext == "")
+			{
+				vfiles.push_back(f.path().string());
+				continue;
+			}
+
+			for(auto e : exts)
+			{
+				if(path.extension().string() == e)
+				{
+					vfiles.push_back(f.path().string());
+					break;
+				}
+			}
+		}
+
+		return vfiles;
+	}
+
+	//! @brief ファイルの存在チェック
+	//! @param path ファイルパス
+	//! @retval true  存在する
+	//! @retval false 存在しない
+	bool CheckFileExistence(std::string_view path)
+	{
+		return fs::exists(path) && fs::is_regular_file(path);
+	}
+
+	//! @brief フォルダの作成
+	//! @param path パス (途中も作成する)
+	//! @retval true 作成した場合
+	//! @retval false 作成しなかった場合(すでに存在)
+	bool CreateFolder(std::string_view path)
+	{
+		try
+		{
+			return fs::create_directories(path);
+		}
+		catch(std::filesystem::filesystem_error e)
+		{
+			assert(!"フォルダにアクセスできません");
+			return false;
+		}
+	}
+
+	bool IsFileNewerThan(const fs::path& file_path, const std::string& date_str)
+	{
+		// 入力例: "2025-06-28"
+		std::tm			   tm = {};
+		std::istringstream ss(date_str);
+		ss >> std::get_time(&tm, "%Y-%m-%d");
+
+		if(ss.fail())
+		{
+			std::cerr << "日付の解析に失敗しました: " << date_str << '\n';
+			return false;
+		}
+
+		// 午前0時での time_point を作成
+		tm.tm_hour = 0;
+		tm.tm_min  = 0;
+		tm.tm_sec  = 0;
+
+		std::time_t targetTimeT = std::mktime(&tm);
+		auto		targetTime	= std::chrono::system_clock::from_time_t(targetTimeT);
+
+		try
+		{
+			auto fileTime = std::chrono::clock_cast<std::chrono::system_clock>(fs::last_write_time(file_path));
+			return fileTime >= targetTime;
+		}
+		catch(const fs::filesystem_error& e)
+		{
+			std::cerr << "ファイルエラー: " << e.what() << '\n';
+			return false;
+		}
+	}
+
+	std::string GetBaseDirectory()
+	{
+		CHAR directory[MAX_PATH];
+		GetCurrentDirectoryA(MAX_PATH, directory);
+		return std::format("{}", directory);
+	}
+
+	std::string GetDataDirectory()
+	{
+		CHAR directory[MAX_PATH];
+		GetCurrentDirectoryA(MAX_PATH, directory);
+		return std::format("{}\\data", directory);
+	}
+
+	std::string OpenFileDialog(const std::string& directory)
+	{
+		CHAR szFile[MAX_PATH]	  = {0};
+		CHAR szRelative[MAX_PATH] = {0};
+
+		OPENFILENAMEA ofn = {};	   // ゼロ初期化
+
+		std::string baseDir	   = GetBaseDirectory();
+		LPCSTR		baseDirPtr = baseDir.c_str();
+
+		std::string initialDir;
+		LPCSTR		initialDirPtr = nullptr;
+		if(!directory.empty())
+		{
+			initialDir	  = std::format("{}\\{}", GetBaseDirectory(), directory);
+			initialDirPtr = initialDir.c_str();
+		}
+		else
+		{
+			initialDir	  = GetDataDirectory();
+			initialDirPtr = initialDir.c_str();
+		}
+
+		ofn.lStructSize		= sizeof(ofn);
+		ofn.hwndOwner		= nullptr;
+		ofn.lpstrFile		= szFile;
+		ofn.nMaxFile		= (sizeof(szFile) / sizeof(wchar_t));
+		ofn.lpstrFilter		= "ModelFiles(MV1)\0*.mv1\0\0";
+		ofn.nFilterIndex	= 1;
+		ofn.lpstrInitialDir = initialDirPtr;
+		ofn.Flags			= OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
+
+		// ダイアログ表示
+		if(GetOpenFileNameA(&ofn))
+		{
+			// PathRelativePathToA を使って相対パスを作る
+			BOOL ok = PathRelativePathToA(szRelative, baseDirPtr, FILE_ATTRIBUTE_DIRECTORY, ofn.lpstrFile, FILE_ATTRIBUTE_NORMAL);
+
+			SetCurrentDirectoryA(baseDir.c_str());
+
+			if(ok)
+			{
+				return szRelative;
+			}
+
+			return ofn.lpstrFile;
+		}
+
+		// キャンセルやエラー時は空文字を返す
+		return std::string{};
+	}
+
+	std::string AddUniqueSuffixWidthFile(const std::string& fname)
+	{
+		fs::path p(fname);
+
+		// 8桁のランダム数字を生成
+		std::random_device				   rd;
+		std::mt19937					   mt(rd());
+		std::uniform_int_distribution<int> dist(0, 99999999);
+
+		int num = dist(mt);
+
+		std::ostringstream oss;
+		oss << p.stem().string() << "." << std::setw(8) << std::setfill('0') << num << p.extension().string();
+
+		fs::path newpath = p.parent_path() / oss.str();
+
+		if(fs::exists(fname))
+		{
+			// 既に存在する場合は再生成（衝突回避）
+			while(fs::exists(newpath))
+			{
+				num = dist(mt);
+				oss.str("");
+				oss << p.stem().string() << "." << std::setw(8) << std::setfill('0') << num << p.extension().string();
+				newpath = p.parent_path() / oss.str();
+			}
+
+			// リネーム実行
+			fs::rename(p, newpath);	   // 標準 C++ の rename 機能
+		}
+		return newpath.string();
+	}
+
+}	 // namespace HelperLib::File
+
+namespace HelperLib::String
+{
+	//----------------------------------------------------------------------------
+	//! @brief @brief stringからwstringに変換します
+	//! @param string string文字列
+	//! @return string文字列
+	//----------------------------------------------------------------------------
+	std::wstring ToWString(std::string_view string)
+	{
+		// 受け側の必要サイズを取得
+		u32 size = MultiByteToWideChar(CP_ACP, 0, string.data(), static_cast<int>(string.length()), nullptr, 0);
+
+		// バッファの取得
+		std::wstring wstring;
+		wstring.resize(size);
+
+		// 変換
+		MultiByteToWideChar(CP_ACP, 0, string.data(), static_cast<int>(string.length()), wstring.data(), static_cast<int>(wstring.size()));
+
+		return wstring;
+	}
+
+	//----------------------------------------------------------------------------
+	//!	@brief wstringからstringに変換します
+	//!	@param wstring wstring文字列
+	//!	@return string文字列
+	//----------------------------------------------------------------------------
+	std::string ToString(std::wstring_view wstring)
+	{
+		// 受け側の必要サイズを取得
+		u32 size = WideCharToMultiByte(CP_ACP, 0, wstring.data(), static_cast<int>(wstring.length()), nullptr, 0, nullptr, nullptr);
+
+		// バッファの取得
+		std::string string;
+		string.resize(size);
+
+		// 変換
+		WideCharToMultiByte(CP_ACP, 0, wstring.data(), static_cast<int>(wstring.length()), string.data(), static_cast<int>(string.size()), nullptr, nullptr);
+
+		return string;
+	}
+
+	//----------------------------------------------------------------------------
+	//!	@brief wstringをu16stringに変換します
+	//!	@param wstring wstring文字列
+	//!	@return u16string文字列
+	//----------------------------------------------------------------------------
+	std::u16string To16Str(std::wstring_view wstring)
+	{
+		// 処理系のバイトサイズが一致しているかチェック
+		static_assert(sizeof(std::wstring::value_type) == sizeof(std::u16string::value_type), "size doesnt' match.");
+
+		return std::u16string{wstring.begin(), wstring.end()};
+	}
+
+	//----------------------------------------------------------------------------
+	//! @brief stringをあるセパレート文字で分解します
+	//! @param string 分解したい文字列
+	//! @param separator 区切り文字
+	//! @return 分解した文字列のリスト
+	//----------------------------------------------------------------------------
+	std::vector<std::string> Split(std::string_view string, char separator)
+	{
+		std::stringstream stream;
+		stream << string;
+
+		std::vector<std::string> result;
+
+		std::string line;
+		while(std::getline(stream, line, separator))
+		{
+			result.emplace_back(std::move(line));
+			line.clear();
+		}
+
+		return result;
+	}
+
+	//! @brief 文字列から、指定文字を排除します
+	//! @param str 加工したい文字列
+	//! @param chars 文字(複数OK) defaultは空白を削除する
+	std::string Trim(std::string_view str, std::string_view chars)
+	{
+		auto s = (std::string)str;
+		for(char c : chars)
+		{
+			s.erase(std::remove(s.begin(), s.end(), c), s.end());
+		}
+		return s;
+	}
+
+	//! @brief 文字列に「特定の文字列」が存在するかチェックする
+	//! @param str 文字列
+	//! @param v 含まれる可能性がある「特定の文字列」
+	//! @retval true : 含まれている
+	bool IsContains(std::string str, std::string_view v)
+	{
+		if(str.find(v) != std::string::npos)
+			return true;
+
+		return false;
+	}
+
+}	 // namespace HelperLib::String
+
+namespace HelperLib::OS
+{
+	namespace
+	{
+		std::string GetRegString(HKEY hkey, const char* sub_key, const char* value_name)
+		{
+			DWORD key_type	= 0;
+			DWORD data_size = 0;
+			if(ERROR_SUCCESS == RegGetValue(hkey, (PCHAR)sub_key, (PCHAR)value_name, RRF_RT_REG_SZ, &key_type, nullptr, &data_size))
+			{
+				std::string text;
+				text.resize(data_size);
+
+				if(ERROR_SUCCESS == RegGetValue(hkey, (PCHAR)sub_key, (PCHAR)value_name, RRF_RT_REG_SZ, &key_type, (PVOID)text.data(), &data_size))
+				{
+					return text;
+				}
+			}
+			return std::string();
+		}
+	}	 // namespace
+
+	bool IsWindows11()
+	{
+		auto reg = GetRegString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "CurrentBuild");
+
+		int value = std::stoi(reg);
+		if(value >= 22000)
+			return true;
+
+		return false;
+	}
+
+	bool IsWindows10OrGreater()
+	{
+		std::string reg = GetRegString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName");
+
+		if(String::IsContains(reg, "Windows 10"))
+			return true;
+
+		return false;
+	}
+}	 // namespace HelperLib::OS
+
+namespace HelperLib::Math
+{
+	bool NearlyEqual(float f1, float f2)
+	{
+		if(fabs(f1 - f2) <= FLT_EPSILON)
+			return true;
+
+		return fabs(f1 - f2) <= FLT_EPSILON * std::max(fabs(f1), fabs(f2));
+	}
+
+	matrix CreateMatrixByFrontVector(float3 front, float3 up, bool upremake)
+	{
+		float3 n_front = normalize(front);
+		float3 n_up	   = normalize(up);
+		float3 n_right = normalize(cross(n_up, n_front));
+		float3 n_pos   = {0, 0, 0};
+
+		if(upremake)
+		{
+			n_up = normalize(cross(n_front, n_right));
+		}
+
+		matrix mat{
+			{n_right, 0}, //< X軸
+			{	 n_up, 0}, //< Y軸
+			{n_front, 0}, //< Z軸
+			{	 n_pos, 1}, //< POS
+		};
+		return mat;
+	}
+
+	matrix LookAtMatrixForObject(float3 my_object_pos, float3 target_object_pos)
+	{
+		auto mat	  = CreateMatrixByFrontVector(target_object_pos - my_object_pos);
+		mat._41_42_43 = my_object_pos;
+
+		return mat;
+	}
+
+	matrix ToMatrix(const float3& translate, const float3& rotate_xyz, const float3& scale_xyz)
+	{
+		float* trans = (float*)&translate.f32;
+		float* rot	 = (float*)&rotate_xyz.f32;
+		float* scale = (float*)&scale_xyz.f32;
+		matrix rmat;
+		RecomposeMatrixFromComponents(trans, rot, scale, rmat.f32_128_0);
+		return rmat;
+	}
+
+	bool FromMatrix(const matrix& mat, float3& translate, float3& rotate_xyz, float3& scale_xyz)
+	{
+		float* rmat = (float*)&(mat.f32_128_0);
+		float  matrixTranslation[3], matrixRotation[3], matrixScale[3];
+		DecomposeMatrixToComponents(rmat, matrixTranslation, matrixRotation, matrixScale);
+
+		translate = {matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]};
+
+		rotate_xyz = {matrixRotation[0], matrixRotation[1], matrixRotation[2]};
+
+		scale_xyz = {matrixScale[0], matrixScale[1], matrixScale[2]};
+
+		return true;
+	}
+
+	float3 RotateVector(float3& vector, const float3& rotate_xyz)
+	{
+		// 回転行列を作成（引数はラジアン想定）
+		matrix rx = matrix::rotateX(rotate_xyz.x * DegToRad);
+		matrix ry = matrix::rotateY(rotate_xyz.y * DegToRad);
+		matrix rz = matrix::rotateZ(rotate_xyz.z * DegToRad);
+
+		// Z * Y * X の順で回転を適用（行列乗算は mul を使用）
+		matrix r = mul(rz, mul(ry, rx));
+
+		// 方向ベクトルとして回転（w = 0）
+		return mul(float4(vector, 0.0f), r).xyz;
+	}
+
+}	 // namespace HelperLib::Math
