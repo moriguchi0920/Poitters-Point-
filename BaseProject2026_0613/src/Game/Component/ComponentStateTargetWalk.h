@@ -3,22 +3,22 @@
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>
 
-USING_PTR(ComponentStateIdleWalk);
+USING_PTR(ComponentStateTargetWalk);
 
-class ComponentStateIdleWalk : public ComponentState
+class ComponentStateTargetWalk : public ComponentState
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateIdleWalk, u8"停止・歩きコンポーネント");
+    BP_COMPONENT_DECL(ComponentStateTargetWalk, u8"CPU用指定地点への歩きコンポーネント");
 
     void Init() override;
 
     void Update() override;
 
-    ComponentStateIdleWalkPtr SetMoveSpeed(const float speed);
+    ComponentStateTargetWalkPtr SetMoveSpeed(const float speed);
 
-    ComponentStateIdleWalkPtr SetRotateSpeed(const float speed);
+    ComponentStateTargetWalkPtr SetRotateSpeed(const float speed);
 
-    ComponentStateIdleWalkPtr SetKeys(int up, int down, int left, int right);
+    ComponentStateTargetWalkPtr SetKeys(int up, int down, int left, int right);
 
     const float GetMoveSpeed() const;
     const float GetRotateSpeed() const;
@@ -40,6 +40,8 @@ private:
     int key_right_ = KEY_INPUT_D;
 
     float front_rot_ = 0.0f;    //!<前方ベクトルの回転角度(0-360度)
+
+    float3 target_pos_;
 
     bool is_holding_;
 
@@ -67,4 +69,4 @@ private:
     }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateIdleWalk, 1);
+CEREAL_CLASS_VERSION(ComponentStateTargetWalk, 1);

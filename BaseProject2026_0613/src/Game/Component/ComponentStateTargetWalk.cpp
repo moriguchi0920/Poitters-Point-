@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateIdleWalk.h>
+#include <Game/Component/ComponentStateTargetWalk.h>
 
-void ComponentStateIdleWalk::Init()
+void ComponentStateTargetWalk::Init()
 {
     __super::Init();
 }
 
-void ComponentStateIdleWalk::Update()
+void ComponentStateTargetWalk::Update()
 {
     __super::Update();
 
@@ -16,17 +16,8 @@ void ComponentStateIdleWalk::Update()
 
     // 移動方向
     float3 dir{0, 0, 0};
-    if(IsKey(key_up_))
-        dir += {0, 0, -1};
 
-    if(IsKey(key_down_))
-        dir += {0, 0, 1};
-
-    if(IsKey(key_right_))
-        dir += {-1, 0, 0};
-
-    if(IsKey(key_left_))
-        dir += {1, 0, 0};
+    dir = target_pos_ - owner->GetTranslate();
 
     // 移動キーが押されているか?
     if((float)length(dir) > 0.0f) {
@@ -63,38 +54,38 @@ void ComponentStateIdleWalk::Update()
     }
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetMoveSpeed(const float speed)
+ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetMoveSpeed(const float speed)
 {
     move_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
 }
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetRotateSpeed(const float speed)
+ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetRotateSpeed(const float speed)
 {
     rot_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
 }
 
-const float ComponentStateIdleWalk::GetMoveSpeed() const
+const float ComponentStateTargetWalk::GetMoveSpeed() const
 {
     return move_speed_;
 }
 
-const float ComponentStateIdleWalk::GetRotateSpeed() const
+const float ComponentStateTargetWalk::GetRotateSpeed() const
 {
     return rot_speed_;
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int left, int right)
+ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetKeys(int up, int down, int left, int right)
 {
     // 移動キーの設定
     key_up_    = up;
     key_down_  = down;
     key_left_  = left;
     key_right_ = right;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
 }
 
-void ComponentStateIdleWalk::GUI()
+void ComponentStateTargetWalk::GUI()
 {
     __super::GUI();
 
@@ -130,10 +121,10 @@ void ComponentStateIdleWalk::GUI()
     ImGui::End();
 }
 
-void ComponentStateIdleWalk::SetIsHolding(bool hold)
+void ComponentStateTargetWalk::SetIsHolding(bool hold)
 {
     is_holding_ = hold;
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateIdleWalk)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateIdleWalk)
+CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateTargetWalk)

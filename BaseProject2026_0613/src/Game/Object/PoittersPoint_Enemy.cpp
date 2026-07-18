@@ -8,6 +8,7 @@
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
+#include <Game/Component/ComponentGrabbable.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -58,6 +59,8 @@ bool Enemy::Init()
     //    ctl->SetMoveSpeed(0.3f);
     //    ctl->SetRotateSpeed(20.0f);
     //}
+
+    AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
     return true;
 }

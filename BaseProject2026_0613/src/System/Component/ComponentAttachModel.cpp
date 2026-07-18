@@ -44,8 +44,15 @@ void ComponentAttachModel::PostUpdate()
             SetAttachObject(object_name_, object_node_name_);
         }
 
+        float3 scale = owner->GetScaleAxisXYZ();
+        matrix mat   = matrix::identity();
+        mat[0][0]    = scale.x;
+        mat[1][1]    = scale.y;
+        mat[2][2]    = scale.z;
+
         // へばりつく位置を自分に設定
         owner->SetMatrix(GetPutOnMatrix());
+        owner->SetScaleAxisXYZ(scale);
 
         // もし配置がまだであればワープさせる (壁を通り越す必要がある)
         if(!owner->GetStatus(Object::StatusBit::Located)) {

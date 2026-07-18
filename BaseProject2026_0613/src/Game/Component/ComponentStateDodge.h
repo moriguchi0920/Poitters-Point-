@@ -1,14 +1,13 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/ComponentState.h>
 
-USING_PTR(ComponentStateThrow);
+USING_PTR(ComponentStateDodge);
 
-class ComponentStateThrow : public ComponentState
+class ComponentStateDodge : public Component
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateThrow, u8"投擲攻撃コンポーネント");
+    BP_COMPONENT_DECL(ComponentStateDodge, u8"回避コンポーネント");
 
     void Init() override;
 
@@ -16,11 +15,7 @@ public:
 
     void GUI() override;
 
-    void SetThrowObject(ObjectWeakPtr object_ptr);
-
 private:
-    ObjectWeakPtr throw_weak_ptr_;
-
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -32,4 +27,4 @@ private:
     CEREAL_SAVELOAD(arc, ver) { arc(cereal::make_nvp("Component", cereal::base_class<Component>(this))); }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateThrow, 1);
+CEREAL_CLASS_VERSION(ComponentStateDodge, 1);

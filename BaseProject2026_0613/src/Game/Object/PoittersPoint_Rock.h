@@ -31,7 +31,6 @@ public:
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
 private:
-
 };
 
 }    // namespace PoittersPoint

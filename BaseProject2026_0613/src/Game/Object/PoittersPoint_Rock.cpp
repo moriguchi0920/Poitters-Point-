@@ -7,7 +7,7 @@
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
-#include"Game/Component/ComponentGrabbable.h"
+#include "Game/Component/ComponentGrabbable.h"
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -19,24 +19,29 @@ bool Rock::Init()
     Super::Init();
     //__super::Init();
 
-    SetTranslate({0, 5, 0});
+    SetTranslate({10, 10, 10});
 
     SetName("Rock");
     AddComponent<ComponentModel>("data/Game/Models/Rock/rock.mv1");
 
-    auto col = AddComponent<ComponentCollisionSphere>()->SetRadius(3.0f);
+    auto col = AddComponent<ComponentCollisionSphere>();
 
+    col->SetRadius(5.0f)->UseGravity(true);
+    col->SetGravity(-0.2f);
     col->SetCollisionGroup(ComponentCollision::CollisionGroup::ETC);
     col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                              (u32)ComponentCollision::CollisionGroup::ITEM);
-    AddComponent<ComponentGrabbable>();
+                              (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
+
+    auto grabbable = AddComponent<ComponentGrabbable>();
+    grabbable->SetBounceOffset(0.2f);
+    grabbable->SetLiftTime(1.0f);
 
     //AddComponent<ComponentCollisionModel>();
     //if(auto collision = GetComponent<ComponentCollisionModel>()) {
     //    collision->AttachToModel();    // コリジョンをモデルに合わせる
     //}
 
-
+    SetScaleAxisXYZ({1.0f});
 
     return true;
 }
@@ -44,15 +49,12 @@ bool Rock::Init()
 void Rock::Update()
 {
     __super::Update();
-
 }
 
 void Rock::GUI()
 {
     __super::GUI();
 }
-
-
 
 void Rock::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
@@ -65,6 +67,19 @@ void Rock::OnHit(const ComponentCollision::HitInfo& hit_info)
         Scene::Object::Release(SharedThis());
     }
     */
+    if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
+        if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+            float3 translation = grabbable->GetTranslation();
+            grabbable->SetCanGrab(true);
+
+            if(grabbable->IsGrounded()) {
+                grabbable->SetBounceOffset(0.2f);
+            }
+            else if(grabbable->IsMoving()) {
+                grabbable->Bounce();
+            }
+        }
+    }
 
     // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
     Super::OnHit(hit_info);

@@ -2,45 +2,16 @@
 #include <Game/Component/ComponentStateThrow.h>
 #include "ComponentStateIdleWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
+#include <Game/Component/ComponentGrabbable.h>
 
 void ComponentStateThrow::Init()
 {
     __super::Init();
 
-    // GetOnwer：オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
-
-    const float3 up_len = {0.0f, 5.0f, 0.0f};
-    float3       vec    = {0.0f, 1.0f, 0.0f};
-
-    matrix mat = matrix::identity();
     if(auto model = owner->GetComponent<ComponentModel>()) {
-        // モデルの完全な向きは、GetWorldMatrix()でとる必要があります。
-        mat = model->GetWorldMatrix();
-
-        constexpr float front_len = 5.0f;
-
-        vec = -(model->GetWorldVectorAxisZ() * front_len);
-
         model->PlayAnimationNoSame("throw");
     }
-
-    auto bullet = Scene::Object::Create<PoittersPoint::Bullet>();
-    bullet->RemoveComponent<ComponentCollisionSphere>();
-    bullet->SetDirection(vec);
-    bullet->SetTranslate(owner->GetTranslate() + up_len + vec);
-
-    auto attach = bullet->AddComponent<ComponentAttachModel>();
-
-    // rig(リグ)：
-    // 作成したモデル（キャラクターや乗り物など）を動かすための
-    // 骨組み（ボーン）と、それを直感的に操作するためのコントローラーがセットになった
-    // 制御システム全体のこと
-    attach->SetAttachObject("Player", "mixamorig:RightHand");
-    attach->SetAttachOffset({12, 17, 0});
-
-    bullet_ = bullet;
 }
 
 void ComponentStateThrow::Update()
@@ -51,19 +22,43 @@ void ComponentStateThrow::Update()
     // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
         // オーナーの投げるアニメーションが0.42以上であれば
-        if(0.42 <= model->GetAnimationTime()) {
+        if(0.65 <= model->GetAnimationTime()) {
             // シェアードポインタに変換
             // バレットがあれば(nullptrかチェック)
-            if(auto bullet = bullet_.lock()) {
+            if(auto throw_object = throw_weak_ptr_.lock()) {
                 // アタッチモデルを取り外す
-                bullet->RemoveComponent<ComponentAttachModel>();
+                throw_object->RemoveComponent<ComponentAttachModel>();
+
+                auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
+                grabbable->SetIsGrabbed(false);
+
+                const float3 up_len = {0.0f, 5.0f, 0.0f};
+                float3       vec    = {0.0f, 1.0f, 0.0f};
+
+                // GetOnwer：オーナー(自分がAddComponentされたObject)を取得します
+                // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
+                auto   owner = GetOwner();
+                matrix mat   = matrix::identity();
+                if(auto model = owner->GetComponent<ComponentModel>()) {
+                    // モデルの完全な向きは、GetWorldMatrix()でとる必要があります。
+                    mat = model->GetWorldMatrix();
+
+                    constexpr float front_len = 5.0f;
+
+                    vec = -(model->GetWorldVectorAxisZ() * front_len);
+                }
+                if(auto throw_object = throw_weak_ptr_.lock()) {
+                    auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
+                    throw_object->AddTranslate(vec * 5.0f);
+                    grabbable->SetTranslation(vec * 5.0f);
+                }
                 // 投げるモーションが終わったので当たり判定を
-                bullet->AddComponent<ComponentCollisionSphere>()->SetRadius(3.0f);
+                if(auto collider = throw_object->GetComponent<ComponentCollision>()) {
+                    collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
+                }
 
-                bullet->ResetDirection();
-
-                // 引数が無しでresetが呼ばれているのでユニークポインタがリソースを保持していない状態となる
-                bullet_.reset();
+                throw_weak_ptr_.reset();
+                ChangeState<ComponentStateIdleWalk>();
             }
 
             /*
@@ -114,6 +109,11 @@ void ComponentStateThrow::GUI()
         }
     }
     ImGui::End();
+}
+
+void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
+{
+    throw_weak_ptr_ = object_ptr;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateThrow)

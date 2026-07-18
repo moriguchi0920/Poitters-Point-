@@ -5,6 +5,7 @@
 //---------------------------------------------------------------------------
 #include <System/Scene.h>
 
+class ComponentGrabbable;
 namespace PoittersPoint {
 // namespace PoittersPoint
 
@@ -19,6 +20,10 @@ public:
     bool Init() override;
 
     void Update() override;
+
+    void OnHit(const ComponentCollision::HitInfo& hit_info) override;
+
+private:
 };
 
 }    // namespace PoittersPoint

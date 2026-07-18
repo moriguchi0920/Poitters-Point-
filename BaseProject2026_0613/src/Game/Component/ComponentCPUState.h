@@ -1,26 +1,30 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/ComponentState.h>
+#include <Game/Component/ComponentStateMachine.h>
 
-USING_PTR(ComponentStateThrow);
+USING_PTR(ComponentCPUState);
 
-class ComponentStateThrow : public ComponentState
+class ComponentCPUState : public ComponentStateMachine
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateThrow, u8"投擲攻撃コンポーネント");
+    BP_COMPONENT_DECL(ComponentCPUState, u8"CPU状態制御コンポーネント");
 
     void Init() override;
 
     void Update() override;
 
+    void LateUpdate() override;
+
     void GUI() override;
 
-    void SetThrowObject(ObjectWeakPtr object_ptr);
+    void GrabbableHit(bool is_hit_grabbable, ObjectPtr target);
 
 private:
-    ObjectWeakPtr throw_weak_ptr_;
+    ObjectWeakPtr grabbing_object_ptr_;
 
+    bool can_grab_;
+    bool can_throw_;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -32,4 +36,4 @@ private:
     CEREAL_SAVELOAD(arc, ver) { arc(cereal::make_nvp("Component", cereal::base_class<Component>(this))); }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateThrow, 1);
+CEREAL_CLASS_VERSION(ComponentCPUState, 1);

@@ -4,14 +4,15 @@
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
-#include "PoittersPoint_Bullet.h"
 #include "Game/Component/ComponentCameraController.h"
 #include "Game/Component/ComponentStateIdleWalk.h"
 #include "Game/Component/ComponentStateThrow.h"
 #include "Game/Component/ComponentPlayerState.h"
+#include "Game/Component/ComponentStateMachine.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
+#include "Game/Component/ComponentGrabbable.h"
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -34,20 +35,23 @@ bool Player::Init()
             ->SetAnimation({
                 //                                  モデルビユーで何番目にいたか
                 //                                                 ↓
-                { "idle",  "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                { "walk",  "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                {"throw", "data/Game/Models/Player/Anims/Throw.mv1", 1, 1.0f}, // Throw
+                {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // Throw
+                {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // Throw
         })
             //->SetScaleAxisXYZ({0.12f, 0.12f, 0.12f});
             ->SetScaleAxisXYZ({0.11f, 0.11f, 0.11f});
     }
 
-    SetTranslate({0, 5, 0});
+    SetTranslate({0, 8, 0});
 
     AddComponent<ComponentPlayerState>();
 
     // カメラの制御を行うコンポーネントを追加
-    AddComponent<ComponentCameraController>();
+    //AddComponent<ComponentCameraController>();
 
     // カプセルコリジョンのコンポーネントを追加
     AddComponent<ComponentCollisionCapsule>();
@@ -66,6 +70,18 @@ bool Player::Init()
 
 void Player::Update()
 {
+}
+
+void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
+{
+    auto target = hit_info.hit_collision_->GetOwnerPtr();
+    if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+        auto player_state = GetComponent<ComponentPlayerState>();
+        if(player_state->can_grab_)
+            player_state->GrabbableHit(target);
+    }
+
+    __super::OnHit(hit_info);
 }
 
 }    // namespace PoittersPoint

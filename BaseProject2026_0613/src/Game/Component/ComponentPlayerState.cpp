@@ -1,7 +1,9 @@
 ﻿#pragma once
 #include <Game/Component/ComponentPlayerState.h>
 #include "ComponentStateIdleWalk.h"
+#include "ComponentStateGrab.h"
 #include "ComponentStateThrow.h"
+#include "ComponentGrabbable.h"
 
 void ComponentPlayerState::Init()
 {
@@ -9,6 +11,8 @@ void ComponentPlayerState::Init()
 
     // オブジェクトの制御を行うコンポーネントを追加
     GetOwner()->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
+
+    can_grab_ = true;
 }
 
 void ComponentPlayerState::Update()
@@ -18,15 +22,50 @@ void ComponentPlayerState::Update()
     auto owner = GetOwner();
 
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
-        // StateThrowがない、つまり投擲していないなら
-        // (投げいるかどうかのフラグを作ってあげれば処理を高速化できる)
-        if(!owner->GetComponent<ComponentStateThrow>()) {
-            // 歩きのモーションを止めて投げるためにIdleWalkを外す
-            owner->RemoveComponent<ComponentStateIdleWalk>();
-            // 投擲コンポーネントを付与
-            owner->AddComponent<ComponentStateThrow>();
+        if(owner->GetComponent<ComponentStateIdleWalk>() && !grabbing_object_ptr_.expired() && can_throw_) {
+            can_throw_ = false;
+            can_grab_  = true;
+            ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
         }
     }
+
+    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
+        if(owner->GetComponent<ComponentStateIdleWalk>()) {
+            if(!grabbing_object_ptr_.expired()) {
+                auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
+                if(grabbable) {
+                    if(grabbable->GetCanGrab()) {
+                        ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
+                        can_grab_ = false;
+                        grabbable->SetCanGrab(false);
+                    }
+                }
+            }
+        }
+    }
+
+    if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
+        if(component_grab->GetFinished()) {
+            if(!grabbing_object_ptr_.expired()) {
+                auto object = grabbing_object_ptr_.lock();
+
+                if(auto collider = object->GetComponent<ComponentCollision>()) {
+                    collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
+                }
+
+                auto grabbable = object->GetComponent<ComponentGrabbable>();
+                grabbable->SetIsGrabbed(true);
+
+                grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
+            }
+            can_throw_ = true;
+            ChangeState<ComponentStateIdleWalk>()->SetIsHolding(true);
+        }
+    }
+}
+
+void ComponentPlayerState::LateUpdate()
+{
 }
 
 void ComponentPlayerState::GUI()
@@ -55,6 +94,14 @@ void ComponentPlayerState::GUI()
         }
     }
     ImGui::End();
+}
+
+void ComponentPlayerState::GrabbableHit(ObjectPtr target)
+{
+    auto owner = GetOwner();
+    if(owner->GetComponent<ComponentStateIdleWalk>()) {
+        grabbing_object_ptr_ = target;
+    }
 }
 
 CEREAL_REGISTER_TYPE(ComponentPlayerState)

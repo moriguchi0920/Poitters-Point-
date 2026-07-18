@@ -24,16 +24,16 @@ bool Camera::Init()
 
     AddComponent<ComponentCamera>();    //カメラコンポーネントを付ける
     if(auto c = GetComponent<ComponentCamera>()) {
-        c->SetPositionAndTarget({0, 20, -50}, {0, 10, 0});
+        c->SetPositionAndTarget({0, 70, 120}, {0, 0, -60});
     }
 
-    // プレイヤーがいるなら追従カメラにする
-    if(Scene::Object::Get<Object>("Player")) {
-        AddComponent<ComponentSpringArm>();
-        if(auto c = GetComponent<ComponentSpringArm>()) {
-            c->SetSpringArmObject("Player");
-        }
-    }
+    //// プレイヤーがいるなら追従カメラにする
+    //if(Scene::Object::Get<Object>("Player")) {
+    //    AddComponent<ComponentSpringArm>();
+    //    if(auto c = GetComponent<ComponentSpringArm>()) {
+    //        c->SetSpringArmObject("Player");
+    //    }
+    //}
 
     return true;
 }
