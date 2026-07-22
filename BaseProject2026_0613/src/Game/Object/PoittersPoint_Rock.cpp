@@ -31,6 +31,7 @@ bool Rock::Init()
     col->SetCollisionGroup(ComponentCollision::CollisionGroup::ETC);
     col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
                               (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
+    col->SetMass(500.0f);
 
     auto grabbable = AddComponent<ComponentGrabbable>();
     grabbable->SetBounceOffset(0.2f);

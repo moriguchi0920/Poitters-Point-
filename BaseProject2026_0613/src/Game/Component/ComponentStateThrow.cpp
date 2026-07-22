@@ -8,6 +8,7 @@ void ComponentStateThrow::Init()
 {
     __super::Init();
 
+    SetName<Component>("State Throw");
     auto owner = GetOwner();
     if(auto model = owner->GetComponent<ComponentModel>()) {
         model->PlayAnimationNoSame("throw");

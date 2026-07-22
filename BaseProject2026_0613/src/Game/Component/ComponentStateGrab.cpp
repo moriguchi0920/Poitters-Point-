@@ -7,6 +7,8 @@ void ComponentStateGrab::Init()
 {
     __super::Init();
 
+    SetName<Component>("State Grab");
+
     auto owner = GetOwner();
     if(auto model = owner->GetComponent<ComponentModel>()) {
         model->PlayAnimationNoSame("lift up");
