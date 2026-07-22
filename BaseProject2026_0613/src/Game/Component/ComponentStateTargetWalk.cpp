@@ -4,6 +4,7 @@
 void ComponentStateTargetWalk::Init()
 {
     __super::Init();
+    SetName<Component>("State Target Walk");
 }
 
 void ComponentStateTargetWalk::Update()

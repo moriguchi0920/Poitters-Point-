@@ -4,6 +4,7 @@
 void ComponentStateIdleWalk::Init()
 {
     __super::Init();
+    SetName<Component>("State IdleWalk");
 }
 
 void ComponentStateIdleWalk::Update()
