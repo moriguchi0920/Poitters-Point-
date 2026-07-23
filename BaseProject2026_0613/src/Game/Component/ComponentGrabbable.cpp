@@ -22,12 +22,10 @@ void ComponentGrabbable::Update()
         owner->AddTranslate(translation_);
         translation_ = lerp(translation_, float3(0.0f, 0.0f, 0.0f), 0.03);
     }
-    if (IsMoving())
-    {
+    if(IsMoving()) {
         can_grab_this_ = false;
     }
-    else if(!is_grabbed_)
-    {
+    else if(!is_grabbed_) {
         can_grab_this_ = true;
     }
 }
@@ -125,7 +123,7 @@ bool ComponentGrabbable::IsGrounded()
 bool ComponentGrabbable::IsMoving()
 {
     return ((translation_.x < -0.01f || 0.01f < translation_.x) ||
-            (translation_.y < -0.01f || 0.01f < translation_.y) || (translation_.z < -0.01f || 0.01f < translation_.z));
+            (translation_.z < -0.01f || 0.01f < translation_.z));
 }
 
 CEREAL_REGISTER_TYPE(ComponentGrabbable)

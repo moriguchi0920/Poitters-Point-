@@ -70,21 +70,81 @@ bool Player::Init()
 
 void Player::Update()
 {
+    OnEyeSight();
 }
 
 void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    auto target = hit_info.hit_collision_->GetOwnerPtr();
-    if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-        auto player_state = GetComponent<ComponentPlayerState>();
-        if (player_state->can_grab_ && grabbable->GetCanGrab())
-        {
-            player_state->GrabbableHit(target);
-        }
-
-    }
+    //auto target = hit_info.hit_collision_->GetOwnerPtr();
+    //if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+    //    auto player_state = GetComponent<ComponentPlayerState>();
+    //    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
+    //        player_state->GrabbableHit(target);
+    //    }
+    //}
 
     __super::OnHit(hit_info);
+}
+
+void Player::OnEyeSight()
+{
+
+    auto ObjArray = Scene::Object::GetArray<Object>();
+    float3 vec;
+    if (auto model = GetComponent<ComponentModel>())
+    {
+        vec = -model->GetWorldVectorAxisZ();
+        normalize(vec);
+    }
+
+    // 親から敵へのベクトル
+    float3 targetVec = {0, 0, 0};
+    // 一番近い敵への距離を保存する変数
+    float shortest = 1000.0f;
+    // 範囲for
+    for(auto& obj : ObjArray) {
+        if (obj == static_cast<ObjectPtr>(shared_from_this()))
+        {
+            continue;
+        }
+
+        // 親の座標(斜めに当てたいので上に上げて判定)
+        float3 pos = GetTranslate() - vec * 0.5f + float3(0.0f, 1.0f, 0.0f);
+        // 敵の座標
+        float3 targetPos = obj->GetTranslate();
+
+        // ベクトルを取得
+        targetVec = targetPos - pos;
+        // 親の正面ベクトルと敵へのベクトルの内積をとる
+        float targetDot = dot(normalize(vec), normalize(targetVec));
+        // 正規化ベクトル同士の内積なのでarccosで角度がとれる
+        float angle = acosf(targetDot);
+        // スカラー付きベクトルの長さは各要素の二乗を足したものの平方根でとれる
+        float distance = sqrtf(targetVec.x * targetVec.x + targetVec.y * targetVec.y + targetVec.z * targetVec.z);
+        // 内積と距離をかけて円錐の範囲にいるかをとる
+        float dotDis = distance * targetDot;
+
+        // 最短距離なら
+        if(distance <= shortest) {
+            // 最短距離を更新
+            shortest = distance;
+            // 円錐の角度内か
+            bool isInAngle = angle <= 3.14f * 0.45 && -3.14f * 0.45 <= angle;
+            // 距離は円錐の範囲内か
+            bool isInDistance = dotDis <= 50.0f;
+
+            // 両方満たしていたら
+            if(isInAngle && isInDistance) {
+                auto target = obj;
+                if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+                    auto player_state = GetComponent<ComponentPlayerState>();
+                    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
+                        player_state->GrabbableHit(target);
+                    }
+                }
+            }
+        }
+    }
 }
 
 }    // namespace PoittersPoint
