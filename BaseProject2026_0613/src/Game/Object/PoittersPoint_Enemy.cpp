@@ -9,6 +9,7 @@
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include <Game/Component/ComponentGrabbable.h>
+#include <Game/Component/ComponentHitPoints.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -61,6 +62,8 @@ bool Enemy::Init()
     //}
 
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
+
+    AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(2.0f);
 
     return true;
 }
@@ -142,7 +145,7 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
     // 当たった相手の名前がBulletだったら消去する
     auto name = hit_info.hit_collision_->GetOwner()->GetNameDefault();
 
-    if(name == "Bullet") {
+    if(name == "Rock") {
         // 自分を削除する
         //Scene::Object::Release(SharedThis());
 
@@ -154,15 +157,26 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
         // sharedポインタのdynamic_cast
         // 間違っている場合nullptrが返ってくるため処理が行われない
         if(auto scene = dynamic_cast<PoittersPoint_Stage*>(now_scene)) {
-            is_down = true;
+            
+            if (auto hp = GetComponent<ComponentHitPoints>())
+            {
+                hp->TakeDamage(1.0f);
 
-            if(auto model = GetComponent<ComponentModel>()) {
-                model->PlayAnimationNoSame("dead", false, 0.1f);
+                if(hp->GetHitPoints() <= 0.0f)
+                {
+                    is_down = true;
+
+                    if(auto model = GetComponent<ComponentModel>()) {
+                        model->PlayAnimationNoSame("dead", false, 0.1f);
+                    }
+
+                    if(auto col = GetComponent<ComponentCollisionCapsule>()) {
+                        RemoveComponent<ComponentCollisionCapsule>();
+                    }
+                }
             }
 
-            if(auto col = GetComponent<ComponentCollisionCapsule>()) {
-                RemoveComponent<ComponentCollisionCapsule>();
-            }
+           
             /*
             // 当たり判定を無効化する
             if(auto col = GetComponent<ComponentCollisionCapsule>()) {
@@ -173,7 +187,7 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
         }
 
         // 弾も削除する
-        Scene::Object::Release(hit_info.hit_collision_->GetOwnerPtr());
+        //Scene::Object::Release(hit_info.hit_collision_->GetOwnerPtr());
     }
 
     if(name == "Player") {
