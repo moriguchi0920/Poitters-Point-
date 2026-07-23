@@ -23,6 +23,8 @@ public:
 
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
+    void OnEyeSight();
+
 private:
 };
 

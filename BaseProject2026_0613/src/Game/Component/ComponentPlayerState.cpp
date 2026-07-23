@@ -21,16 +21,13 @@ void ComponentPlayerState::Update()
 
     auto owner = GetOwner();
 
-    
     // スペースキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
         // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
         if(owner->GetComponent<ComponentStateIdleWalk>()) {
-            if (!grabbing_object_ptr_.expired())
-            {
+            if(!grabbing_object_ptr_.expired()) {
                 //(投げ可能 = すでにアイテムを持っている)
-                if (can_throw_)
-                {
+                if(can_throw_) {
                     // 投げ判定変数をfalseに
                     can_throw_ = false;
                     // 持ち上げ可能に
@@ -40,8 +37,7 @@ void ComponentPlayerState::Update()
                     grabbing_object_ptr_.reset();
                 }
                 // (投げ不可能 = アイテムはまだ持っていない)
-                else
-                {
+                else {
                     // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
                     auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
                     // コンポーネントがあったら
@@ -58,9 +54,8 @@ void ComponentPlayerState::Update()
             }
         }
     }
-  
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
 
+    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
     }
 
     if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {

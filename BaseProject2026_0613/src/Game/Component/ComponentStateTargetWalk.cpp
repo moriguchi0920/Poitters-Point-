@@ -93,7 +93,7 @@ void ComponentStateTargetWalk::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State IdleWalk")) {
+        if(ImGui::TreeNode("State TargetWalk")) {
             //-------------------------------------------------------
             // 共通部分
 
