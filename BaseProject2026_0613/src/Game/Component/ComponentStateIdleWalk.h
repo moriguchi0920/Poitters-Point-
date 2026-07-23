@@ -31,8 +31,8 @@ public:
     void SetIsHolding(bool hold);
 
 private:
-    float move_speed_ = 1.0f;
-    float rot_speed_  = 5.0f;
+    float move_speed_ = 0.3f;
+    float rot_speed_  = 20.0f;
 
     int key_up_    = KEY_INPUT_W;
     int key_down_  = KEY_INPUT_S;

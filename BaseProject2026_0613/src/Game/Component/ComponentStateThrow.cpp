@@ -59,7 +59,7 @@ void ComponentStateThrow::Update()
                 }
 
                 throw_weak_ptr_.reset();
-                ChangeState<ComponentStateIdleWalk>();
+                //ChangeState<ComponentStateIdleWalk>();
             }
 
             /*

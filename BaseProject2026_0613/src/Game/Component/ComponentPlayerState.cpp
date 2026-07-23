@@ -4,13 +4,18 @@
 #include "ComponentStateGrab.h"
 #include "ComponentStateThrow.h"
 #include "ComponentGrabbable.h"
+#include "ComponentHitPoints.h"
 
 void ComponentPlayerState::Init()
 {
     __super::Init();
 
+    auto owner = GetOwner();
+
     // オブジェクトの制御を行うコンポーネントを追加
-    GetOwner()->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
+    owner->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
+
+    owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
     can_grab_ = true;
 }
