@@ -43,7 +43,6 @@ void ComponentStateTargetWalk::Update()
         }
     }
     else {
-        // モデルを移動の方向に向けます
         if(auto mdl = owner->GetComponent<ComponentModel>()) {
             if(is_holding_) {
                 mdl->PlayAnimationNoSame("grab idle", true);
