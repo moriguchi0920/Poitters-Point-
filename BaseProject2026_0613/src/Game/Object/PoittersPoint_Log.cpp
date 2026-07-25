@@ -1,8 +1,8 @@
 ﻿//---------------------------------------------------------------------------
-//! @file   PoittersPoint_Rock.cpp
-//! @brief  PoittersPoint_Rock
+//! @file   PoittersPoint_Log.cpp
+//! @brief  PoittersPoint_Log
 //---------------------------------------------------------------------------
-#include "PoittersPoint_Rock.h"
+#include "PoittersPoint_Log.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 #include <System/Scene.h>
@@ -12,7 +12,7 @@
 namespace PoittersPoint {
 // namespace PoittersPoint
 
-bool Rock::Init()
+bool Log::Init()
 {
     // 親(継承元の基底クラス)のInit関数を呼ぶ
     // これがなければabort()が呼ばれる
@@ -21,8 +21,8 @@ bool Rock::Init()
 
     SetTranslate({10, 10, 10});
 
-    SetName("Rock");
-    AddComponent<ComponentModel>("data/Game/Models/Rock/rock.mv1");
+    SetName("Log");
+    AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
 
     auto col = AddComponent<ComponentCollisionSphere>();
 
@@ -47,17 +47,17 @@ bool Rock::Init()
     return true;
 }
 
-void Rock::Update()
+void Log::Update()
 {
     __super::Update();
 }
 
-void Rock::GUI()
+void Log::GUI()
 {
     __super::GUI();
 }
 
-void Rock::OnHit(const ComponentCollision::HitInfo& hit_info)
+void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
     /*
     // 当たった相手の名前がEnemyだったら消去する
