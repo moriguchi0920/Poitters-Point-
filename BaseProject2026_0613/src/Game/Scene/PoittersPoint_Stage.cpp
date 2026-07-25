@@ -119,6 +119,7 @@ void PoittersPoint_Stage::Update()
 
     printfDx("\nDEAD ENEMY: %d", enemy_dead_count);
 
+ 
     {
         // Enemyという名前がついたObjectをVectorで複数取得
         auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
