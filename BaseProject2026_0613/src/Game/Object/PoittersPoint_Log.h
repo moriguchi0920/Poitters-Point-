@@ -1,18 +1,18 @@
 ﻿#pragma once
 //---------------------------------------------------------------------------
-//! @file   PoittersPoint_Rock.h
-//! @brief  PoittersPoint_Rock
+//! @file   PoittersPoint_Log.h
+//! @brief  PoittersPoint_Log
 //---------------------------------------------------------------------------
 #include <System/Scene.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
 
-USING_PTR(Rock);
-class Rock : public Object
+USING_PTR(Log);
+class Log : public Object
 {
 public:
-    BP_OBJECT_DECL(Rock, "PoittersPoint::Rock");
+    BP_OBJECT_DECL(Log, "PoittersPoint::Log");
 
     //! @brief 初期化
     //! @return 初期化終了
@@ -35,5 +35,5 @@ private:
 
 }    // namespace PoittersPoint
 
-CEREAL_REGISTER_TYPE(PoittersPoint::Rock);
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Object, PoittersPoint::Rock);
+CEREAL_REGISTER_TYPE(PoittersPoint::Log);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Object, PoittersPoint::Log);
