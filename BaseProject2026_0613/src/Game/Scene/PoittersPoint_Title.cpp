@@ -6,11 +6,12 @@
 #include "PoittersPoint_Title.h"
 // 自作系
 #include "PoittersPoint_Stage.h"
-// システム
+// システム系
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <System/Component/ComponentModel.h>
 #include <System/Component/ComponentCollisionModel.h>
+
 
 namespace PoittersPoint {
 //! @brief 初期化
