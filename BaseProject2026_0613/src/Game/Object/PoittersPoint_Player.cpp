@@ -5,10 +5,10 @@
 #include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Component/ComponentCameraController.h"
-#include "Game/Component/ComponentStateIdleWalk.h"
-#include "Game/Component/ComponentStateThrow.h"
-#include "Game/Component/ComponentPlayerState.h"
-#include "Game/Component/ComponentStateMachine.h"
+#include "Game/Component/State/ComponentStateControllerWalk.h"
+#include "Game/Component/State/ComponentStateThrow.h"
+#include "Game/Component/StateMachine/ComponentPlayerState.h"
+#include "Game/Component/StateMachine/ComponentStateMachine.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
@@ -88,11 +88,9 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 
 void Player::OnEyeSight()
 {
-
-    auto ObjArray = Scene::Object::GetArray<Object>();
+    auto   ObjArray = Scene::Object::GetArray<Object>();
     float3 vec;
-    if (auto model = GetComponent<ComponentModel>())
-    {
+    if(auto model = GetComponent<ComponentModel>()) {
         vec = -model->GetWorldVectorAxisZ();
         normalize(vec);
     }
@@ -103,8 +101,7 @@ void Player::OnEyeSight()
     float shortest = 1000.0f;
     // 範囲for
     for(auto& obj : ObjArray) {
-        if (obj == static_cast<ObjectPtr>(shared_from_this()))
-        {
+        if(obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
         }
 

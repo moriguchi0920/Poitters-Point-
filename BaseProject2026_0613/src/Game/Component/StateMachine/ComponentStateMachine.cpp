@@ -1,24 +1,19 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateDodge.h>
-#include "ComponentStateIdleWalk.h"
+#include <Game/Component/StateMachine/ComponentStateMachine.h>
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
-void ComponentStateDodge::Init()
+void ComponentStateMachine::Init()
 {
     __super::Init();
-    SetName<Component>("State Dodge");
-
-    // GetOnwer：オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
-    auto owner = GetOwner();
 }
 
-void ComponentStateDodge::Update()
+void ComponentStateMachine::Update()
 {
     __super::Update();
 }
 
-void ComponentStateDodge::GUI()
+void ComponentStateMachine::GUI()
 {
     __super::GUI();
 
@@ -26,7 +21,7 @@ void ComponentStateDodge::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State Dodge")) {
+        if(ImGui::TreeNode("State Machine")) {
             //-------------------------------------------------------
             // 共通部分(共通化したい)
 
@@ -41,11 +36,20 @@ void ComponentStateDodge::GUI()
             //-------------------------------------------------------
 
             //if(ImGui::TreeNode("State IdleWalk")) とセット
+
             ImGui::TreePop();
         }
     }
     ImGui::End();
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateDodge)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateDodge)
+const std::string ComponentStateMachine::GetStateName() const
+{
+    if(auto state = GetOwner()->GetComponent<ComponentState>()) {
+        return state->GetName().data();
+    }
+    return "";
+}
+
+CEREAL_REGISTER_TYPE(ComponentStateMachine)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateMachine)

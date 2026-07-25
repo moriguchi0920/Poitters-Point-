@@ -1,19 +1,35 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateMachine.h>
-#include "ComponentStateIdleWalk.h"
+#include <Game/Component/State/ComponentStateGrab.h>
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
-void ComponentStateMachine::Init()
+void ComponentStateGrab::Init()
 {
     __super::Init();
+
+    SetName<Component>("State Grab");
+
+    auto owner = GetOwner();
+    if(auto model = owner->GetComponent<ComponentModel>()) {
+        model->PlayAnimationNoSame("lift up");
+    }
 }
 
-void ComponentStateMachine::Update()
+void ComponentStateGrab::Update()
 {
+    lift_time_ -= GetDeltaTime();
+    if(lift_time_ < 0.0f) {
+        finished_  = true;
+        auto owner = GetOwner();
+        if(auto model = owner->GetComponent<ComponentModel>()) {
+            model->PlayAnimationNoSame("grab idle");
+        }
+    }
+
     __super::Update();
 }
 
-void ComponentStateMachine::GUI()
+void ComponentStateGrab::GUI()
 {
     __super::GUI();
 
@@ -21,7 +37,7 @@ void ComponentStateMachine::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State Machine")) {
+        if(ImGui::TreeNode("State Grab")) {
             //-------------------------------------------------------
             // 共通部分(共通化したい)
 
@@ -36,20 +52,21 @@ void ComponentStateMachine::GUI()
             //-------------------------------------------------------
 
             //if(ImGui::TreeNode("State IdleWalk")) とセット
-
             ImGui::TreePop();
         }
     }
     ImGui::End();
 }
 
-const std::string ComponentStateMachine::GetStateName() const
+void ComponentStateGrab::SetLiftTime(float time)
 {
-    if(auto state = GetOwner()->GetComponent<ComponentState>()) {
-        return state->GetName().data();
-    }
-    return "";
+    lift_time_ = time;
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateMachine)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateMachine)
+bool ComponentStateGrab::GetFinished()
+{
+    return finished_;
+}
+
+CEREAL_REGISTER_TYPE(ComponentStateGrab)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateGrab)

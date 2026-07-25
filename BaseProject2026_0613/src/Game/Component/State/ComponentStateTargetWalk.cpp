@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateTargetWalk.h>
+#include <Game/Component/State/ComponentStateTargetWalk.h>
 
 void ComponentStateTargetWalk::Init()
 {

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <Game/Component/ComponentGrabbable.h>
-#include "ComponentStateIdleWalk.h"
+#include <Game/Component/State/ComponentStateControllerWalk.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 void ComponentGrabbable::Init()
@@ -122,8 +122,7 @@ bool ComponentGrabbable::IsGrounded()
 
 bool ComponentGrabbable::IsMoving()
 {
-    return ((translation_.x < -0.01f || 0.01f < translation_.x) ||
-            (translation_.z < -0.01f || 0.01f < translation_.z));
+    return ((translation_.x < -0.01f || 0.01f < translation_.x) || (translation_.z < -0.01f || 0.01f < translation_.z));
 }
 
 CEREAL_REGISTER_TYPE(ComponentGrabbable)

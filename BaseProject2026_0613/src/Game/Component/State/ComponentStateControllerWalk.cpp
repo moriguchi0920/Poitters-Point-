@@ -1,13 +1,13 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateIdleWalk.h>
+#include <Game/Component/State/ComponentStateControllerWalk.h>
 
-void ComponentStateIdleWalk::Init()
+void ComponentStateControllerWalk::Init()
 {
     __super::Init();
     SetName<Component>("State IdleWalk");
 }
 
-void ComponentStateIdleWalk::Update()
+void ComponentStateControllerWalk::Update()
 {
     __super::Update();
 
@@ -64,38 +64,38 @@ void ComponentStateIdleWalk::Update()
     }
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetMoveSpeed(const float speed)
+ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetMoveSpeed(const float speed)
 {
     move_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
 }
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetRotateSpeed(const float speed)
+ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetRotateSpeed(const float speed)
 {
     rot_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
 }
 
-const float ComponentStateIdleWalk::GetMoveSpeed() const
+const float ComponentStateControllerWalk::GetMoveSpeed() const
 {
     return move_speed_;
 }
 
-const float ComponentStateIdleWalk::GetRotateSpeed() const
+const float ComponentStateControllerWalk::GetRotateSpeed() const
 {
     return rot_speed_;
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int left, int right)
+ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetKeys(int up, int down, int left, int right)
 {
     // 移動キーの設定
     key_up_    = up;
     key_down_  = down;
     key_left_  = left;
     key_right_ = right;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
 }
 
-void ComponentStateIdleWalk::GUI()
+void ComponentStateControllerWalk::GUI()
 {
     __super::GUI();
 
@@ -131,10 +131,10 @@ void ComponentStateIdleWalk::GUI()
     ImGui::End();
 }
 
-void ComponentStateIdleWalk::SetIsHolding(bool hold)
+void ComponentStateControllerWalk::SetIsHolding(bool hold)
 {
     is_holding_ = hold;
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateIdleWalk)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateIdleWalk)
+CEREAL_REGISTER_TYPE(ComponentStateControllerWalk)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateControllerWalk)
