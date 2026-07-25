@@ -13,9 +13,8 @@ void ComponentPlayerState::Init()
     auto owner = GetOwner();
 
     // オブジェクトの制御を行うコンポーネントを追加
-    owner->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
-
     owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
+
 
     can_grab_ = true;
 }
@@ -26,27 +25,41 @@ void ComponentPlayerState::Update()
 
     auto owner = GetOwner();
 
+    // スペースキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
-        if(owner->GetComponent<ComponentStateIdleWalk>() && !grabbing_object_ptr_.expired() && can_throw_) {
-            can_throw_ = false;
-            can_grab_  = true;
-            ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
-        }
-    }
-
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
+        // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
         if(owner->GetComponent<ComponentStateIdleWalk>()) {
             if(!grabbing_object_ptr_.expired()) {
-                auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
-                if(grabbable) {
-                    if(grabbable->GetCanGrab()) {
-                        ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
-                        can_grab_ = false;
-                        grabbable->SetCanGrab(false);
+                //(投げ可能 = すでにアイテムを持っている)
+                if(can_throw_) {
+                    // 投げ判定変数をfalseに
+                    can_throw_ = false;
+                    // 持ち上げ可能に
+                    can_grab_ = true;
+                    // Throwステートに変更
+                    ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
+                    grabbing_object_ptr_.reset();
+                }
+                // (投げ不可能 = アイテムはまだ持っていない)
+                else {
+                    // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
+                    auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
+                    // コンポーネントがあったら
+                    if(grabbable) {
+                        // 持ち上げ相手が持てる状態なら
+                        if(grabbable->GetCanGrab()) {
+                            // ステートをGrabステートに
+                            ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
+                            can_grab_ = false;
+                            grabbable->SetCanGrab(false);
+                        }
                     }
                 }
             }
         }
+    }
+
+    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
     }
 
     if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
