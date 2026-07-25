@@ -1,14 +1,14 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/ComponentState.h>
+#include <Game/Component/State/ComponentState.h>
 
-USING_PTR(ComponentStateThrow);
+USING_PTR(ComponentStateGrab);
 
-class ComponentStateThrow : public ComponentState
+class ComponentStateGrab : public ComponentState
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateThrow, u8"投擲攻撃コンポーネント");
+    BP_COMPONENT_DECL(ComponentStateGrab, u8"つかみ状態コンポーネント");
 
     void Init() override;
 
@@ -16,11 +16,14 @@ public:
 
     void GUI() override;
 
-    void SetThrowObject(ObjectWeakPtr object_ptr);
+    void SetLiftTime(float time);
+
+    bool GetFinished();
 
 private:
-    ObjectWeakPtr throw_weak_ptr_;
+    float lift_time_;
 
+    bool finished_;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -32,4 +35,4 @@ private:
     CEREAL_SAVELOAD(arc, ver) { arc(cereal::make_nvp("Component", cereal::base_class<Component>(this))); }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateThrow, 1);
+CEREAL_CLASS_VERSION(ComponentStateGrab, 1);

@@ -1,9 +1,6 @@
 ﻿#pragma once
-#include <Game/Component/ComponentCPUState.h>
-#include "ComponentStateIdleWalk.h"
-#include "ComponentStateGrab.h"
-#include "ComponentStateThrow.h"
-#include "ComponentGrabbable.h"
+#include <Game/Component/StateMachine/ComponentCPUState.h>
+#include <Game/Component/State/ComponentStateTargetWalk.h>
 
 void ComponentCPUState::Init()
 {
@@ -51,7 +48,7 @@ void ComponentCPUState::GUI()
 void ComponentCPUState::GrabbableHit(bool is_hit_grabbable, ObjectPtr target)
 {
     auto owner = GetOwner();
-    if(owner->GetComponent<ComponentStateIdleWalk>()) {
+    if(owner->GetComponent<ComponentStateTargetWalk>()) {
         can_grab_            = is_hit_grabbable;
         grabbing_object_ptr_ = target;
     }

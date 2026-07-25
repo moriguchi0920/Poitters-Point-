@@ -1,16 +1,16 @@
 ﻿#pragma once
-#include <Game/Component/ComponentPlayerState.h>
-#include "ComponentStateIdleWalk.h"
-#include "ComponentStateGrab.h"
-#include "ComponentStateThrow.h"
-#include "ComponentGrabbable.h"
+#include <Game/Component/StateMachine/ComponentPlayerState.h>
+#include <Game/Component/State/ComponentStateControllerWalk.h>
+#include <Game/Component/State/ComponentStateGrab.h>
+#include <Game/Component/State/ComponentStateThrow.h>
+#include <Game/Component/ComponentGrabbable.h>
 
 void ComponentPlayerState::Init()
 {
     __super::Init();
 
     // オブジェクトの制御を行うコンポーネントを追加
-    GetOwner()->AddComponent<ComponentStateIdleWalk>();
+    GetOwner()->AddComponent<ComponentStateControllerWalk>();
 
     can_grab_ = true;
 }
@@ -24,7 +24,7 @@ void ComponentPlayerState::Update()
     // スペースキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
         // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
-        if(owner->GetComponent<ComponentStateIdleWalk>()) {
+        if(owner->GetComponent<ComponentStateControllerWalk>()) {
             if(!grabbing_object_ptr_.expired()) {
                 //(投げ可能 = すでにアイテムを持っている)
                 if(can_throw_) {
@@ -73,7 +73,7 @@ void ComponentPlayerState::Update()
                 grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
             }
             can_throw_ = true;
-            ChangeState<ComponentStateIdleWalk>()->SetIsHolding(true);
+            ChangeState<ComponentStateControllerWalk>()->SetIsHolding(true);
         }
     }
 }
@@ -113,7 +113,7 @@ void ComponentPlayerState::GUI()
 void ComponentPlayerState::GrabbableHit(ObjectPtr target)
 {
     auto owner = GetOwner();
-    if(owner->GetComponent<ComponentStateIdleWalk>()) {
+    if(owner->GetComponent<ComponentStateControllerWalk>()) {
         grabbing_object_ptr_ = target;
     }
 }

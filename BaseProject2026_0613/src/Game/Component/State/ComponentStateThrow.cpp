@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateThrow.h>
-#include "ComponentStateIdleWalk.h"
+#include <Game/Component/State/ComponentStateThrow.h>
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
 
@@ -59,7 +59,7 @@ void ComponentStateThrow::Update()
                 }
 
                 throw_weak_ptr_.reset();
-                ChangeState<ComponentStateIdleWalk>();
+                ChangeState<ComponentStateControllerWalk>();
             }
 
             /*
@@ -78,7 +78,7 @@ void ComponentStateThrow::Update()
             // 自分自身を取り除く
             RemoveThisComponent();
             // 歩きのコンポーネントを再付与する
-            GetOwner()->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
+            GetOwner()->AddComponent<ComponentStateControllerWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
         }
     }
 }

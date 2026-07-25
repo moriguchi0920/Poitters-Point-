@@ -1,29 +1,30 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/ComponentState.h>
+#include <Game/Component/StateMachine/ComponentStateMachine.h>
 
-USING_PTR(ComponentStateGrab);
+USING_PTR(ComponentCPUState);
 
-class ComponentStateGrab : public ComponentState
+class ComponentCPUState : public ComponentStateMachine
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateGrab, u8"つかみ状態コンポーネント");
+    BP_COMPONENT_DECL(ComponentCPUState, u8"CPU状態制御コンポーネント");
 
     void Init() override;
 
     void Update() override;
 
+    void LateUpdate() override;
+
     void GUI() override;
 
-    void SetLiftTime(float time);
-
-    bool GetFinished();
+    void GrabbableHit(bool is_hit_grabbable, ObjectPtr target);
 
 private:
-    float lift_time_;
+    ObjectWeakPtr grabbing_object_ptr_;
 
-    bool finished_;
+    bool can_grab_;
+    bool can_throw_;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -35,4 +36,4 @@ private:
     CEREAL_SAVELOAD(arc, ver) { arc(cereal::make_nvp("Component", cereal::base_class<Component>(this))); }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateGrab, 1);
+CEREAL_CLASS_VERSION(ComponentCPUState, 1);
