@@ -43,7 +43,10 @@ void PoittersPoint_Title::Update()
 {
     if(Input::IsKeyDown(KEY_INPUT_SPACE))
         Scene::Change(Scene::GetScene<PoittersPoint_Stage>());
+
+    
 }
+
 
 void PoittersPoint_Title::LateDraw()
 {
@@ -51,7 +54,10 @@ void PoittersPoint_Title::LateDraw()
     float ADJUST_Y = (WINDOW_H / 720.0f);
 
     SetFontSize(static_cast<int>(title_size_ * ADJUST_X));
-    DrawFormatString(static_cast<int>(title_x_ * ADJUST_X), static_cast<int>(title_y_ * ADJUST_Y), GetColor(255, 255, 255), "Title");
+    DrawFormatString(static_cast<int>(title_x_ * ADJUST_X), static_cast<int>(title_y_ * ADJUST_Y), GetColor(255, 255, 255), "ポイッターズ\n  ポイント");
+
+    SetFontSize(static_cast<int>(button_size_ * ADJUST_X));
+    DrawFormatString(static_cast<int>(button_x_ * ADJUST_X), static_cast<int>(button_y_ * ADJUST_Y), GetColor(255, 255, 255), "PRESS START!!");
 }
 
 void PoittersPoint_Title::GUI()
