@@ -24,9 +24,12 @@ bool Log::Init()
     SetName("Log");
     AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
 
-    auto col = AddComponent<ComponentCollisionSphere>();
+    auto col = AddComponent<ComponentCollisionCapsule>();
 
-    col->SetRadius(5.0f)->UseGravity(true);
+    //col->SetRadius(3.0f)
+    col->SetRadius(2.0f);  
+    col->SetHeight(10.0f);
+    col->UseGravity(true);
     col->SetGravity(-0.2f);
     col->SetCollisionGroup(ComponentCollision::CollisionGroup::ETC);
     col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
@@ -42,7 +45,7 @@ bool Log::Init()
     //    collision->AttachToModel();    // コリジョンをモデルに合わせる
     //}
 
-    SetScaleAxisXYZ({1.0f});
+    SetScaleAxisXYZ({0.75f});
 
     return true;
 }
