@@ -20,7 +20,13 @@ void ComponentGrabbable::Update()
     auto owner = GetOwner();
     if(!is_grabbed_) {
         owner->AddTranslate(translation_);
-        translation_ = lerp(translation_, float3(0.0f, 0.0f, 0.0f), 0.04);
+        translation_ = lerp(translation_, float3(0.0f, 0.0f, 0.0f), 0.03);
+    }
+    if(IsMoving()) {
+        can_grab_this_ = false;
+    }
+    else if(!is_grabbed_) {
+        can_grab_this_ = true;
     }
 }
 
@@ -116,7 +122,8 @@ bool ComponentGrabbable::IsGrounded()
 
 bool ComponentGrabbable::IsMoving()
 {
-    return ((translation_.x < -0.01f && 0.01f < translation_.x) && (translation_.z < -0.01f && 0.01f < translation_.z));
+    return ((translation_.x < -0.01f || 0.01f < translation_.x) ||
+            (translation_.z < -0.01f || 0.01f < translation_.z));
 }
 
 CEREAL_REGISTER_TYPE(ComponentGrabbable)
