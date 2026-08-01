@@ -7,6 +7,9 @@ void ComponentItemSpawner::Init()
 {
     __super::Init();
 
+    // スポナー本体のモデルを設定・読み込み
+    LoadModel();
+
     // 起動時はタイマーなしで即座にアイテムを生成
     spawn_timer_ = 0.0f;
     SpawnItem();
@@ -17,7 +20,7 @@ void ComponentItemSpawner::Update()
     __super::Update();
 
     // -------------------------------------------------------------
-    // 監視対象の岩がまだワールドに存在している間
+    // 1. 監視対象の岩がまだワールドに存在している間
     // -------------------------------------------------------------
     if(!Spawn_Item_ptr_.expired()) {
         if(auto item = Spawn_Item_ptr_.lock()) {
@@ -46,6 +49,7 @@ void ComponentItemSpawner::Update()
         }
     }
 }
+
 void ComponentItemSpawner::GUI()
 {
     __super::GUI();
@@ -58,6 +62,14 @@ void ComponentItemSpawner::GUI()
             bool enable = GetStatus(StatusBit::Enable);
             if(ImGui::Checkbox(u8"有効", &enable)) {
                 SetStatus(StatusBit::Enable, enable);
+            }
+
+            // GUI上でモデルパスを入力・変更可能にする
+            char buffer[256];
+            strncpy_s(buffer, model_path_.c_str(), sizeof(buffer));
+            if(ImGui::InputText(u8"モデルパス", buffer, sizeof(buffer))) {
+                model_path_ = buffer;
+                LoadModel();
             }
 
             // GUI上で再生成までの秒数を自由に調整できるようにする
@@ -112,8 +124,23 @@ void ComponentItemSpawner::SpawnItem()
     if(rock) {
         rock->SetTranslate(spawn_pos);
 
-        
         Spawn_Item_ptr_ = rock;
+    }
+}
+
+void ComponentItemSpawner::LoadModel()
+{
+    auto owner = GetOwner();
+    if(!owner)
+        return;
+    auto modelComp = owner->GetComponent<ComponentModel>();
+    if(!modelComp) {
+        modelComp = owner->AddComponent<ComponentModel>();
+    }
+
+    if(modelComp) {
+        modelComp->UseShader(false);
+        modelComp->Load(model_path_);
     }
 }
 
