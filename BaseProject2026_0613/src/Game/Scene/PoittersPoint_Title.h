@@ -37,11 +37,11 @@ public:
 
 private:
     int title_x_    = 100;
-    int title_y_    = 100;
+    int title_y_    = 170;
     int title_size_ = 170;
 
-    int button_x_ = 500;
-    int button_y_ = 560;
+    int button_x_    = 500;
+    int button_y_    = 560;
     int button_size_ = 50;
 };
 
