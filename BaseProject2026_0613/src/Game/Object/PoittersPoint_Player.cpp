@@ -13,6 +13,7 @@
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include "Game/Component/ComponentGrabbable.h"
+#include "Game/Component/ComponentHitPoints.h"
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -49,6 +50,8 @@ bool Player::Init()
     SetTranslate({0, 8, 0});
 
     AddComponent<ComponentPlayerState>();
+    // 他者に掴まれて投げられるようにする
+    AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
     // カメラの制御を行うコンポーネントを追加
     //AddComponent<ComponentCameraController>();
@@ -75,24 +78,50 @@ void Player::Update()
 
 void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    //auto target = hit_info.hit_collision_->GetOwnerPtr();
-    //if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-    //    auto player_state = GetComponent<ComponentPlayerState>();
-    //    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-    //        player_state->GrabbableHit(target);
-    //    }
-    //}
+    auto hitter = hit_info.hit_collision_->GetOwner();
+
+    // ヒットした相手が掴めるもの(=投げられて移動中)か判定
+    if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
+        // 投げた本人自身の場合はダメージなし
+        if(grabbable->IsThrower(SharedThis())) {
+            __super::OnHit(hit_info);
+            return;
+        }
+
+        // 地面で停止中はダメージなし
+        if(!grabbable->IsMoving()) {
+            __super::OnHit(hit_info);
+            return;
+        }
+
+        // 既にこのターゲットをHit済みならスルー(連続ヒット防止)
+        if(grabbable->IsAlreadyHit(SharedThis())) {
+            __super::OnHit(hit_info);
+            return;
+        }
+
+        // 初Hitなら記録してダメージ処理へ
+        grabbable->AddHitTarget(SharedThis());
+    }
+    else {
+        // 弾などgrabbable以外は今まで通り
+        __super::OnHit(hit_info);
+        return;
+    }
+
+    // 投げ物ごとのダメージ値を適用
+    if(auto hp = GetComponent<ComponentHitPoints>()) {
+        hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
+    }
 
     __super::OnHit(hit_info);
 }
 
 void Player::OnEyeSight()
 {
-
-    auto ObjArray = Scene::Object::GetArray<Object>();
+    auto   ObjArray = Scene::Object::GetArray<Object>();
     float3 vec;
-    if (auto model = GetComponent<ComponentModel>())
-    {
+    if(auto model = GetComponent<ComponentModel>()) {
         vec = -model->GetWorldVectorAxisZ();
         normalize(vec);
     }
@@ -103,8 +132,7 @@ void Player::OnEyeSight()
     float shortest = 1000.0f;
     // 範囲for
     for(auto& obj : ObjArray) {
-        if (obj == static_cast<ObjectPtr>(shared_from_this()))
-        {
+        if(obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
         }
 
