@@ -7,9 +7,6 @@ void ComponentHitPoints::Init()
 {
     __super::Init();
 
-    // オブジェクトの制御を行うコンポーネントを追加
-    //GetOwner()->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
-
     hit_points_ = max_hit_points_;
 }
 
