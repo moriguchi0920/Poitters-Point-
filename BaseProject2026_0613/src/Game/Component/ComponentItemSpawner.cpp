@@ -10,8 +10,8 @@ void ComponentItemSpawner::Init()
 
     LoadModel();
 
-    move_speed_       = 70.0f;   
-    spawn_delay_time_ =1.0f;   
+    move_speed_       = 70.0f;
+    spawn_delay_time_ = 1.0f;
 
     // スポナー位置の間隔
     spawner_points_.clear();

@@ -114,7 +114,7 @@ bool PoittersPoint_Stage::Init()
         // スポナーを置く位置
         spawner_obj->SetTranslate({0.0f, 10.0f, 0.0f});    // X:0, Y:10, Z:0
 
-       //のちにモデルの変更をする際に使います
+        //のちにモデルの変更をする際に使います
         //spawner_obj->AddComponent<ComponentModel>("data/Game/Models/UFO/.mv1");
 
         // アイテムスポナーコンポーネントを追加

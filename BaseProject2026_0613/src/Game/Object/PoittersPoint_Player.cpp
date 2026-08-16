@@ -88,11 +88,9 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 
 void Player::OnEyeSight()
 {
-
-    auto ObjArray = Scene::Object::GetArray<Object>();
+    auto   ObjArray = Scene::Object::GetArray<Object>();
     float3 vec;
-    if (auto model = GetComponent<ComponentModel>())
-    {
+    if(auto model = GetComponent<ComponentModel>()) {
         vec = -model->GetWorldVectorAxisZ();
         normalize(vec);
     }
@@ -103,8 +101,7 @@ void Player::OnEyeSight()
     float shortest = 1000.0f;
     // 範囲for
     for(auto& obj : ObjArray) {
-        if (obj == static_cast<ObjectPtr>(shared_from_this()))
-        {
+        if(obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
         }
 
