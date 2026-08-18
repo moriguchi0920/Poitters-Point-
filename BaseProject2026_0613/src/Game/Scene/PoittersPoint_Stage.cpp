@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Stage.h"
 #include "PoittersPoint_GameOver.h"
+#include "Game/Object/PoittersPoint_Character.h"
 #include "Game/Object/PoittersPoint_Player.h"
 #include "Game/Object/PoittersPoint_Ground.h"
 #include "Game/Object/PoittersPoint_Camera.h"
@@ -17,6 +18,7 @@
 #include <System/Component/ComponentCollisionCapsule.h>
 #include <System/Component/ComponentSpringArm.h>
 #include <System/Component/ComponentObjectController.h>
+#include"Game/Component/StateMachine/ComponentPlayerState.h"
 
 namespace PoittersPoint {
 
@@ -47,7 +49,21 @@ bool PoittersPoint_Stage::Init()
     }
 #endif
 #if 1    //プレイヤー作成
-    Scene::Object::Create<Player>();
+    CharacterData playerdata("data/Game/Models/Player/Player.mv1",
+                             {
+                                 {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                                 {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                                 {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                                 {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                                 {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                                 {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+    },
+                             {0.11f, 0.11f, 0.11f}, 0.3f, 1.0f, 1.0f);
+    auto player = Scene::Object::Create<Character>();
+    player->SetCharacterStatus(playerdata);
+    player->AddComponent<ComponentPlayerState>();
+
+    //Scene::Object::Create<Player>();
 #else
     // プレイヤー生成(Component: モデル、カプセルコリジョン、オブジェクトコントローラ)
     {

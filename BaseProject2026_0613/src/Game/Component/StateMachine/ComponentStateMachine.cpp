@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include <Game/Component/StateMachine/ComponentStateMachine.h>
-#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 void ComponentStateMachine::Init()

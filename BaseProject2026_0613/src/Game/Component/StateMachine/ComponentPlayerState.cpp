@@ -55,11 +55,11 @@ void ComponentPlayerState::Update()
         }
     }
 
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
-    }
-
+    // 現在のステートが掴みであるとき
     if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
+        // 掴みモーションが終わったら
         if(component_grab->GetFinished()) {
+            // 掴みオブジェクトがある時
             if(!grabbing_object_ptr_.expired()) {
                 auto object = grabbing_object_ptr_.lock();
 
