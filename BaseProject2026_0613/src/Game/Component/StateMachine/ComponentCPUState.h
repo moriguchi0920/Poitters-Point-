@@ -23,8 +23,32 @@ public:
 private:
     ObjectWeakPtr grabbing_object_ptr_;
 
+    // 現在ものをつかめる状態にあるか
     bool can_grab_;
+    // 現在ものを投げられるか
     bool can_throw_;
+
+    // タイマー完成後に置き換える仮タイマー
+    int                  tmp_count_;
+    static constexpr int second = 60;
+
+    // CPUの隙である思考時間であるかどうか
+    bool is_thinking_;
+
+    // CPUの行動定数
+    enum CPU_ACTION
+    {
+        // ものを掴みに行く動き
+        ACTION_GRAB,
+        // ものを持っている相手を避ける動き
+        ACTION_AVOID_ATTACKER,
+        // ものを持っている場合、相手に投げに行く動き
+        ACTION_ATTACK,
+        ACTION_NUM
+    };
+
+    int cur_action_;
+
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------

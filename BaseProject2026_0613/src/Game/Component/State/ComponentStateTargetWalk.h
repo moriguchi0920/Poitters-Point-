@@ -26,6 +26,9 @@ public:
     inline const void  SetFrontRotate(float rotate) { front_rot_ = rotate; }
     inline const float GetFrontRotate() const { return front_rot_; }
 
+    void          SetTargetPos(const float3& position);
+    const float3& GetTargetPos();
+
     void GUI() override;
 
     void SetIsHolding(bool hold);

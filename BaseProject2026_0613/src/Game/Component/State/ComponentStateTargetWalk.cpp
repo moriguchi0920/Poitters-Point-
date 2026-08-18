@@ -75,14 +75,14 @@ const float ComponentStateTargetWalk::GetRotateSpeed() const
     return rot_speed_;
 }
 
-ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetKeys(int up, int down, int left, int right)
+void ComponentStateTargetWalk::SetTargetPos(const float3& position)
 {
-    // 移動キーの設定
-    key_up_    = up;
-    key_down_  = down;
-    key_left_  = left;
-    key_right_ = right;
-    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
+    target_pos_ = position;
+}
+
+const float3& ComponentStateTargetWalk::GetTargetPos()
+{
+    return target_pos_;
 }
 
 void ComponentStateTargetWalk::GUI()
