@@ -2,10 +2,11 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/State/ComponentState.h>
+#include<Game/Component/State/ComponentStateWalkBase.h>
 
 USING_PTR(ComponentStateControllerWalk);
 
-class ComponentStateControllerWalk : public ComponentState
+class ComponentStateControllerWalk : public ComponentStateWalkBase
 {
 public:
     BP_COMPONENT_DECL(ComponentStateControllerWalk, u8"停止・歩きコンポーネント");
@@ -14,34 +15,18 @@ public:
 
     void Update() override;
 
-    ComponentStateControllerWalkPtr SetMoveSpeed(const float speed);
-
-    ComponentStateControllerWalkPtr SetRotateSpeed(const float speed);
 
     ComponentStateControllerWalkPtr SetKeys(int up, int down, int left, int right);
 
-    const float GetMoveSpeed() const;
-    const float GetRotateSpeed() const;
-
-    inline const void  SetFrontRotate(float rotate) { front_rot_ = rotate; }
-    inline const float GetFrontRotate() const { return front_rot_; }
 
     void GUI() override;
 
-    void SetIsHolding(bool hold);
-
 private:
-    float move_speed_ = 0.3f;
-    float rot_speed_  = 20.0f;
 
     int key_up_    = KEY_INPUT_W;
     int key_down_  = KEY_INPUT_S;
     int key_left_  = KEY_INPUT_A;
     int key_right_ = KEY_INPUT_D;
-
-    float front_rot_ = 0.0f;    //!<前方ベクトルの回転角度(0-360度)
-
-    bool is_holding_;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

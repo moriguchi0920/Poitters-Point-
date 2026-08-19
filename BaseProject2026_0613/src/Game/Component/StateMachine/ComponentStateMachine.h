@@ -28,6 +28,15 @@ public:
 
     const std::string GetStateName() const;
 
+    void GrabbableHit(ObjectPtr target);
+
+    bool GetCanGrab();
+
+protected:
+    bool          can_grab_;
+    bool          can_throw_;
+    ObjectWeakPtr grabbing_object_ptr_;
+
 private:
     //--------------------------------------------------------------------
     //! @name Cereal処理
