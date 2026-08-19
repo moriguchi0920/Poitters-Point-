@@ -110,13 +110,5 @@ void ComponentPlayerState::GUI()
     ImGui::End();
 }
 
-void ComponentPlayerState::GrabbableHit(ObjectPtr target)
-{
-    auto owner = GetOwner();
-    if(owner->GetComponent<ComponentStateControllerWalk>()) {
-        grabbing_object_ptr_ = target;
-    }
-}
-
 CEREAL_REGISTER_TYPE(ComponentPlayerState)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentPlayerState)

@@ -18,7 +18,7 @@
 #include <System/Component/ComponentCollisionCapsule.h>
 #include <System/Component/ComponentSpringArm.h>
 #include <System/Component/ComponentObjectController.h>
-#include"Game/Component/StateMachine/ComponentPlayerState.h"
+#include "Game/Component/StateMachine/ComponentPlayerState.h"
 
 namespace PoittersPoint {
 
@@ -58,8 +58,11 @@ bool PoittersPoint_Stage::Init()
                                  {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
                                  {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
     },
-                             {0.11f, 0.11f, 0.11f}, 0.3f, 1.0f, 1.0f);
-    auto player = Scene::Object::Create<Character>();
+                             {0.11f, 0.11f, 0.11f},
+                             0.3f,
+                             1.0f,
+                             1.0f);
+    auto          player = Scene::Object::Create<Character>();
     player->SetCharacterStatus(playerdata);
     player->AddComponent<ComponentPlayerState>();
 

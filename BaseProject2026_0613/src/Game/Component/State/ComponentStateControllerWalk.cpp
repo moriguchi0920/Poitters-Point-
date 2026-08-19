@@ -64,26 +64,6 @@ void ComponentStateControllerWalk::Update()
     }
 }
 
-ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetMoveSpeed(const float speed)
-{
-    move_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
-}
-ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetRotateSpeed(const float speed)
-{
-    rot_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
-}
-
-const float ComponentStateControllerWalk::GetMoveSpeed() const
-{
-    return move_speed_;
-}
-
-const float ComponentStateControllerWalk::GetRotateSpeed() const
-{
-    return rot_speed_;
-}
 
 ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetKeys(int up, int down, int left, int right)
 {
@@ -131,10 +111,6 @@ void ComponentStateControllerWalk::GUI()
     ImGui::End();
 }
 
-void ComponentStateControllerWalk::SetIsHolding(bool hold)
-{
-    is_holding_ = hold;
-}
 
 CEREAL_REGISTER_TYPE(ComponentStateControllerWalk)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateControllerWalk)

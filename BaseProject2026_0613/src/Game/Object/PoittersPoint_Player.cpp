@@ -75,13 +75,13 @@ void Player::Update()
 
 void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    //auto target = hit_info.hit_collision_->GetOwnerPtr();
-    //if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-    //    auto player_state = GetComponent<ComponentPlayerState>();
-    //    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-    //        player_state->GrabbableHit(target);
-    //    }
-    //}
+    auto target = hit_info.hit_collision_->GetOwnerPtr();
+    if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+        auto player_state = GetComponent<ComponentPlayerState>();
+        if(player_state->can_grab_ && grabbable->GetCanGrab()) {
+            player_state->GrabbableHit(target);
+        }
+    }
 
     __super::OnHit(hit_info);
 }
