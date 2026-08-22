@@ -2,7 +2,7 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/State/ComponentState.h>
-#include<Game/Component/State/ComponentStateWalkBase.h>
+#include <Game/Component/State/ComponentStateWalkBase.h>
 
 USING_PTR(ComponentStateTargetWalk);
 
@@ -15,16 +15,17 @@ public:
 
     void Update() override;
 
-
-    void          SetTargetPos(const float3& position);
+    ComponentStateTargetWalkPtr  SetTargetPos(const float3& position);
+    void          SetTargetPtr(const ObjectPtr ptr);
+    void          ResetTargetPtr();
     const float3& GetTargetPos();
+    bool          GetArrival();
 
     void GUI() override;
 
 private:
-
     float3 target_pos_;
-
+    ObjectPtr target_ptr_;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

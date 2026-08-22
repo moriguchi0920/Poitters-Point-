@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <Game/Component/StateMachine/ComponentStateMachine.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
-#include<Game/Component/ComponentGrabbable.h>
+#include <Game/Component/ComponentGrabbable.h>
 
 void ComponentStateMachine::Init()
 {
@@ -53,22 +53,23 @@ const std::string ComponentStateMachine::GetStateName() const
 
 void ComponentStateMachine::GrabbableHit(ObjectPtr target)
 {
-    if (auto owner = GetOwner())
-    {
-        if (auto grabbable = target->GetComponent<ComponentGrabbable>())
-        {
-            if (grabbable->GetCanGrab() && can_grab_)
-            {
+    if(auto owner = GetOwner()) {
+        if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+            if(grabbable->GetCanGrab() && can_grab_) {
                 grabbing_object_ptr_ = target;
             }
         }
     }
-
 }
 
 bool ComponentStateMachine::GetCanGrab()
 {
     return can_grab_;
+}
+
+bool ComponentStateMachine::GetGrabbing()
+{
+    return !grabbing_object_ptr_.expired() && !can_grab_;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateMachine)

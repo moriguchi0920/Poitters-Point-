@@ -32,6 +32,8 @@ public:
 
     bool GetCanGrab();
 
+    bool GetGrabbing();
+
 protected:
     bool          can_grab_;
     bool          can_throw_;

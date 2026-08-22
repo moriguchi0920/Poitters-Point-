@@ -2,7 +2,7 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/State/ComponentState.h>
-#include<Game/Component/State/ComponentStateWalkBase.h>
+#include <Game/Component/State/ComponentStateWalkBase.h>
 
 USING_PTR(ComponentStateControllerWalk);
 
@@ -15,14 +15,11 @@ public:
 
     void Update() override;
 
-
     ComponentStateControllerWalkPtr SetKeys(int up, int down, int left, int right);
-
 
     void GUI() override;
 
 private:
-
     int key_up_    = KEY_INPUT_W;
     int key_down_  = KEY_INPUT_S;
     int key_left_  = KEY_INPUT_A;

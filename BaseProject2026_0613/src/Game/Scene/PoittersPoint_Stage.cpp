@@ -18,7 +18,8 @@
 #include <System/Component/ComponentCollisionCapsule.h>
 #include <System/Component/ComponentSpringArm.h>
 #include <System/Component/ComponentObjectController.h>
-#include "Game/Component/StateMachine/ComponentPlayerState.h"
+#include <Game/Component/StateMachine/ComponentPlayerState.h>
+#include<Game/Component/StateMachine/ComponentCPUState.h>
 
 namespace PoittersPoint {
 
@@ -112,9 +113,25 @@ bool PoittersPoint_Stage::Init()
         }
     }
 #endif
-    for(int i = 0; i < MAX_ENEMIES; i++) {
-        Scene::Object::Create<Enemy>();
-    }
+    //for(int i = 0; i < MAX_ENEMIES; i++) {
+    //    Scene::Object::Create<Enemy>();
+    //}
+    CharacterData cpu_data("data/Game/Models/Enemy/Enemy.mv1",
+                             {
+                                 {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                                 {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                                 {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                                 {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                                 {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                                 {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+    },
+                             {0.11f, 0.11f, 0.11f},
+                             0.3f,
+                             1.0f,
+                             1.0f);
+    auto       cpu_character    = Scene::Object::Create<Character>();
+    cpu_character->SetCharacterStatus(cpu_data);
+    cpu_character->AddComponent<ComponentCPUState>();
 
     //for(int i = 0; i < 5; i++) {
     //    Scene::Object::Create<Bullet>();
@@ -128,50 +145,50 @@ bool PoittersPoint_Stage::Init()
 //! @brief 更新
 void PoittersPoint_Stage::Update()
 {
-    // 毎フレーム動作する
-    counter2++;
+    //// 毎フレーム動作する
+    //counter2++;
 
-    //テスト用
-    if(auto obj = Scene::Object::Get<Object>("OBJ")) {
-        obj->AddTranslate({0.001, 0, 0});
-    }
+    ////テスト用
+    //if(auto obj = Scene::Object::Get<Object>("OBJ")) {
+    //    obj->AddTranslate({0.001, 0, 0});
+    //}
 
-    printfDx("\nDEAD ENEMY: %d", enemy_dead_count);
+    //printfDx("\nDEAD ENEMY: %d", enemy_dead_count);
 
-    {
-        // Enemyという名前がついたObjectをVectorで複数取得
-        auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
+    //{
+    //    // Enemyという名前がついたObjectをVectorで複数取得
+    //    auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
 
-        // Vectorのメソッドでサイズを取得
-        auto enemy_num = enemies.size();
+    //    // Vectorのメソッドでサイズを取得
+    //    auto enemy_num = enemies.size();
 
-        // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
-        auto released_enemy_num = MAX_ENEMIES - enemy_num;
-        // 死亡カウントの中身に代入する
-        enemy_dead_count = released_enemy_num;
+    //    // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
+    //    auto released_enemy_num = MAX_ENEMIES - enemy_num;
+    //    // 死亡カウントの中身に代入する
+    //    enemy_dead_count = released_enemy_num;
 
-        // もし死亡カウントがエネミーの上限数以上なら
-        if(MAX_ENEMIES <= released_enemy_num) {
-            //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
+    //    // もし死亡カウントがエネミーの上限数以上なら
+    //    if(MAX_ENEMIES <= released_enemy_num) {
+    //        //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
 
-            bool canCreateEnemy = true;
-            auto objs           = Scene::Object::GetArray<Enemy>();
-            for(int i = 0; i < objs.size(); i++) {
-                if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
-                    canCreateEnemy = false;
-                }
-            }
+    //        bool canCreateEnemy = true;
+    //        auto objs           = Scene::Object::GetArray<Enemy>();
+    //        for(int i = 0; i < objs.size(); i++) {
+    //            if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
+    //                canCreateEnemy = false;
+    //            }
+    //        }
 
-            if(canCreateEnemy) {
-                // エネミーを生成する
-                createEnemy();
+    //        if(canCreateEnemy) {
+    //            // エネミーを生成する
+    //            createEnemy();
 
-                for(int i = 0; i < objs.size(); i++) {
-                    Scene::Object::Release(objs[i]);
-                }
-            }
-        }
-    }
+    //            for(int i = 0; i < objs.size(); i++) {
+    //                Scene::Object::Release(objs[i]);
+    //            }
+    //        }
+    //    }
+    //}
 }
 
 //! @brief GUI表示

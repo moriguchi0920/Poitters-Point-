@@ -64,7 +64,6 @@ void ComponentStateControllerWalk::Update()
     }
 }
 
-
 ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetKeys(int up, int down, int left, int right)
 {
     // 移動キーの設定
@@ -83,7 +82,7 @@ void ComponentStateControllerWalk::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State IdleWalk")) {
+        if(ImGui::TreeNode("State ControllerWalk")) {
             //-------------------------------------------------------
             // 共通部分
 
@@ -110,7 +109,6 @@ void ComponentStateControllerWalk::GUI()
     }
     ImGui::End();
 }
-
 
 CEREAL_REGISTER_TYPE(ComponentStateControllerWalk)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateControllerWalk)

@@ -63,7 +63,7 @@ void ComponentStateGrab::SetLiftTime(float time)
     lift_time_ = time;
 }
 
-bool ComponentStateGrab::GetFinished()
+bool ComponentStateGrab::GetIsFinished()
 {
     return finished_;
 }
