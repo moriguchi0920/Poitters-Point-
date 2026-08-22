@@ -18,7 +18,7 @@ public:
 
     void SetLiftTime(float time);
 
-    bool GetFinished();
+    bool GetIsFinished();
 
 private:
     float lift_time_;

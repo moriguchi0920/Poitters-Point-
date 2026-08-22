@@ -5,6 +5,7 @@ void ComponentStateTargetWalk::Init()
 {
     __super::Init();
     SetName<Component>("State Target Walk");
+    ResetTargetPtr();
 }
 
 void ComponentStateTargetWalk::Update()
@@ -14,6 +15,11 @@ void ComponentStateTargetWalk::Update()
     // オーナー(自分がAddComponentされたObject)を取得します
     // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
+
+    if (target_ptr_)
+    {
+        target_pos_ = target_ptr_->GetTranslate();
+    }
 
     // 移動方向
     float3 dir{0, 0, 0};
@@ -54,14 +60,33 @@ void ComponentStateTargetWalk::Update()
     }
 }
 
-void ComponentStateTargetWalk::SetTargetPos(const float3& position)
+ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetTargetPos(const float3& position)
 {
     target_pos_ = position;
+    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
+}
+
+void ComponentStateTargetWalk::SetTargetPtr(const ObjectPtr ptr)
+{
+    target_ptr_ = ptr;
+}
+
+void ComponentStateTargetWalk::ResetTargetPtr()
+{
+    target_ptr_ = nullptr;
 }
 
 const float3& ComponentStateTargetWalk::GetTargetPos()
 {
     return target_pos_;
+}
+
+bool ComponentStateTargetWalk::GetArrival()
+{
+    auto owner     = GetOwner();
+    auto translate = owner->GetTranslate();
+    auto vec       = target_pos_ - translate;
+    return fabsf(vec.x) < 1.0 && fabsf(vec.y) < 1.0 && fabsf(vec.z) < 1.0;
 }
 
 void ComponentStateTargetWalk::GUI()
@@ -89,6 +114,7 @@ void ComponentStateTargetWalk::GUI()
             // 移動の基本情報
             ImGui::DragFloat(u8"移動速度", &move_speed_, 0.1f);
             ImGui::DragFloat(u8"移動回転角度", &rot_speed_, 1.0f);
+            ImGui::DragFloat3(u8"目的地", target_pos_.RawArray(), 1.0f);
 
             // 移動の基本情報
             ImGui::DragFloat(u8"オブジェクト オフセット回転", &front_rot_, 1.0f);
@@ -99,8 +125,6 @@ void ComponentStateTargetWalk::GUI()
     }
     ImGui::End();
 }
-
-
 
 CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateTargetWalk)

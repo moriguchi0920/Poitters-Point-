@@ -59,7 +59,6 @@ void ComponentStateThrow::Update()
                 }
 
                 throw_weak_ptr_.reset();
-                ChangeState<ComponentStateControllerWalk>();
             }
 
             /*
@@ -73,13 +72,7 @@ void ComponentStateThrow::Update()
             */
         }
 
-        // アニメーションが止まっているか
-        if(!model->IsPlaying()) {
-            // 自分自身を取り除く
-            RemoveThisComponent();
-            // 歩きのコンポーネントを再付与する
-            GetOwner()->AddComponent<ComponentStateControllerWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
-        }
+
     }
 }
 
@@ -115,6 +108,16 @@ void ComponentStateThrow::GUI()
 void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
 {
     throw_weak_ptr_ = object_ptr;
+}
+
+bool ComponentStateThrow::GetIsFinished()
+{
+    // アニメーションが止まっているか
+    if (auto model = GetOwner()->GetComponent<ComponentModel>())
+    {
+        return !model->IsPlaying();
+    }
+    return false;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateThrow)

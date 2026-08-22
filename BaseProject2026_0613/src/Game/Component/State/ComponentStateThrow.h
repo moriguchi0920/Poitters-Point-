@@ -18,6 +18,8 @@ public:
 
     void SetThrowObject(ObjectWeakPtr object_ptr);
 
+    bool GetIsFinished();
+
 private:
     ObjectWeakPtr throw_weak_ptr_;
 

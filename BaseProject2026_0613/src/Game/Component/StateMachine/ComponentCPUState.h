@@ -14,23 +14,16 @@ public:
 
     void Update() override;
 
-    void LateUpdate() override;
 
     void GUI() override;
 
-    void GrabbableHit(bool is_hit_grabbable, ObjectPtr target);
+
 
 private:
-    ObjectWeakPtr grabbing_object_ptr_;
-
-    // 現在ものをつかめる状態にあるか
-    bool can_grab_;
-    // 現在ものを投げられるか
-    bool can_throw_;
-
     // タイマー完成後に置き換える仮タイマー
     int                  tmp_count_;
     static constexpr int second = 60;
+    const float          escape_offset = 10.0f;
 
     // CPUの隙である思考時間であるかどうか
     bool is_thinking_;
@@ -38,6 +31,7 @@ private:
     // CPUの行動定数
     enum CPU_ACTION
     {
+        ACTION_DEFAULT,
         // ものを掴みに行く動き
         ACTION_GRAB,
         // ものを持っている相手を避ける動き

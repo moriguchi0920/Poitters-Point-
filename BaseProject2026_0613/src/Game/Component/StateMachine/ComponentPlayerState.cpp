@@ -4,13 +4,20 @@
 #include <Game/Component/State/ComponentStateGrab.h>
 #include <Game/Component/State/ComponentStateThrow.h>
 #include <Game/Component/ComponentGrabbable.h>
+#include<Game/Object/PoittersPoint_Character.h>
 
 void ComponentPlayerState::Init()
 {
     __super::Init();
+    auto owner = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
     // オブジェクトの制御を行うコンポーネントを追加
-    GetOwner()->AddComponent<ComponentStateControllerWalk>();
+    if (character_casted_owner)
+    {
+        owner->AddComponent<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    }
+    
 
     can_grab_ = true;
 }
@@ -20,14 +27,18 @@ void ComponentPlayerState::Update()
     __super::Update();
 
     auto owner = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
     // スペースキーが押された時の処理
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
+    if(Input::IsKeyDown(KEY_INPUT_SPACE)) 
+    {
         // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
-        if(owner->GetComponent<ComponentStateControllerWalk>()) {
+        if(owner->GetComponent<ComponentStateControllerWalk>()) 
+        {
             if(!grabbing_object_ptr_.expired()) {
                 //(投げ可能 = すでにアイテムを持っている)
-                if(can_throw_) {
+                if(can_throw_) 
+                {
                     // 投げ判定変数をfalseに
                     can_throw_ = false;
                     // 持ち上げ可能に
@@ -37,7 +48,8 @@ void ComponentPlayerState::Update()
                     grabbing_object_ptr_.reset();
                 }
                 // (投げ不可能 = アイテムはまだ持っていない)
-                else {
+                else
+                {
                     // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
                     auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
                     // コンポーネントがあったら
@@ -56,14 +68,16 @@ void ComponentPlayerState::Update()
     }
 
     // 現在のステートが掴みであるとき
-    if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
+    if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) 
+    {
         // 掴みモーションが終わったら
-        if(component_grab->GetFinished()) {
+        if(component_grab->GetIsFinished()) {
             // 掴みオブジェクトがある時
             if(!grabbing_object_ptr_.expired()) {
                 auto object = grabbing_object_ptr_.lock();
 
-                if(auto collider = object->GetComponent<ComponentCollision>()) {
+                if(auto collider = object->GetComponent<ComponentCollision>()) 
+                {
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
                 }
 
@@ -73,7 +87,21 @@ void ComponentPlayerState::Update()
                 grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
             }
             can_throw_ = true;
-            ChangeState<ComponentStateControllerWalk>()->SetIsHolding(true);
+            if(character_casted_owner) 
+            {
+                ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
+            }
+        }
+    }
+
+    if (auto component_throw = owner->GetComponent<ComponentStateThrow>())
+    {
+        if (component_throw->GetIsFinished()) 
+        {
+            if(character_casted_owner)
+            {
+                ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+            }
         }
     }
 }
