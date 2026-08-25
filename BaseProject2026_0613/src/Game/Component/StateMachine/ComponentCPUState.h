@@ -14,15 +14,12 @@ public:
 
     void Update() override;
 
-
     void GUI() override;
-
-
 
 private:
     // タイマー完成後に置き換える仮タイマー
     int                  tmp_count_;
-    static constexpr int second = 60;
+    static constexpr int second        = 60;
     const float          escape_offset = 10.0f;
 
     // CPUの隙である思考時間であるかどうか

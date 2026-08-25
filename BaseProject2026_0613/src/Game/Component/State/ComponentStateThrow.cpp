@@ -71,8 +71,6 @@ void ComponentStateThrow::Update()
             }
             */
         }
-
-
     }
 }
 
@@ -113,8 +111,7 @@ void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
 bool ComponentStateThrow::GetIsFinished()
 {
     // アニメーションが止まっているか
-    if (auto model = GetOwner()->GetComponent<ComponentModel>())
-    {
+    if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
         return !model->IsPlaying();
     }
     return false;

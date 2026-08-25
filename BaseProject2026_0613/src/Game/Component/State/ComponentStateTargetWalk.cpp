@@ -16,8 +16,7 @@ void ComponentStateTargetWalk::Update()
     // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
 
-    if (target_ptr_)
-    {
+    if(target_ptr_) {
         target_pos_ = target_ptr_->GetTranslate();
     }
 
@@ -25,9 +24,10 @@ void ComponentStateTargetWalk::Update()
     float3 dir{0, 0, 0};
 
     dir = target_pos_ - owner->GetTranslate();
+    dir.y = 0.0f;
 
     // 移動キーが押されているか?
-    if((float)length(dir) > 0.0f) {
+    if((float)length(dir) > 0.1f) {
         // 斜めが押されていることを考慮し、
         // その方向の移動スピードを1とし、スピードを掛け合わせる
         dir = normalize(dir);
@@ -86,7 +86,7 @@ bool ComponentStateTargetWalk::GetArrival()
     auto owner     = GetOwner();
     auto translate = owner->GetTranslate();
     auto vec       = target_pos_ - translate;
-    return fabsf(vec.x) < 1.0 && fabsf(vec.y) < 1.0 && fabsf(vec.z) < 1.0;
+    return fabsf(vec.x) < 0.1 && fabsf(vec.y) < 0.1 && fabsf(vec.z) < 0.1;
 }
 
 void ComponentStateTargetWalk::GUI()

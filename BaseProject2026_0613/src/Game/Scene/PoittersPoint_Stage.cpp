@@ -19,7 +19,7 @@
 #include <System/Component/ComponentSpringArm.h>
 #include <System/Component/ComponentObjectController.h>
 #include <Game/Component/StateMachine/ComponentPlayerState.h>
-#include<Game/Component/StateMachine/ComponentCPUState.h>
+#include <Game/Component/StateMachine/ComponentCPUState.h>
 
 namespace PoittersPoint {
 
@@ -116,20 +116,20 @@ bool PoittersPoint_Stage::Init()
     //for(int i = 0; i < MAX_ENEMIES; i++) {
     //    Scene::Object::Create<Enemy>();
     //}
-    CharacterData cpu_data("data/Game/Models/Enemy/Enemy.mv1",
-                             {
-                                 {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                                 {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                                 {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                                 {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                                 {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
-                                 {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+    CharacterData cpu_data("data/Game/Models/Player/Player.mv1",
+                           {
+                               {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                               {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                               {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                               {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                               {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                               {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
     },
-                             {0.11f, 0.11f, 0.11f},
-                             0.3f,
-                             1.0f,
-                             1.0f);
-    auto       cpu_character    = Scene::Object::Create<Character>();
+                           {0.11f, 0.11f, 0.11f},
+                           0.3f,
+                           1.0f,
+                           1.0f);
+    auto          cpu_character = Scene::Object::Create<Character>();
     cpu_character->SetCharacterStatus(cpu_data);
     cpu_character->AddComponent<ComponentCPUState>();
 

@@ -15,16 +15,16 @@ public:
 
     void Update() override;
 
-    ComponentStateTargetWalkPtr  SetTargetPos(const float3& position);
-    void          SetTargetPtr(const ObjectPtr ptr);
-    void          ResetTargetPtr();
-    const float3& GetTargetPos();
-    bool          GetArrival();
+    ComponentStateTargetWalkPtr SetTargetPos(const float3& position);
+    void                        SetTargetPtr(const ObjectPtr ptr);
+    void                        ResetTargetPtr();
+    const float3&               GetTargetPos();
+    bool                        GetArrival();
 
     void GUI() override;
 
 private:
-    float3 target_pos_;
+    float3    target_pos_;
     ObjectPtr target_ptr_;
 
     //--------------------------------------------------------------------
