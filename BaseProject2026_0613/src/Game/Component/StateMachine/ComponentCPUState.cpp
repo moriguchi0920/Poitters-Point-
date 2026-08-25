@@ -3,14 +3,14 @@
 #include <Game/Component/State/ComponentStateTargetWalk.h>
 #include <Game/Component/State/ComponentStateGrab.h>
 #include <Game/Component/State/ComponentStateThrow.h>
-#include<Game/Component/ComponentGrabbable.h>
+#include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Rock.h>
 #include <Game/Object/PoittersPoint_Character.h>
 
 void ComponentCPUState::Init()
 {
     __super::Init();
-    is_thinking_ = true;
+    is_thinking_                = true;
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
@@ -19,7 +19,7 @@ void ComponentCPUState::Init()
         owner->AddComponent<ComponentStateTargetWalk>()->SetTargetPos(owner->GetTranslate())->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     }
 
-    can_grab_ = true;
+    can_grab_   = true;
     can_throw_  = false;
     cur_action_ = CPU_ACTION::ACTION_DEFAULT;
 }
@@ -28,7 +28,7 @@ void ComponentCPUState::Update()
 {
     __super::Update();
 
-    auto owner = GetOwner();
+    auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
     // タイマーが未完成のため仮
@@ -38,6 +38,7 @@ void ComponentCPUState::Update()
         tmp_count_++;
         // 仮で三秒たったら行動を変更させる
         if(second * 3 < tmp_count_) {
+            int prev = cur_action_;
             while(true) {
                 // 行動をenum内からランダムにとる
                 int r = GetRand(CPU_ACTION::ACTION_NUM - 1);
@@ -49,12 +50,10 @@ void ComponentCPUState::Update()
                 if(cur_action_ == CPU_ACTION::ACTION_ATTACK && r == CPU_ACTION::ACTION_ATTACK) {
                     continue;
                 }
-                if (grabbing_object_ptr_.expired() && r == CPU_ACTION::ACTION_ATTACK)
-                {
+                if(grabbing_object_ptr_.expired() && r == CPU_ACTION::ACTION_ATTACK) {
                     continue;
                 }
-                if (r == CPU_ACTION::ACTION_DEFAULT)
-                {
+                if(r == CPU_ACTION::ACTION_DEFAULT) {
                     continue;
                 }
                 // 現在の行動を更新
@@ -84,10 +83,8 @@ void ComponentCPUState::Update()
                     // 岩オブジェクトを走査
                     for(auto& target : targets) {
                         // 距離を算出し比較、一番近い岩を目的地へ
-                        if (auto grabbable = target->GetComponent<ComponentGrabbable>())
-                        {
-                            if (grabbable->GetIsGrabbed())
-                            {
+                        if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+                            if(grabbable->GetIsGrabbed()) {
                                 continue;
                             }
                         }
@@ -113,6 +110,11 @@ void ComponentCPUState::Update()
                     if(owner->GetComponent<ComponentStateTargetWalk>()) {
                         // 何もしない
                     }
+                    else if (prev == CPU_ACTION::ACTION_GRAB)
+                    {
+                        // ステート変更
+                        ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
+                    }
                     else {
                         // ステート変更
                         ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
@@ -121,10 +123,10 @@ void ComponentCPUState::Update()
                     component_target_walk->ResetTargetPtr();
                     auto      characters       = Scene::Object::GetArray<PoittersPoint::Character>();
                     ObjectPtr nearest_ptr      = nullptr;
-                    ObjectPtr attacker_ptr      = nullptr;
+                    ObjectPtr attacker_ptr     = nullptr;
                     float     nearest_distance = FLT_MAX;
                     for(auto& character : characters) {
-                        if(character == owner->SharedThis())
+                        if(std::static_pointer_cast<Object>(character) == owner->SharedThis())
                             continue;
                         if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
                             float3 vec = character->GetTranslate() - owner->GetTranslate();
@@ -132,21 +134,18 @@ void ComponentCPUState::Update()
                             if(dis < nearest_distance) {
                                 nearest_distance = dis;
                                 nearest_ptr      = character;
-                                if (state_machine->GetGrabbing())
-                                {
+                                if(state_machine->GetGrabbing()) {
                                     attacker_ptr = character;
                                 }
                             }
                         }
                     }
-                    if (attacker_ptr == nullptr)
-                    {
+                    if(attacker_ptr == nullptr) {
                         attacker_ptr = nearest_ptr;
                     }
                     float3 move = normalize(owner->GetTranslate() - attacker_ptr->GetTranslate());
                     move.y      = 0.0f;
-                    component_target_walk->SetTargetPos(owner->GetTranslate() +
-                                                        move * escape_offset);
+                    component_target_walk->SetTargetPos(owner->GetTranslate() + move * escape_offset);
 
                     break;
                 }
@@ -161,9 +160,9 @@ void ComponentCPUState::Update()
                         ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
                     }
                     auto      component_target_walk = owner->GetComponent<ComponentStateTargetWalk>();
-                    auto      characters       = Scene::Object::GetArray<PoittersPoint::Character>();
-                    ObjectPtr nearest_ptr      = nullptr;
-                    float     nearest_distance = FLT_MAX;
+                    auto      characters            = Scene::Object::GetArray<PoittersPoint::Character>();
+                    ObjectPtr nearest_ptr           = nullptr;
+                    float     nearest_distance      = FLT_MAX;
                     for(auto& character : characters) {
                         if(character == owner->SharedThis())
                             continue;
@@ -184,21 +183,17 @@ void ComponentCPUState::Update()
 
             // 思考時間を終了
             is_thinking_ = false;
-            
 
             tmp_count_ = 0;
         }
     }
 
     // 行動ごとの更新
-    switch(cur_action_)
-    {
+    switch(cur_action_) {
     case CPU_ACTION::ACTION_GRAB:
         {
-            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>())
-            {
-                if(!grabbing_object_ptr_.expired())
-                {
+            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>()) {
+                if(!grabbing_object_ptr_.expired()) {
                     // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
                     auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
                     // コンポーネントがあったら
@@ -210,18 +205,14 @@ void ComponentCPUState::Update()
                             can_grab_ = false;
                             grabbable->SetCanGrab(false);
                         }
-                        else
-                        {
+                        else {
                             is_thinking_ = true;
-                  
                         }
                     }
                 }
             }
-            if (auto component_grab = owner->GetComponent<ComponentStateGrab>())
-            {
-                if(component_grab->GetIsFinished() && can_throw_ == false)
-                {
+            if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
+                if(component_grab->GetIsFinished() && can_throw_ == false) {
                     // 掴みオブジェクトがある時
                     if(!grabbing_object_ptr_.expired()) {
                         auto object = grabbing_object_ptr_.lock();
@@ -232,11 +223,14 @@ void ComponentCPUState::Update()
 
                         auto grabbable = object->GetComponent<ComponentGrabbable>();
                         grabbable->SetIsGrabbed(true);
+                        if(character_casted_owner) {
+                            ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
+                        }
 
                         grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
                     }
                     can_throw_ = true;
-                
+
                     is_thinking_ = true;
                 }
             }
@@ -244,10 +238,8 @@ void ComponentCPUState::Update()
         }
     case CPU_ACTION::ACTION_AVOID_ATTACKER:
         {
-            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>())
-            {
-                if(component_target_walk->GetArrival())
-                {
+            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>()) {
+                if(component_target_walk->GetArrival()) {
                     is_thinking_ = true;
                 }
             }
@@ -270,7 +262,6 @@ void ComponentCPUState::Update()
         }
     }
 }
-
 
 void ComponentCPUState::GUI()
 {
