@@ -31,6 +31,8 @@ public:
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
 private:
+    bool  is_rolling_ = false;    //!< 着地して転がり中かどうか
+    float roll_speed_ = 0.0f;     //!< 転がるスピード（回転速度）
 };
 
 }    // namespace PoittersPoint
