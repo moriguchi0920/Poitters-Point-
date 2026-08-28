@@ -9,6 +9,7 @@
 #include "Game/Object/PoittersPoint_Camera.h"
 #include "Game/Object/PoittersPoint_Enemy.h"
 #include "Game/Object/PoittersPoint_Rock.h"
+#include "Game/Object/PoittersPoint_Log.h"
 
 #include <System/Scene.h>
 #include <System/Component/Component.h>
@@ -102,6 +103,7 @@ bool PoittersPoint_Stage::Init()
     //}
 
     Scene::Object::Create<Rock>();
+    Scene::Object::Create<Log>();
 
     return true;
 }
