@@ -6,7 +6,7 @@
 #include "PoittersPoint_Title.h"
 // 自作系
 #include "PoittersPoint_Stage.h"
-// システム
+// システム系
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <System/Component/ComponentModel.h>
