@@ -1,4 +1,8 @@
 ﻿#pragma once
+//---------------------------------------------------------------------------
+//! @file   ComponentPlayerState.cpp
+//! @brief  プレイヤー状態制御コンポーネント
+//---------------------------------------------------------------------------
 #include <Game/Component/ComponentPlayerState.h>
 #include "ComponentStateIdleWalk.h"
 #include "ComponentStateGrab.h"
@@ -6,6 +10,9 @@
 #include "ComponentGrabbable.h"
 #include "ComponentHitPoints.h"
 
+//===========================================================================
+// 初期化処理
+//===========================================================================
 void ComponentPlayerState::Init()
 {
     __super::Init();
@@ -13,8 +20,10 @@ void ComponentPlayerState::Init()
     auto owner = GetOwner();
 
     // オブジェクトの制御を行うコンポーネントを追加
-    owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
+    owner->AddComponent<ComponentStateIdleWalk>();
 
+    // オブジェクトの体力を管理するコンポーネントを追加
+    owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
     can_grab_ = true;
 }
@@ -62,30 +71,45 @@ void ComponentPlayerState::Update()
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
     }
 
+    // 掴みアニメーションが終了したら、掴み状態を完了させる
     if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
         if(component_grab->GetFinished()) {
             if(!grabbing_object_ptr_.expired()) {
                 auto object = grabbing_object_ptr_.lock();
 
+                // 掴んでいる間は当たり判定を無効化
                 if(auto collider = object->GetComponent<ComponentCollision>()) {
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
                 }
 
+                // 掴み状態に設定
                 auto grabbable = object->GetComponent<ComponentGrabbable>();
                 grabbable->SetIsGrabbed(true);
 
+                // ヒット記録をクリア
+                grabbable->ClearHitTargets();
+
+                // 手にモデルをアタッチ
                 grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
             }
+
+            // 掴み状態が完了したら、投げ可能にする
             can_throw_ = true;
             ChangeState<ComponentStateIdleWalk>()->SetIsHolding(true);
         }
     }
 }
 
+//===========================================================================
+// 更新後処理
+//===========================================================================
 void ComponentPlayerState::LateUpdate()
 {
 }
 
+//===========================================================================
+// GUI処理
+//===========================================================================
 void ComponentPlayerState::GUI()
 {
     __super::GUI();
@@ -114,6 +138,9 @@ void ComponentPlayerState::GUI()
     ImGui::End();
 }
 
+//===========================================================================
+// 掴める物を検知した時の判定処理
+//===========================================================================
 void ComponentPlayerState::GrabbableHit(ObjectPtr target)
 {
     auto owner = GetOwner();

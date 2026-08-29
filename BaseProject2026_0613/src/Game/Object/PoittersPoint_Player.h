@@ -19,10 +19,16 @@ public:
     //! @return 初期化終了
     bool Init() override;
 
+    //! @brief 更新
+    //! 視界内の掴み可能対象を検知する
     void Update() override;
 
+    //! @brief 当たり判定のコールバック
+    //! 投げられた物体が移動中に当たった場合、ダメージを与える
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
+    //! @brief 視界判定
+    //! 正面45度・距離50以内の掴み可能対象を検知する
     void OnEyeSight();
 
 private:
