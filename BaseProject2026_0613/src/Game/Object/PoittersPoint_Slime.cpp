@@ -1,88 +1,89 @@
-﻿//---------------------------------------------------------------------------
-//! @file   PoittersPoint_Slime.cpp
-//! @brief  PoittersPoint_Slime
-//---------------------------------------------------------------------------
-#include "PoittersPoint_Slime.h"
+﻿#include "PoittersPoint_Slime.h"
+
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 #include <System/Scene.h>
+
 #include <System/Component/ComponentModel.h>
+
+#include <System/Component/ComponentCollisionSphere.h>
+
 #include "Game/Component/ComponentGrabbable.h"
 
 namespace PoittersPoint {
-// namespace PoittersPoint
 
 bool Slime::Init()
-{
-    // 親(継承元の基底クラス)のInit関数を呼ぶ
-    // これがなければabort()が呼ばれる
-    Super::Init();
-    //__super::Init();
 
-    SetTranslate({10, 10, 10});
+{
+    if(!Super::Init())
+
+        return false;
 
     SetName("Slime");
-    AddComponent<ComponentModel>("data/Game/Models/model.obj");
 
-    auto col = AddComponent<ComponentCollisionSphere>();
+    // 1. スケールは一旦 1.0f で標準化（極小化によるコリジョン不具合を防ぐ）
 
-    col->SetRadius(5.0f)->UseGravity(true);
-    col->SetGravity(-0.2f);
-    col->SetCollisionGroup(ComponentCollision::CollisionGroup::ETC);
-    col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                              (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-    col->SetMass(500.0f);
+    SetScaleAxisXYZ({0.2f, 0.2f, 0.2f});
 
+    SetTranslate({0.0f, 6.0f, 12.0f});
+
+    // 2. 3Dモデルの設定
+
+    auto model = AddComponent<ComponentModel>("data/Game/Models/Slime/Slime.mv1");
+
+    // 3. 当たり判定（球体）の設定
+    ComponentCollisionSphere* col = AddComponent<ComponentCollisionSphere>().get();
+    if(col) {
+        col->SetRadius(5.0f);
+        col->UseGravity(true);
+        col->SetGravity(-0.2f);
+        col->SetCollisionGroup(ComponentCollision::CollisionGroup::ETC);
+        // ★ GROUNDだけでなくETCなども含めて衝突を受け取れるように調整
+        col->SetHitCollisionGroup(static_cast<u32>(ComponentCollision::CollisionGroup::GROUND) | static_cast<u32>(ComponentCollision::CollisionGroup::PLAYER) |
+                                  static_cast<u32>(ComponentCollision::CollisionGroup::ETC) | static_cast<u32>(ComponentCollision::CollisionGroup::WEAPON));
+        col->SetMass(5.0f);
+    }
+
+    // 4. 持ち上げ機能（Grabbable）
     auto grabbable = AddComponent<ComponentGrabbable>();
-    grabbable->SetBounceOffset(0.2f);
-    grabbable->SetLiftTime(1.0f);
-
-    //AddComponent<ComponentCollisionModel>();
-    //if(auto collision = GetComponent<ComponentCollisionModel>()) {
-    //    collision->AttachToModel();    // コリジョンをモデルに合わせる
-    //}
-
-    SetScaleAxisXYZ({1.0f});
+    if(grabbable) {
+        grabbable->SetBounceOffset(0.2f);
+        grabbable->SetLiftTime(1.0f);
+        grabbable->SetCanGrab(true);    // ★ 初期化時 true
+    }
 
     return true;
 }
 
 void Slime::Update()
+
 {
-    __super::Update();
+    Super::Update();
 }
 
 void Slime::GUI()
+
 {
-    __super::GUI();
+    Super::GUI();
 }
 
 void Slime::OnHit(const ComponentCollision::HitInfo& hit_info)
+
 {
-    /*
-    // 当たった相手の名前がEnemyだったら消去する
-    auto name = hit_info.hit_collision_->GetOwner()->GetNameDefault();
-    if(name == "Enemy") {
-        hit_info.collision_->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
-        // 自分を削除する
-        Scene::Object::Release(SharedThis());
-    }
-    */
-    if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
+    if(hit_info.hit_collision_ && hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
         if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-            float3 translation = grabbable->GetTranslation();
             grabbable->SetCanGrab(true);
 
             if(grabbable->IsGrounded()) {
                 grabbable->SetBounceOffset(0.2f);
             }
+
             else if(grabbable->IsMoving()) {
                 grabbable->Bounce();
             }
         }
     }
 
-    // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
     Super::OnHit(hit_info);
 }
 
