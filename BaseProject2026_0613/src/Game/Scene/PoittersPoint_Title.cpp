@@ -12,7 +12,6 @@
 #include <System/Component/ComponentModel.h>
 #include <System/Component/ComponentCollisionModel.h>
 
-
 namespace PoittersPoint {
 //! @brief 初期化
 //! @return 初期化済み
