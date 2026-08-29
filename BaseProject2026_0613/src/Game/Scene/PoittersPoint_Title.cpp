@@ -1,4 +1,4 @@
-﻿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Title.cpp
 //! @brief  自作チュートリアルシーンXのタイトル
 //---------------------------------------------------------------------------
@@ -6,6 +6,9 @@
 #include "PoittersPoint_Title.h"
 // 自作系
 #include "PoittersPoint_Stage.h"
+#include "PoittersPoint_CharacterSelect.h"
+
+// システム
 // システム系
 #include <System/Scene.h>
 #include <System/Component/Component.h>
@@ -27,13 +30,6 @@ bool PoittersPoint_Title::Init()
 
     // 地面生成
     {
-        auto ground = Scene::Object::Create<Object>("Ground");
-        ground->AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
-        ground
-            ->AddComponent<ComponentCollisionModel>()
-            // 所属するグループを「GROUND」とします
-            ->SetCollisionGroup(ComponentCollision::CollisionGroup::GROUND)
-            ->AttachToModel();    // コリジョンをモデルに合わせる
     }
 
     return true;
@@ -42,7 +38,7 @@ bool PoittersPoint_Title::Init()
 void PoittersPoint_Title::Update()
 {
     if(Input::IsKeyDown(KEY_INPUT_SPACE))
-        Scene::Change(Scene::GetScene<PoittersPoint_Stage>());
+        Scene::Change(Scene::GetScene<PoittersPoint_CharacterSelect>());
 }
 
 void PoittersPoint_Title::LateDraw()
