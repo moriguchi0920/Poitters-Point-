@@ -9,7 +9,7 @@
 #include <System/Component/ComponentModel.h>
 #include "Game/Component/ComponentGrabbable.h"
 
-#include <System/Component/ComponentCollisionCapsule.h>    // ★これを追加
+#include <System/Component/ComponentCollisionCapsule.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -25,6 +25,17 @@ bool Log::Init()
 
     SetName("Log");
     auto model = AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
+    if(model) {
+        // 丸太だけに限定してカラー（ディフューズ色）を設定する
+        // ※お使いの ComponentModel に用意されている設定関数を呼び出します
+
+        // パターンA: モデルの色を指定できる関数がある場合
+        // model->SetColor({ 0.5f, 0.3f, 0.1f, 1.0f }); // 茶色
+
+        // パターンB: マテリアルを取得して設定する場合
+        // auto material = model->GetMaterial(0);
+        // if(material) material->SetDiffuse({ 0.5f, 0.3f, 0.1f, 1.0f });
+    }
 
     // 左
     auto col1 = AddComponent<ComponentCollisionCapsule>();
@@ -33,7 +44,7 @@ bool Log::Init()
         col1->SetHeight(5.0f);
         col1->SetTranslate({-8.5f, 2.0f, 0.0f});
 
-        col1->UseGravity(false);
+        col1->UseGravity(true);
         col1->SetGravity(-0.2f);
         col1->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
         col1->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
@@ -48,7 +59,7 @@ bool Log::Init()
         col2->SetHeight(5.0f);
         col2->SetTranslate({0.0f, 3.0f, 0.0f});
 
-        col2->UseGravity(false);
+        col2->UseGravity(true);
         col2->SetGravity(-0.2f);
         col2->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
         col2->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
@@ -64,7 +75,7 @@ bool Log::Init()
         col3->SetHeight(5.0f);
         col3->SetTranslate({8.5f, 3.0f, 0.0f});
 
-        col3->UseGravity(false);
+        col3->UseGravity(true);
         col3->SetGravity(-0.2f);
         col3->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
         col3->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
@@ -139,22 +150,22 @@ void Log::Update()
     //    }
     //}
 
-    // 転がっている間
-    if(is_rolling_) {
-        // 丸太を回転させる
-        float3 rot  = GetRotationAxisXYZ();
-        rot.x      += roll_speed_;
-        SetRotationAxisXYZ(rot);
+    //// 転がっている間
+    //if(is_rolling_) {
+    //    // 丸太を回転させる
+    //    float3 rot  = GetRotationAxisXYZ();
+    //    rot.x      += roll_speed_;
+    //    SetRotationAxisXYZ(rot);
 
-        // 徐々に減速
-        roll_speed_ *= 0.98f;
+    //    // 徐々に減速
+    //    roll_speed_ *= 0.98f;
 
-        // 十分遅くなったら停止
-        if(std::abs(roll_speed_) < 0.01f) {
-            roll_speed_ = 0.0f;
-            is_rolling_ = false;
-        }
-    }
+    //    // 十分遅くなったら停止
+    //    if(std::abs(roll_speed_) < 0.01f) {
+    //        roll_speed_ = 0.0f;
+    //        is_rolling_ = false;
+    //    }
+    //}
 
     // 地面に固定されている時は跳ねを抑える
     if(auto grabbable = GetComponent<ComponentGrabbable>()) {
@@ -188,41 +199,40 @@ void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
     }
     */
 
+    if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
+        if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+            grabbable->SetCanGrab(true);
+
+            // 座標判定を行わず、着地状態だけチェック
+            if(grabbable->IsGrounded()) {
+                grabbable->SetBounceOffset(0.0f);
+            }
+            else if(grabbable->IsMoving()) {
+                grabbable->Bounce();
+            }
+        }
+    }
 
     //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
     //    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
     //        grabbable->SetCanGrab(true);
 
-    //        // 座標判定を行わず、着地状態だけチェック
-    //        if(grabbable->IsGrounded()) {
+    //        if(grabbable->IsMoving()) {
+    //            // 地面に着いたら丸太を水平にする
+    //            float3 rot = GetRotationAxisXYZ();
+    //            rot.x      = 0.0f;
+    //            rot.z      = 0.0f;
+    //            SetRotationAxisXYZ(rot);
+
+    //            //// 転がり開始
+    //            ////is_rolling_ = true;
+    //            ////roll_speed_ = 0.2f;
+
+    //            // 跳ねさせない
     //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    //        else if(grabbable->IsMoving()) {
-    //            grabbable->Bounce();
     //        }
     //    }
     //}
-
-if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-        if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-            grabbable->SetCanGrab(true);
-
-            if(grabbable->IsMoving()) {
-                // 地面に着いたら丸太を水平にする
-                float3 rot = GetRotationAxisXYZ();
-                rot.x      = 0.0f;
-                rot.z      = 0.0f;
-                SetRotationAxisXYZ(rot);
-
-                // 転がり開始
-                is_rolling_ = true;
-                roll_speed_ = 0.2f;
-
-                // 跳ねさせない
-                grabbable->SetBounceOffset(0.0f);
-            }
-        }
-    }
 
     //// 地面に当たった時の処理
     //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
@@ -244,7 +254,6 @@ if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::Collision
     //            grabbable->SetBounceOffset(0.0f);
     //        }
     // }
-
 
     // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
     Super::OnHit(hit_info);
