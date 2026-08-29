@@ -58,8 +58,13 @@ void ComponentStateThrow::Update()
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
                 }
 
+                // 投げ主を記録（自分自身への初期ダメージをスキップするため）
+                if(auto grabbable = throw_object->GetComponent<ComponentGrabbable>()) {
+                    grabbable->SetThrower(GetOwnerPtr());
+                }
+
                 throw_weak_ptr_.reset();
-                ChangeState<ComponentStateIdleWalk>();
+                //ChangeState<ComponentStateIdleWalk>();
             }
 
             /*
