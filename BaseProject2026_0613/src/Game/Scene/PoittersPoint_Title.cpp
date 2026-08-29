@@ -1,4 +1,4 @@
-﻿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Title.cpp
 //! @brief  自作チュートリアルシーンXのタイトル
 //---------------------------------------------------------------------------
@@ -9,6 +9,7 @@
 #include "PoittersPoint_CharacterSelect.h"
 
 // システム
+// システム系
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <System/Component/ComponentModel.h>
