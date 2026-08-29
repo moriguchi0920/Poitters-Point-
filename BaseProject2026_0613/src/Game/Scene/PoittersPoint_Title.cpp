@@ -47,11 +47,19 @@ void PoittersPoint_Title::Update()
 
 void PoittersPoint_Title::LateDraw()
 {
+    DrawBoxAA(0, 0, WINDOW_W, WINDOW_H, GetColor(245, 240, 230), TRUE);
+    DrawBoxAA(0, 150, WINDOW_W, 450, GetColor(240, 240, 200), TRUE);
+
     float ADJUST_X = (WINDOW_W / 1280.0f);
     float ADJUST_Y = (WINDOW_H / 720.0f);
 
     SetFontSize(static_cast<int>(title_size_ * ADJUST_X));
-    DrawFormatString(static_cast<int>(title_x_ * ADJUST_X), static_cast<int>(title_y_ * ADJUST_Y), GetColor(255, 255, 255), "Title");
+    DrawFormatString(static_cast<int>(title_x_ * ADJUST_X), static_cast<int>(title_y_ * ADJUST_Y), GetColor(255, 20, 80), "タイトル名");
+
+    unsigned int button_color = ((GetNowCount() / 150) % 2 == 0) ? GetColor(150, 255, 150)     // 緑
+                                                                 : GetColor(255, 255, 140);    // 黄
+    SetFontSize(static_cast<int>(button_size_ * ADJUST_X));
+    DrawFormatString(static_cast<int>(button_x_ * ADJUST_X), static_cast<int>(button_y_ * ADJUST_Y), button_color, "PRESS START!!");
 }
 
 void PoittersPoint_Title::GUI()
