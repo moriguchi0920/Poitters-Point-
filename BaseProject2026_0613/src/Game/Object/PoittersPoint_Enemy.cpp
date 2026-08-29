@@ -10,12 +10,14 @@
 #include <System/Component/ComponentModel.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Component/ComponentHitPoints.h>
+#include <Game/Component/ComponentStateDead.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
 
-//! @brief 初期化
-//! @return 初期化終了
+//============================================================================
+// 初期化処理
+//============================================================================
 bool Enemy::Init()
 {
     // 親(継承元の基底クラス)のInit関数を呼ぶ
@@ -61,13 +63,19 @@ bool Enemy::Init()
     //    ctl->SetRotateSpeed(20.0f);
     //}
 
-    AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
+    // 掴まれて投げられるようにする
+    auto grabbable = AddComponent<ComponentGrabbable>();
+    grabbable->SetLiftTime(0.5f);
+    grabbable->SetDamage(1.0f);
 
     AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(2.0f);
 
     return true;
 }
 
+//============================================================================
+// 更新処理
+//============================================================================
 void Enemy::Update()
 {
     __super::Update();
@@ -130,68 +138,75 @@ void Enemy::Update()
         */
     }
 
+    // 死亡アニメーション終了時にis_deadをtrueにする
+    // 死亡処理自体はComponentStateDeadで行う
     if(!is_dead) {
         if(auto model = GetComponent<ComponentModel>()) {
             if(!model->IsPlaying()) {
                 is_dead = true;
-                SetName("deadEnemy");
             }
         }
     }
 }
 
+//============================================================================
+// 当たり判定のコールバック
+//============================================================================
 void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    // 当たった相手の名前がBulletだったら消去する
-    auto name = hit_info.hit_collision_->GetOwner()->GetNameDefault();
+    auto hitter = hit_info.hit_collision_->GetOwner();
 
-    if(name == "Rock") {
-        // 自分を削除する
-        //Scene::Object::Release(SharedThis());
-
-        // どのシーンでもエネミーは存在できるし
-        // Xのシーンなら死亡数のカウントができる
-
-        // 今のシーンを取得
-        auto now_scene = Scene::GetCurrentScene();
-        // sharedポインタのdynamic_cast
-        // 間違っている場合nullptrが返ってくるため処理が行われない
-        if(auto scene = dynamic_cast<PoittersPoint_Stage*>(now_scene)) {
-            
-            if (auto hp = GetComponent<ComponentHitPoints>())
-            {
-                hp->TakeDamage(1.0f);
-
-                if(hp->GetHitPoints() <= 0.0f)
-                {
-                    is_down = true;
-
-                    if(auto model = GetComponent<ComponentModel>()) {
-                        model->PlayAnimationNoSame("dead", false, 0.1f);
-                    }
-
-                    if(auto col = GetComponent<ComponentCollisionCapsule>()) {
-                        RemoveComponent<ComponentCollisionCapsule>();
-                    }
-                }
-            }
-
-           
-            /*
-            // 当たり判定を無効化する
-            if(auto col = GetComponent<ComponentCollisionCapsule>()) {
-                col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                          (u32)ComponentCollision::CollisionGroup::PLAYER);
-            }
-            */
+    // ヒットした相手が掴めるものなら
+    if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
+        // 投げた本人自身の場合はダメージなし
+        if(grabbable->IsThrower(SharedThis())) {
+            Super::OnHit(hit_info);
+            return;
         }
 
-        // 弾も削除する
-        //Scene::Object::Release(hit_info.hit_collision_->GetOwnerPtr());
+        // 地面で停止中はダメージなし
+        if(!grabbable->IsMoving()) {
+            Super::OnHit(hit_info);
+            return;
+        }
+
+        // 連続ヒット防止のために既にこの敵をHit済みならスルー
+        if(grabbable->IsAlreadyHit(SharedThis())) {
+            Super::OnHit(hit_info);
+            return;
+        }
+
+        // 初Hitなら記録してダメージ処理へ
+        grabbable->AddHitTarget(SharedThis());
+    }
+    else {
+        // 弾などgrabbable以外は今まで通りのHit処理を行う
+        Super::OnHit(hit_info);
+        return;
     }
 
-    if(name == "Player") {
-        //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
+    // 今のシーンを取得
+    auto now_scene = Scene::GetCurrentScene();
+    // sharedポインタのdynamic_cast
+    // 間違っている場合nullptrが返ってくるため処理が行われない
+    if(auto scene = dynamic_cast<PoittersPoint_Stage*>(now_scene)) {
+        if(auto hp = GetComponent<ComponentHitPoints>()) {
+            // 投げれる物ごとダメージを与える
+            hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
+
+            if(hp->GetHitPoints() <= 0.0f) {
+                is_down = true;
+
+                // 死亡状態へ
+                if(auto model = GetComponent<ComponentModel>()) {
+                    AddComponent<ComponentStateDead>();
+                }
+
+                if(auto col = GetComponent<ComponentCollisionCapsule>()) {
+                    RemoveComponent<ComponentCollisionCapsule>();
+                }
+            }
+        }
     }
 
     // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。

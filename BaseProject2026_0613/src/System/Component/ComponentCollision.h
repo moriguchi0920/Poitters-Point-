@@ -121,6 +121,9 @@ public:
         ITEM   = 5,
         CAMERA = 6,
         ETC    = 7,
+        LOG    = 8,
+
+
 #if 0
 		WALL2	= 8,
 		GROUND2	= 9,
@@ -130,6 +133,8 @@ public:
 		ITEM2	= 13,
 		CAMERA2 = 14,
 		ETC2	= 15,
+        LOG2	= 16,
+
 #endif
     };
 
@@ -143,6 +148,8 @@ public:
         ITEM   = 1 << static_cast<u32>(CollisionGroupBit::ITEM),
         CAMERA = 1 << static_cast<u32>(CollisionGroupBit::CAMERA),
         ETC    = 1 << static_cast<u32>(CollisionGroupBit::ETC),
+        LOG    = 1 << static_cast<u32>(CollisionGroupBit::LOG),
+
 #if 0
 		WALL2   = 1 << static_cast<u32>( CollisionGroupBit::WALL2 ),
 		GROUND2 = 1 << static_cast<u32>( CollisionGroupBit::GROUND2 ),
@@ -152,6 +159,7 @@ public:
 		ITEM2   = 1 << static_cast<u32>( CollisionGroupBit::ITEM2 ),
 		CAMERA2 = 1 << static_cast<u32>( CollisionGroupBit::CAMERA2 ),
 		ETC2	= 1 << static_cast<u32>( CollisionGroupBit::ETC2 ),
+        LOG2	= 1 << static_cast<u32>( CollisionGroupBit::LOG2 ),
 #endif
     };
 
