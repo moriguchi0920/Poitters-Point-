@@ -110,8 +110,7 @@ void ComponentCPUState::Update()
                     if(owner->GetComponent<ComponentStateTargetWalk>()) {
                         // 何もしない
                     }
-                    else if (prev == CPU_ACTION::ACTION_GRAB)
-                    {
+                    else if(prev == CPU_ACTION::ACTION_GRAB) {
                         // ステート変更
                         ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
                     }

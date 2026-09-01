@@ -23,7 +23,7 @@ void ComponentStateTargetWalk::Update()
     // 移動方向
     float3 dir{0, 0, 0};
 
-    dir = target_pos_ - owner->GetTranslate();
+    dir   = target_pos_ - owner->GetTranslate();
     dir.y = 0.0f;
 
     // 移動キーが押されているか?
