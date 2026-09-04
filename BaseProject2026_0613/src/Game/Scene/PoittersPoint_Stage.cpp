@@ -13,7 +13,6 @@
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
 
-
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <System/Component/ComponentModel.h>
@@ -129,9 +128,8 @@ void PoittersPoint_Stage::Update()
 
     printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
 
-    printfDx("\n TIME : %.2f",PoittersPoint_Timer::GetTimer());
-    
-    
+    printfDx("\n TIME : %.2f", PoittersPoint_Timer::GetTimer());
+
     {
         // Enemyという名前がついたObjectをVectorで複数取得
         auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
@@ -176,8 +174,6 @@ void PoittersPoint_Stage::GUI()
 
     ImGui::InputInt("(Test)Counter2", &counter2);
     ImGui::InputInt("(Test)Counter3", &counter3);
-
-   
 }
 
 void PoittersPoint_Stage::AddDeadEnemy()
