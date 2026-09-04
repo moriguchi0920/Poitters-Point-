@@ -6,17 +6,22 @@
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Rock.h>
 #include <Game/Object/PoittersPoint_Character.h>
+#include<Game/Component/State/ComponentStateSetRangeWalk.h>
 
 void ComponentCPUState::Init()
 {
     __super::Init();
     is_thinking_                = true;
+    time_count_                 = 0.0f;
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
     // オブジェクトの制御を行うコンポーネントを追加
     if(character_casted_owner) {
-        owner->AddComponent<ComponentStateTargetWalk>()->SetTargetPos(owner->GetTranslate())->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+        auto component_range_walk =  owner->AddComponent<ComponentStateSetRangeWalk>();
+        component_range_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+        component_range_walk->SetWalkDirection({0.0f, 0.0f, 0.0f});
+        component_range_walk->SetWalkDistance(0.0f);
     }
 
     can_grab_   = true;
@@ -31,17 +36,17 @@ void ComponentCPUState::Update()
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
-    // タイマーが未完成のため仮
+
     // 思考時間中の処理
     if(is_thinking_) {
         // 思考時間をカウントアップ
-        tmp_count_++;
+        time_count_ += GetDeltaTime();
         // 仮で三秒たったら行動を変更させる
-        if(second * 3 < tmp_count_) {
+        if(1.0f < time_count_) {
             int prev = cur_action_;
             while(true) {
                 // 行動をenum内からランダムにとる
-                int r = GetRand(CPU_ACTION::ACTION_NUM - 1);
+                int r = 1 + GetRand(CPU_ACTION::ACTION_NUM - 2);
                 // 二連続で掴みに入らないように弾く
                 if(cur_action_ == CPU_ACTION::ACTION_GRAB && r == CPU_ACTION::ACTION_GRAB) {
                     continue;
@@ -106,20 +111,22 @@ void ComponentCPUState::Update()
                 }
             case CPU_ACTION::ACTION_AVOID_ATTACKER:
                 {
-                    // すでにComponentStateTargetWalkがある場合(前回が回避だった場合想定)
-                    if(owner->GetComponent<ComponentStateTargetWalk>()) {
-                        // 何もしない
+                    if (owner->GetComponent<ComponentStateSetRangeWalk>())
+                    {
+
                     }
-                    else if(prev == CPU_ACTION::ACTION_GRAB) {
-                        // ステート変更
-                        ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
+                    else
+                    {
+                        if(prev == CPU_ACTION::ACTION_GRAB) {
+                            // ステート変更
+                            ChangeState<ComponentStateSetRangeWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
+                        }
+                        else {
+                            // ステート変更
+                            ChangeState<ComponentStateSetRangeWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+                        }
                     }
-                    else {
-                        // ステート変更
-                        ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
-                    }
-                    auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>();
-                    component_target_walk->ResetTargetPtr();
+
                     auto      characters       = Scene::Object::GetArray<PoittersPoint::Character>();
                     ObjectPtr nearest_ptr      = nullptr;
                     ObjectPtr attacker_ptr     = nullptr;
@@ -144,19 +151,21 @@ void ComponentCPUState::Update()
                     }
                     float3 move = normalize(owner->GetTranslate() - attacker_ptr->GetTranslate());
                     move.y      = 0.0f;
-                    component_target_walk->SetTargetPos(owner->GetTranslate() + move * escape_offset);
+                    auto component_range_walk = owner->GetComponent<ComponentStateSetRangeWalk>();
+                    component_range_walk->SetWalkDirection(move);
+                    component_range_walk->SetWalkDistance(escape_offset_);
 
                     break;
                 }
             case CPU_ACTION::ACTION_ATTACK:
                 {
-                    // すでにComponentStateTargetWalkがある場合(前回が回避だった場合想定)
+                    // すでにComponentStateTargetWalkがある場合
                     if(owner->GetComponent<ComponentStateTargetWalk>()) {
                         // 何もしない
                     }
                     else {
                         // ステート変更
-                        ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+                        ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
                     }
                     auto      component_target_walk = owner->GetComponent<ComponentStateTargetWalk>();
                     auto      characters            = Scene::Object::GetArray<PoittersPoint::Character>();
@@ -183,7 +192,7 @@ void ComponentCPUState::Update()
             // 思考時間を終了
             is_thinking_ = false;
 
-            tmp_count_ = 0;
+            time_count_ = 0.0f;
         }
     }
 
@@ -191,7 +200,7 @@ void ComponentCPUState::Update()
     switch(cur_action_) {
     case CPU_ACTION::ACTION_GRAB:
         {
-            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>()) {
+            if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
                 if(!grabbing_object_ptr_.expired()) {
                     // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
                     auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
@@ -222,9 +231,6 @@ void ComponentCPUState::Update()
 
                         auto grabbable = object->GetComponent<ComponentGrabbable>();
                         grabbable->SetIsGrabbed(true);
-                        if(character_casted_owner) {
-                            ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
-                        }
 
                         grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
                     }
@@ -237,8 +243,8 @@ void ComponentCPUState::Update()
         }
     case CPU_ACTION::ACTION_AVOID_ATTACKER:
         {
-            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>()) {
-                if(component_target_walk->GetArrival()) {
+            if(auto component_set_range_walk = owner->GetComponent<ComponentStateSetRangeWalk>()) {
+                if(component_set_range_walk->GetArrival() || component_set_range_walk->GetStopped()) {
                     is_thinking_ = true;
                 }
             }
@@ -247,8 +253,8 @@ void ComponentCPUState::Update()
     case CPU_ACTION::ACTION_ATTACK:
         {
             if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>()) {
-                if(component_target_walk->GetArrival() && can_throw_) {
-                    ChangeState<ComponentStateThrow>();
+                if((component_target_walk->GetArrival() || component_target_walk->GetStopped()) && can_throw_) {
+                    ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
                     can_throw_ = false;
                 }
             }

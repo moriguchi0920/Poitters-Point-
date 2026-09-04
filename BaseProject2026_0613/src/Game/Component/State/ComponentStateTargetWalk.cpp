@@ -49,6 +49,7 @@ void ComponentStateTargetWalk::Update()
         }
     }
     else {
+        stopping_time_ += GetDeltaTime();
         if(auto mdl = owner->GetComponent<ComponentModel>()) {
             if(is_holding_) {
                 mdl->PlayAnimationNoSame("grab idle", true);
@@ -124,6 +125,11 @@ void ComponentStateTargetWalk::GUI()
         }
     }
     ImGui::End();
+}
+
+bool ComponentStateTargetWalk::GetStopped()
+{
+    return stop_judge_time_ < stopping_time_;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)
