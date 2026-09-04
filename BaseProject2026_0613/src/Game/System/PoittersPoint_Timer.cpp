@@ -4,10 +4,9 @@
 //---------------------------------------------------------------------------
 // システム
 #include "PoittersPoint_Timer.h"
-#include<algorithm>
+#include <algorithm>
 
 namespace PoittersPoint {
-
 
 float PoittersPoint_Timer::time_ = 0.0f;
 // 制限時間の上限(2分)
@@ -21,8 +20,8 @@ bool PoittersPoint_Timer::Init()
 {
     // 最初に1回動作する
     // ただし trueを返さなければ Initに何回も来る仕様。
-    time_ = 0.0f;
-    time_ = max_time_;    // 制限時間の初期化
+    time_      = 0.0f;
+    time_      = max_time_;    // 制限時間の初期化
     is_paused_ = false;
 
     return true;
