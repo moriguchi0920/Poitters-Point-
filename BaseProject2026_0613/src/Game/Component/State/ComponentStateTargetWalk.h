@@ -22,11 +22,14 @@ public:
     bool                        GetArrival();
 
     void GUI() override;
+    bool GetStopped();
 
 private:
     float3    target_pos_;
     ObjectPtr target_ptr_;
 
+    float       stopping_time_;
+    const float stop_judge_time_ = 0.5f;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
