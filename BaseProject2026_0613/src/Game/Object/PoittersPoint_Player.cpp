@@ -12,7 +12,6 @@
 #include <System/Component/ComponentObjectController.h>
 #include "Game/Component/ComponentHitPoints.h"
 
-
 namespace PoittersPoint {
 
 bool Player::Init()
@@ -125,24 +124,24 @@ void Player::OnEyeSight()
         if(obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
 
-        float3 targetPos = obj->GetTranslate();
-        float3 targetVec = targetPos - playerPos;
+            float3 targetPos = obj->GetTranslate();
+            float3 targetVec = targetPos - playerPos;
 
-        float distance = sqrtf(targetVec.x * targetVec.x + targetVec.z * targetVec.z);
+            float distance = sqrtf(targetVec.x * targetVec.x + targetVec.z * targetVec.z);
 
-        if(distance <= 100.0f && distance < shortest) {
-            if(grabbable->GetCanGrab()) {
-                shortest   = distance;
-                target_obj = obj;
+            if(distance <= 100.0f && distance < shortest) {
+                if(grabbable->GetCanGrab()) {
+                    shortest   = distance;
+                    target_obj = obj;
+                }
+            }
+        }
+
+        if(target_obj) {
+            if(auto player_state = GetComponent<ComponentPlayerState>()) {
+                player_state->GrabbableHit(target_obj);
             }
         }
     }
-
-    if(target_obj) {
-        if(auto player_state = GetComponent<ComponentPlayerState>()) {
-            player_state->GrabbableHit(target_obj);
-        }
-    }
-}
 
 }    // namespace PoittersPoint

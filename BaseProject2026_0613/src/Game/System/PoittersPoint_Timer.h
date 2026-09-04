@@ -19,13 +19,13 @@ public:
     void Update();
 
     //! @brief 時間の加算
-    //! @param sec 
-    void AddTime(float sec);    
+    //! @param sec
+    void AddTime(float sec);
 
     //! @brief 時間の減算
-    //! @param sec 
-    void SubTime(float sec);    
-    
+    //! @param sec
+    void SubTime(float sec);
+
     //! @brief タイマーの状態設定
     void SetPause(bool is_pause);
 
@@ -36,19 +36,17 @@ public:
     void SetMaxTime(float max_time);
 
     //! @brief 停止中かどうか
-    //! @return 
+    //! @return
     bool IsPaused();
 
     //! @brief タイムアップしたかどうか
-    //! @return 
+    //! @return
     bool IsTimeUp();
-
 
     // 現在の残り時間を取得する
     float GetTimer();
 
     void GUI();
-
 
 private:
     // 現在のタイムを保持する変数
