@@ -1,7 +1,9 @@
 ﻿#include "ComponentItemSpawner.h"
 #include "Game/Object/PoittersPoint_Rock.h"
-#include "Game/Component/ComponentGrabbable.h"
+// #include "Game/Object/PoittersPoint_Crate.h"  // モデル到着時にコメント解除
+// #include "Game/Object/PoittersPoint_Slime.h"  // モデル到着時にコメント解除
 #include <System/Scene.h>
+#include <System/Component/ComponentModel.h>
 #include <cmath>
 #include <algorithm>
 
@@ -9,37 +11,45 @@ void ComponentItemSpawner::Init()
 {
     __super::Init();
 
-    // 乱数エンジンの初期化
-    std::random_device rd;
-    random_engine_.seed(rd());
-
     LoadModel();
 
     move_speed_       = 90.0f;
     spawn_delay_time_ = 0.3f;
 
-    // -------------------------------------------------------------
-    // スポナー候補地の範囲調整（画面内にきれいに収まるサイズ感）
-    // -------------------------------------------------------------
     spawner_points_.clear();
 
-    const int   grid_size = 5;         // 5x5 = 25箇所のグリッド
-    const float start_pos = -60.0f;    // 開始位置をやや内側に絞る（旧: -100.0f）
-    const float step      = 30.0f;     // 間隔を縮小（旧: 40.0f）
-    // これにより -60.0, -30.0, 0.0, 30.0, 60.0 の範囲に生成されます
+    // 例：5x5 グリッドの設定
+    const int   grid_size = 5;
+    const float start_pos = -40.0f;
+    const float step      = 20.0f;
 
     for(int z = 0; z < grid_size; ++z) {
         for(int x = 0; x < grid_size; ++x) {
             float px = start_pos + x * step;
             float pz = start_pos + z * step;
-            spawner_points_.push_back({float3(px, 0.0f, pz), {}});
+
+            SpawnerPoint point;
+            point.position = float3(px, 0.0f, pz);
+
+            // ----------------------------------------------------------------
+            // ★【マスごとのアイテム割り当て設定】
+            // ステージの配置パターンに合わせてここで各マスの種類を決めます。
+            // (以下は偶数マスにスライム、奇数マスに木箱を割り当てるテスト用の例)
+            // ----------------------------------------------------------------
+            if((x + z) % 2 == 0) {
+                point.assigned_type = ItemType::Slime;    // このマスはスライム専用
+            }
+            else {
+                point.assigned_type = ItemType::Crate;    // このマスは木箱専用
+            }
+
+            spawner_points_.push_back(point);
         }
     }
 
     spawn_timer_        = 0.0f;
-    target_point_index_ = GetRandomEmptyPointIndex();
+    target_point_index_ = GetEmptyPointIndex();
 
-    // ドラゴンの初期位置
     if(auto owner = GetOwner()) {
         if(target_point_index_ != -1) {
             float3 start_pos  = spawner_points_[target_point_index_].position;
@@ -63,36 +73,20 @@ void ComponentItemSpawner::Update()
         spawn_timer_ -= delta_time;
     }
 
-    // 各ポイントのアイテムの状態をチェック（掴まれたら解放）
-    for(auto& point : spawner_points_) {
-        if(!point.current_item_ptr.expired()) {
-            if(auto item = point.current_item_ptr.lock()) {
-                if(auto grabbable = item->GetComponent<ComponentGrabbable>()) {
-                    if(grabbable->GetIsGrabbed() && grabbable->GetOwner() == item.get()) {
-                        point.current_item_ptr.reset();
-                    }
-                }
-            }
-        }
-    }
-
-    // ターゲット地点の更新（未設定または埋まったら再選択）
-    if(target_point_index_ == -1 || !spawner_points_[target_point_index_].IsEmpty()) {
-        target_point_index_ = GetRandomEmptyPointIndex();
+    // ターゲット地点が「空きかつ補充が必要」でなくなったら再検索
+    if(target_point_index_ == -1 || !spawner_points_[target_point_index_].IsEmptyAndNeedsSpawn()) {
+        target_point_index_ = GetEmptyPointIndex();
     }
 
     float3 current_pos = owner->GetTranslate();
 
-    // -------------------------------------------------------------
-    // 目標地点がない場合（または全17個埋まっている場合）、上空退避
-    // -------------------------------------------------------------
+    // 補充が必要なマスが全くなければ上空退避
     if(target_point_index_ == -1) {
         float3 retreat_pos = float3(0.0f, 80.0f, -120.0f);
-
-        float dx   = retreat_pos.x - current_pos.x;
-        float dy   = retreat_pos.y - current_pos.y;
-        float dz   = retreat_pos.z - current_pos.z;
-        float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        float  dx          = retreat_pos.x - current_pos.x;
+        float  dy          = retreat_pos.y - current_pos.y;
+        float  dz          = retreat_pos.z - current_pos.z;
+        float  dist        = std::sqrt(dx * dx + dy * dy + dz * dz);
 
         if(dist > 2.0f) {
             float speed    = move_speed_ * 1.5f;
@@ -109,9 +103,7 @@ void ComponentItemSpawner::Update()
         return;
     }
 
-    // ------------------------------------------------------------------------
-    // 目標のスポーン地点へ移動・配置
-    // ------------------------------------------------------------------------
+    // 目標地点へ移動して生成
     float3      target_pos     = spawner_points_[target_point_index_].position;
     const float flight_height  = 35.0f;
     target_pos.y              += flight_height;
@@ -121,15 +113,12 @@ void ComponentItemSpawner::Update()
     float distance_xz = std::sqrt(dx * dx + dz * dz);
 
     if(distance_xz > 1.5f) {
-        float dy = target_pos.y - current_pos.y;
-
+        float dy       = target_pos.y - current_pos.y;
         current_pos.x += (dx / distance_xz) * move_speed_ * delta_time;
         current_pos.y += (dy / distance_xz) * move_speed_ * delta_time;
         current_pos.z += (dz / distance_xz) * move_speed_ * delta_time;
-
         float_timer_  += delta_time * 4.0f;
         current_pos.y += std::sin(float_timer_) * 0.015f;
-
         owner->SetTranslate(current_pos);
     }
     else {
@@ -146,61 +135,12 @@ void ComponentItemSpawner::Update()
     }
 }
 
-void ComponentItemSpawner::GUI()
+int ComponentItemSpawner::GetEmptyPointIndex()
 {
-    __super::GUI();
-
-    ImGui::Begin(GetOwner()->GetName().data());
-    {
-        ImGui::Separator();
-        if(ImGui::TreeNode("Item Spawner (Dragon)")) {
-            bool enable = GetStatus(StatusBit::Enable);
-            if(ImGui::Checkbox(u8"有効", &enable)) {
-                SetStatus(StatusBit::Enable, enable);
-            }
-
-            char buffer[256];
-            strncpy_s(buffer, model_path_.c_str(), sizeof(buffer));
-            if(ImGui::InputText(u8"モデルパス", buffer, sizeof(buffer))) {
-                model_path_ = buffer;
-                LoadModel();
-            }
-
-            ImGui::DragFloat(u8"移動速度", &move_speed_, 0.5f, 0.0f, 100.0f);
-            ImGui::DragFloat(u8"再生成時間(秒)", &spawn_delay_time_, 0.1f, 0.0f, 60.0f);
-
-            if(ImGui::Button(u8"削除")) {
-                GetOwner()->RemoveComponent(shared_from_this());
-            }
-
-            ImGui::TreePop();
-        }
-    }
-    ImGui::End();
-}
-
-int ComponentItemSpawner::GetRandomEmptyPointIndex()
-{
-    constexpr int   MAX_FIELD_ITEMS = 17;       // フィールド上の最大個数
-    constexpr float MIN_DISTANCE    = 25.0f;    // グリッドを狭めたため最小距離も縮小（旧: 35.0f）
-
-    // 1. 現在のフィールド上の総アイテム数をカウント
-    int current_item_count = 0;
-    for(const auto& point : spawner_points_) {
-        if(!point.IsEmpty()) {
-            current_item_count++;
-        }
-    }
-
-    // 2. 17個以上なら生成をストップ
-    if(current_item_count >= MAX_FIELD_ITEMS) {
-        return -1;
-    }
-
-    // 3. 空いているポイントを収集
+    // 補充が必要な（＝消去されていて None でもない）マスをリストアップ
     std::vector<int> empty_indices;
     for(size_t i = 0; i < spawner_points_.size(); ++i) {
-        if(spawner_points_[i].IsEmpty()) {
+        if(spawner_points_[i].IsEmptyAndNeedsSpawn()) {
             empty_indices.push_back(static_cast<int>(i));
         }
     }
@@ -209,46 +149,22 @@ int ComponentItemSpawner::GetRandomEmptyPointIndex()
         return -1;
     }
 
-    // ランダム順にシャッフル
-    std::shuffle(empty_indices.begin(), empty_indices.end(), random_engine_);
+    // 複数ある場合はランダムに1個選んで補充に向かう
+    std::random_device rd;
+    std::mt19937       g(rd());
+    std::shuffle(empty_indices.begin(), empty_indices.end(), g);
 
-    // 4. すでに存在する岩と離れているポイント（MIN_DISTANCE以上）を最優先で選ぶ
-    for(int idx : empty_indices) {
-        float3 candidate_pos = spawner_points_[idx].position;
-        bool   too_close     = false;
-
-        for(const auto& point : spawner_points_) {
-            if(!point.IsEmpty()) {
-                float dx   = candidate_pos.x - point.position.x;
-                float dz   = candidate_pos.z - point.position.z;
-                float dist = std::sqrt(dx * dx + dz * dz);
-
-                if(dist < MIN_DISTANCE) {
-                    too_close = true;
-                    break;
-                }
-            }
-        }
-
-        if(!too_close) {
-            return idx;
-        }
-    }
-
-    // 離れている場所がなければ、通常の空き場所から選択
     return empty_indices[0];
-}
-
-ItemType ComponentItemSpawner::DecideNextItemType()
-{
-    return ItemType::Rock;
 }
 
 ObjectPtr ComponentItemSpawner::CreateItemInstance(ItemType type)
 {
     switch(type) {
-    case ItemType::Rock:
+    /* クラス完成時にコメント解除    case ItemType::Crate:        return Scene::Object::Create<PoittersPoint::Crate>();    case ItemType::Slime:        return Scene::Object::Create<PoittersPoint::Slime>();    */
+    case ItemType::Crate:
+    case ItemType::Slime:
     default:
+        // アセットが揃うまでは仮で Rock を出す
         return Scene::Object::Create<PoittersPoint::Rock>();
     }
 }
@@ -258,14 +174,15 @@ void ComponentItemSpawner::SpawnItemAt(int point_index)
     if(point_index < 0 || point_index >= static_cast<int>(spawner_points_.size()))
         return;
 
-    if(!spawner_points_[point_index].IsEmpty())
+    if(!spawner_points_[point_index].IsEmptyAndNeedsSpawn())
         return;
 
     float3 spawn_pos  = spawner_points_[point_index].position;
     spawn_pos.y      += 34.0f;
 
-    ItemType next_type = DecideNextItemType();
-    auto     item      = CreateItemInstance(next_type);
+    // ★そのマスに割り当てられている「ItemType」のオブジェクトを生成！
+    ItemType type_to_spawn = spawner_points_[point_index].assigned_type;
+    auto     item          = CreateItemInstance(type_to_spawn);
 
     if(item) {
         item->SetTranslate(spawn_pos);
@@ -273,11 +190,20 @@ void ComponentItemSpawner::SpawnItemAt(int point_index)
     }
 }
 
+void ComponentItemSpawner::GUI()
+{
+}
+
 void ComponentItemSpawner::LoadModel()
 {
     auto owner = GetOwner();
     if(!owner)
         return;
+
+    if(model_path_.empty()) {
+        model_path_ = "data/Game/Models/ItemSpawner/Dragon.mv1";
+    }
+
     auto modelComp = owner->GetComponent<ComponentModel>();
     if(!modelComp) {
         modelComp = owner->AddComponent<ComponentModel>();
