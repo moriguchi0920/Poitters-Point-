@@ -1,4 +1,4 @@
-#include "PoittersPoint_Player.h"
+﻿#include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Component/ComponentCameraController.h"
 #include "Game/Component/ComponentStateIdleWalk.h"
@@ -41,10 +41,6 @@ bool Player::Init()
     // 他者に掴まれて投げられるようにする
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
-    if(auto idle = AddComponent<ComponentStateIdleWalk>()) {
-        idle->SetMoveSpeed(0.3f);
-        idle->SetRotateSpeed(20.0f);
-    }
 
     // カプセルコリジョンのコンポーネントを追加
     AddComponent<ComponentCollisionCapsule>();
@@ -108,40 +104,5 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 
 void Player::OnEyeSight()
 {
-    auto   ObjArray = Scene::Object::GetArray<Object>();
-    float3 vec;
-    if(auto model = GetComponent<ComponentModel>()) {
-        vec = -model->GetWorldVectorAxisZ();
-        normalize(vec);
-    }
-
-    // 親から敵へのベクトル
-    float3 targetVec = {0, 0, 0};
-    // 一番近い敵への距離を保存する変数
-    float shortest = 1000.0f;
-    // 範囲for
-    for(auto& obj : ObjArray) {
-        if(obj == static_cast<ObjectPtr>(shared_from_this())) {
-            continue;
-
-            float3 targetPos = obj->GetTranslate();
-            float3 targetVec = targetPos - playerPos;
-
-            float distance = sqrtf(targetVec.x * targetVec.x + targetVec.z * targetVec.z);
-
-            if(distance <= 100.0f && distance < shortest) {
-                if(grabbable->GetCanGrab()) {
-                    shortest   = distance;
-                    target_obj = obj;
-                }
-            }
-        }
-
-        if(target_obj) {
-            if(auto player_state = GetComponent<ComponentPlayerState>()) {
-                player_state->GrabbableHit(target_obj);
-            }
-        }
-    }
-
+}
 }    // namespace PoittersPoint

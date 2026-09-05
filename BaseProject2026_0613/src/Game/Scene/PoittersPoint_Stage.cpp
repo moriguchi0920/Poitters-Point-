@@ -1,4 +1,4 @@
-//---------------------------------------------------------------------------
+﻿//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Stage.cpp
 //! @brief  PoittersPointステージシーン
 //---------------------------------------------------------------------------
@@ -29,7 +29,6 @@ namespace PoittersPoint {
 //! @return 初期化済み
 bool PoittersPoint_Stage::Init()
 {
-    PoittersPoint_Timer::Init();
     // 最初に1回動作する
     // ただし trueを返さなければ Initに何回も来る仕様。
 
@@ -117,7 +116,6 @@ bool PoittersPoint_Stage::Init()
 //! @brief 更新
 void PoittersPoint_Stage::Update()
 {
-    PoittersPoint_Timer::Update();
     // 毎フレーム動作する
     counter2++;
 
@@ -127,8 +125,6 @@ void PoittersPoint_Stage::Update()
     }
 
     printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
-
-    printfDx("\n TIME : %.2f", PoittersPoint_Timer::GetTimer());
 
     {
         // Enemyという名前がついたObjectをVectorで複数取得
