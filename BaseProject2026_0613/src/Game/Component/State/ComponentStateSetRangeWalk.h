@@ -2,7 +2,7 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/State/ComponentState.h>
-#include<Game/Component/State/ComponentStateWalkBase.h>
+#include <Game/Component/State/ComponentStateWalkBase.h>
 
 USING_PTR(ComponentStateSetRangeWalk);
 
@@ -27,9 +27,9 @@ protected:
     // 移動方向
     float3 walk_direction_;
     // 移動距離
-    float  walk_distance_;
+    float walk_distance_;
 
-    float stopping_time_;
+    float       stopping_time_;
     const float stop_judge_time_ = 0.5f;
 
 private:
