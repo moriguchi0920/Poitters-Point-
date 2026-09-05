@@ -18,8 +18,8 @@ public:
 
 private:
     // タイマー完成後に置き換える仮タイマー
-    float                  time_count_;
-    const float          escape_offset_ = 20.0f;
+    float       time_count_;
+    const float escape_offset_ = 20.0f;
 
     // CPUの隙である思考時間であるかどうか
     bool is_thinking_;

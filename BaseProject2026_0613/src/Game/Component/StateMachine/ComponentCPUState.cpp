@@ -6,7 +6,7 @@
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Rock.h>
 #include <Game/Object/PoittersPoint_Character.h>
-#include<Game/Component/State/ComponentStateSetRangeWalk.h>
+#include <Game/Component/State/ComponentStateSetRangeWalk.h>
 
 void ComponentCPUState::Init()
 {
@@ -18,7 +18,7 @@ void ComponentCPUState::Init()
 
     // オブジェクトの制御を行うコンポーネントを追加
     if(character_casted_owner) {
-        auto component_range_walk =  owner->AddComponent<ComponentStateSetRangeWalk>();
+        auto component_range_walk = owner->AddComponent<ComponentStateSetRangeWalk>();
         component_range_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
         component_range_walk->SetWalkDirection({0.0f, 0.0f, 0.0f});
         component_range_walk->SetWalkDistance(0.0f);
@@ -35,7 +35,6 @@ void ComponentCPUState::Update()
 
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
-
 
     // 思考時間中の処理
     if(is_thinking_) {
@@ -93,10 +92,15 @@ void ComponentCPUState::Update()
                                 continue;
                             }
                         }
+                        // 座標を減算しベクトルを取得
                         float3 vec = target->GetTranslate() - owner->GetTranslate();
+                        // 距離取得
                         float  dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+                        // 比較して最短であれば
                         if(dis < nearest_distance) {
+                            // 最短距離を更新
                             nearest_distance = dis;
+                            // ターゲットとして登録
                             targetPtr        = target;
                         }
                     }
@@ -109,14 +113,13 @@ void ComponentCPUState::Update()
 
                     break;
                 }
+                // 攻撃者や一番近いキャラクターから逃げるアクション
             case CPU_ACTION::ACTION_AVOID_ATTACKER:
                 {
-                    if (owner->GetComponent<ComponentStateSetRangeWalk>())
-                    {
-
+                    // ステートをRangeWalkに変更し逃げるように歩かせる
+                    if(owner->GetComponent<ComponentStateSetRangeWalk>()) {
                     }
-                    else
-                    {
+                    else {
                         if(prev == CPU_ACTION::ACTION_GRAB) {
                             // ステート変更
                             ChangeState<ComponentStateSetRangeWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
@@ -126,37 +129,58 @@ void ComponentCPUState::Update()
                             ChangeState<ComponentStateSetRangeWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
                         }
                     }
-
+                    // キャラクターを配列で取得
                     auto      characters       = Scene::Object::GetArray<PoittersPoint::Character>();
+                    // 一番近いキャラクターのポインタ
                     ObjectPtr nearest_ptr      = nullptr;
+                    // 一番近いものを持っているキャラクターのポインタ
                     ObjectPtr attacker_ptr     = nullptr;
+                    // キャラクターへの距離を比べる用のfloat最大値(キャラクターの中から一番近いものを求めるため)
                     float     nearest_distance = FLT_MAX;
+                    // キャラクター配列を走査
                     for(auto& character : characters) {
+                        // 自分ははじく
                         if(std::static_pointer_cast<Object>(character) == owner->SharedThis())
                             continue;
+                        // 対象のステートマシン取得
                         if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
+                            // 座標を減算しベクトルを取得
                             float3 vec = character->GetTranslate() - owner->GetTranslate();
+                            // ベクトルから距離を取得
                             float  dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+                            // 距離を比較して最短距離であれば
                             if(dis < nearest_distance) {
+                                // 最短距離を更新
                                 nearest_distance = dis;
+                                // 一番近いキャラクターとして登録
                                 nearest_ptr      = character;
+                                // ものを持っていたら
                                 if(state_machine->GetGrabbing()) {
+                                    // 攻撃者として登録
                                     attacker_ptr = character;
                                 }
                             }
                         }
                     }
+                    // 攻撃者がいなければ
                     if(attacker_ptr == nullptr) {
+                        // 一番近いキャラクターを攻撃者として扱う
                         attacker_ptr = nearest_ptr;
                     }
-                    float3 move = normalize(owner->GetTranslate() - attacker_ptr->GetTranslate());
-                    move.y      = 0.0f;
+                    // 移動ベクトル
+                    float3 move               = normalize(owner->GetTranslate() - attacker_ptr->GetTranslate());
+                    // Y座標はモデルのがたつきが発生したためフリーズ
+                    move.y                    = 0.0f;
+                    // 歩きコンポーネントを取得
                     auto component_range_walk = owner->GetComponent<ComponentStateSetRangeWalk>();
+                    // 移動方向を登録
                     component_range_walk->SetWalkDirection(move);
+                    // 移動距離を設定
                     component_range_walk->SetWalkDistance(escape_offset_);
 
                     break;
                 }
+                // ものを持っているときにそれを投げて攻撃するアクション
             case CPU_ACTION::ACTION_ATTACK:
                 {
                     // すでにComponentStateTargetWalkがある場合
@@ -167,9 +191,13 @@ void ComponentCPUState::Update()
                         // ステート変更
                         ChangeState<ComponentStateTargetWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
                     }
+                    // 歩きコンポーネントを取得
                     auto      component_target_walk = owner->GetComponent<ComponentStateTargetWalk>();
+                    // キャラクターを配列で取得
                     auto      characters            = Scene::Object::GetArray<PoittersPoint::Character>();
+                    // 一番近いオブジェクトのポインタ
                     ObjectPtr nearest_ptr           = nullptr;
+                    // キャラクターへの距離を比べる用のfloat最大値(キャラクターの中から一番近いものを求めるため)
                     float     nearest_distance      = FLT_MAX;
                     for(auto& character : characters) {
                         if(character == owner->SharedThis())
