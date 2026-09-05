@@ -31,8 +31,13 @@ public:
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
 private:
-    bool  is_rolling_ = false;    //!< 着地して転がり中かどうか
-    float roll_speed_ = 0.0f;     //!< 転がるスピード（回転速度）
+    bool  is_bounced_this_frame_ = false;    //同一フレーム内でのバウンド重複防止フラグ
+    int   se_handle_ = -1;       //SEのメモリハンドル
+
+    //転がり演出用フラグ・変数
+    bool   is_rolling_ = false;        // 転がり中フラグ
+    float  roll_speed_ = 0.0f;         // 転がるスピード (回転・移動速度)
+    float3 roll_dir_   = {0, 0, 1};    // 転がる方向
 };
 
 }    // namespace PoittersPoint

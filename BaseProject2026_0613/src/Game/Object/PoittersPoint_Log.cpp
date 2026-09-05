@@ -8,7 +8,6 @@
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include "Game/Component/ComponentGrabbable.h"
-
 #include <System/Component/ComponentCollisionCapsule.h>
 
 namespace PoittersPoint {
@@ -113,6 +112,14 @@ bool Log::Init()
         col5->SetMass(200.0f);
     }
 
+    const float3 col_offsets[] = {
+        { -8.5f, 2.0f, 0.0f},
+        {  0.0f, 3.0f, 0.0f},
+        {  8.5f, 3.0f, 0.0f},
+        {-16.0f, 3.0f, 0.0f},
+        { 16.0f, 3.0f, 0.0f}
+    };
+
     auto grabbable = AddComponent<ComponentGrabbable>();
     if(grabbable) {
         grabbable->SetBounceOffset(0.0f);    // 初期は跳ねを抑える
@@ -124,10 +131,14 @@ bool Log::Init()
     //    collision->AttachToModel();    // コリジョンをモデルに合わせる
     //}
 
-    //SetScaleAxisXYZ({0.75f});
+    //SE
+    se_handle_ = LoadSoundMem("data/Game/LogSE/Log1.mp3");
+    //throw_cool_down_ = 0.0f;
+    //is_bounced_      = false;
 
-    //is_rolling_ = false;
-    //roll_speed_ = 0.0f;
+    // 転がり関連の初期化
+    is_rolling_ = false;
+    roll_speed_ = 0.0f;
 
     return true;
 }
@@ -135,37 +146,6 @@ bool Log::Init()
 void Log::Update()
 {
     __super::Update();
-
-    //if(is_rolling_) {
-    //    float3 rot  = GetRotationAxisXYZ();
-    //    rot.x      += roll_speed_;
-    //    SetRotationAxisXYZ(rot);
-
-    //    roll_speed_ *= 0.90f;    // 少し減衰を早める
-
-    //    // ★ 0.5f 以下になったら完全にピタッと止める
-    //    if(roll_speed_ < 0.5f) {
-    //        roll_speed_ = 0.0f;
-    //        is_rolling_ = false;
-    //    }
-    //}
-
-    //// 転がっている間
-    //if(is_rolling_) {
-    //    // 丸太を回転させる
-    //    float3 rot  = GetRotationAxisXYZ();
-    //    rot.x      += roll_speed_;
-    //    SetRotationAxisXYZ(rot);
-
-    //    // 徐々に減速
-    //    roll_speed_ *= 0.98f;
-
-    //    // 十分遅くなったら停止
-    //    if(std::abs(roll_speed_) < 0.01f) {
-    //        roll_speed_ = 0.0f;
-    //        is_rolling_ = false;
-    //    }
-    //}
 
     // 地面に固定されている時は跳ねを抑える
     if(auto grabbable = GetComponent<ComponentGrabbable>()) {
@@ -180,6 +160,38 @@ void Log::Update()
             grabbable->SetBounceOffset(0.0f);
         }
     }
+
+    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+        // 転がるアニメーション＆移動処理
+        if(is_rolling_ && roll_speed_ > 0.01f) {
+            // 現在の座標と回転を取得
+            float3 pos = GetTranslate();
+            float3 rot = GetRotationAxisXYZ();
+
+            // 速度に合わせて移動 ( roll_dir_ 方向へ移動 )
+            pos += roll_dir_ * roll_speed_ * GetDeltaTime();
+
+            // 速度に合わせてX軸回りに転がる（回転）
+            rot.x += roll_speed_ * 2.0f * GetDeltaTime();
+
+            SetTranslate(pos);
+            SetRotationAxisXYZ(rot);
+
+            // 地面の摩擦によって減速（毎フレーム92%に減衰）
+            roll_speed_ *= 0.92f;
+
+            // 十分遅くなったら転がり停止
+            if(roll_speed_ <= 0.05f) {
+                roll_speed_ = 0.0f;
+                is_rolling_ = false;
+            }
+        }
+        else if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
+            // 完全接地時
+            grabbable->SetBounceOffset(0.0f);
+        }
+    }
+
 }
 
 void Log::GUI()
@@ -189,16 +201,6 @@ void Log::GUI()
 
 void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    /*
-    // 当たった相手の名前がEnemyだったら消去する
-    auto name = hit_info.hit_collision_->GetOwner()->GetNameDefault();
-    if(name == "Enemy") {
-        hit_info.collision_->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
-        // 自分を削除する
-        Scene::Object::Release(SharedThis());
-    }
-    */
-
     if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
         if(auto grabbable = GetComponent<ComponentGrabbable>()) {
             grabbable->SetCanGrab(true);
@@ -209,52 +211,18 @@ void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
             }
             else if(grabbable->IsMoving()) {
                 grabbable->Bounce();
+
+                // ----------------------------------------------------
+                // 丸太を投げて地面に落ちた時に丸太のSEを流す
+                // ----------------------------------------------------
+                //PlaySoundFile("data/Game/LogSE/Log1.mp3", DX_PLAYTYPE_BACK);
+                //再生
+                if(se_handle_ != -1) {
+                    PlaySoundMem(se_handle_, DX_PLAYTYPE_BACK);
+                }
             }
         }
     }
-
-    //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-    //    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-    //        grabbable->SetCanGrab(true);
-
-    //        if(grabbable->IsMoving()) {
-    //            // 地面に着いたら丸太を水平にする
-    //            float3 rot = GetRotationAxisXYZ();
-    //            rot.x      = 0.0f;
-    //            rot.z      = 0.0f;
-    //            SetRotationAxisXYZ(rot);
-
-    //            //// 転がり開始
-    //            ////is_rolling_ = true;
-    //            ////roll_speed_ = 0.2f;
-
-    //            // 跳ねさせない
-    //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    //    }
-    //}
-
-    //// 地面に当たった時の処理
-    //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-    //    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-    //        grabbable->SetCanGrab(true);
-
-    //        // ★一度着地したら（または転がり中なら）、完全に Bounce() を呼ぶのをやめる！
-    //        // 落ちてくる「移動中」かつ「転がりが始まっていない」最初の瞬間だけ一度だけバウンドを考慮
-    //        if(!is_rolling_ && !grabbable->IsGrounded()) {
-    //            // 初回着地時に転がり開始
-    //            is_rolling_ = true;
-    //            roll_speed_ = 8.0f;    // 転がる勢い
-
-    //            // バウンドはさせずにオフセット固定（これで振動をシャットアウトします）
-    //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    //        else {
-    //            // 着地後は絶対に跳ね返り処理（Bounce）を起こさせない
-    //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    // }
-
     // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
     Super::OnHit(hit_info);
 }
