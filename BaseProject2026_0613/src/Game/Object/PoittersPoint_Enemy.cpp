@@ -80,6 +80,15 @@ void Enemy::Update()
 {
     __super::Update();
 
+    // --- ノックバック速度が残っているなら毎フレーム適用して減衰させる ---
+    // knockback_velocity は「単位時間当たりの速度（およそ per-second 想定）」として扱い、
+    // AddTranslate(velocity) を呼ぶことで内部で delta を掛けて適用されます。
+    if((fabs(knockback_velocity.x) > 0.001f) || (fabs(knockback_velocity.y) > 0.001f) || (fabs(knockback_velocity.z) > 0.001f)) {
+        AddTranslate(knockback_velocity, false);    // direct=false -> deltaでスケールされる
+        // 減衰（チューニング可能）
+        knockback_velocity = lerp(knockback_velocity, float3(0.0f, 0.0f, 0.0f), 0.12f);
+    }
+
     //-------------------------------------------------------------------------------
     // 敵の方向をプレイヤーのほうに向ける　
     //-------------------------------------------------------------------------------
@@ -178,6 +187,39 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
 
         // 初Hitなら記録してダメージ処理へ
         grabbable->AddHitTarget(SharedThis());
+
+        // --- ここからノックバック処理を追加 ---
+        // 投げ物の移動量からノックバック方向と強さを算出して敵に適用します。
+        {
+            // ノックバック方向：投げた物から敵へのベクトル（ワールド）
+            float3 dir = GetTranslate() - hitter->GetTranslate();
+            float  len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+            if(len > 0.0001f) {
+                dir = dir / len;
+            }
+            else {
+                // 万が一同位置なら前方へ押す
+                dir = float3{0.0f, 0.0f, 1.0f};
+            }
+
+            // 投げ物の移動量（velocity相当）を取得して大きさを計算
+            float3 throwVel = grabbable->GetTranslation();
+            float  velMag   = sqrtf(throwVel.x * throwVel.x + throwVel.y * throwVel.y + throwVel.z * throwVel.z);
+
+            // ノックバックの係数（チューニング可）
+            float baseForce   = 5.0f;                             // 速度から変換する係数
+            float damageBonus = grabbable->GetDamage() * 0.5f;    // ダメージに応じた加算
+
+            float force = velMag * baseForce + damageBonus;
+
+            // 最低限の上方向成分を与えてふっとばす見た目にする
+            float3 knock = dir * force;
+            knock.y      = fmaxf(knock.y, 4.0f);    // 上方向は最低でも一定量
+
+            // 即時移動せず、速度として蓄積する（Updateで減衰適用）
+            knockback_velocity += knock;
+        }
+        // --- ノックバック処理ここまで ---
     }
     else {
         // 弾などgrabbable以外は今まで通りのHit処理を行う

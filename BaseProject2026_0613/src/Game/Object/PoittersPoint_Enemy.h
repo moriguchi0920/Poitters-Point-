@@ -29,6 +29,9 @@ public:
     bool is_dead    = false;    //!< 死亡済みかどうか
     bool is_down    = false;    //!< ダウン状態かどうか
     bool is_running = false;    //!< 現在走っているかどうかのフラグ
+
+    // ノックバック用：OnHitでここに速度を入れ、Updateで減衰しながら適用する
+    float3 knockback_velocity = {0.0f, 0.0f, 0.0f};
 };
 
 }    // namespace PoittersPoint
