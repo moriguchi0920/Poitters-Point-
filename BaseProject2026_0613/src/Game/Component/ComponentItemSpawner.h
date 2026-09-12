@@ -7,24 +7,20 @@
 
 USING_PTR(ComponentItemSpawner);
 
-//! @brief 生成可能なアイテムの種類
 enum class ItemType
 {
-    None,       // 補充対象外（固定配置の岩など）
+    None,       // 壊れないアイテム
     Crate,      // 木箱
     Slime,      // スライム
     Missile,    // ミサイル
-    // 必要に応じて追加
 };
 
-//! @brief スポナー地点の情報構造体
 struct SpawnerPoint
 {
-    float3        position{0.0f, 0.0f, 0.0f};         // 地点の座標
-    ObjectWeakPtr current_item_ptr;                   // 現在配置されているアイテムの参照
-    ItemType      assigned_type = ItemType::Crate;    // ★このマスに降らせる固定のアイテム種類
+    float3        position{0.0f, 0.0f, 0.0f};
+    ObjectWeakPtr current_item_ptr;
+    ItemType      assigned_type = ItemType::Crate;
 
-    //! @brief その場所にアイテムが無い（破棄/消滅された）か判定（補充対象外でないことも確認）
     bool IsEmptyAndNeedsSpawn() const { return assigned_type != ItemType::None && current_item_ptr.expired(); }
 };
 
@@ -41,15 +37,15 @@ public:
     void LoadModel();
 
 private:
-    //! @brief 補充が必要な空き地点を1つ取得する
-    int GetEmptyPointIndex();
-
-    //! @brief 指定した種類のアイテムインスタンスを生成するファクトリ関数
+    int       GetEmptyPointIndex();
     ObjectPtr CreateItemInstance(ItemType type);
 
 private:
     std::vector<SpawnerPoint> spawner_points_;
     int                       target_point_index_ = -1;
+
+    // フィールド上に同時に存在できる最大アイテム数
+    size_t max_active_items_ = 20;
 
     float move_speed_       = 90.0f;
     float float_timer_      = 0.0f;

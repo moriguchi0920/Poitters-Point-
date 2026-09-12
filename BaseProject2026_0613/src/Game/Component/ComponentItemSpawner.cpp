@@ -6,6 +6,7 @@
 #include <System/Component/ComponentModel.h>
 #include <cmath>
 #include <algorithm>
+#include <random>
 
 void ComponentItemSpawner::Init()
 {
@@ -15,32 +16,33 @@ void ComponentItemSpawner::Init()
 
     move_speed_       = 90.0f;
     spawn_delay_time_ = 0.3f;
+    max_active_items_ = 20;    //　ステージ上に同時に存在していられるアイテムの数
 
     spawner_points_.clear();
 
-    // 例：5x5 グリッドの設定
-    const int   grid_size = 5;
-    const float start_pos = -40.0f;
-    const float step      = 20.0f;
+    std::random_device rd;
+    std::mt19937       gen(rd());
+    // 各マスの中心座標から少しずらしてまばらに生成している感を出す
+    std::uniform_real_distribution<float> offset_dist(-8.0f, 8.0f);
+    std::uniform_int_distribution<int>    type_dist(1, 2);    // 1: Crate, 2: Slime
+
+    const int   grid_size = 4;    // スポーンは4*4
+    const float start_pos = -45.0f;
+    const float step      = 30.0f;    // 少し広めの間隔(スポーン同士)
 
     for(int z = 0; z < grid_size; ++z) {
         for(int x = 0; x < grid_size; ++x) {
-            float px = start_pos + x * step;
-            float pz = start_pos + z * step;
+            float px = start_pos + x * step + offset_dist(gen);
+            float pz = start_pos + z * step + offset_dist(gen);
 
             SpawnerPoint point;
             point.position = float3(px, 0.0f, pz);
 
-            // ----------------------------------------------------------------
-            // ★【マスごとのアイテム割り当て設定】
-            // ステージの配置パターンに合わせてここで各マスの種類を決めます。
-            // (以下は偶数マスにスライム、奇数マスに木箱を割り当てるテスト用の例)
-            // ----------------------------------------------------------------
-            if((x + z) % 2 == 0) {
-                point.assigned_type = ItemType::Slime;    // このマスはスライム専用
+            if(type_dist(gen) == 1) {
+                point.assigned_type = ItemType::Crate;
             }
             else {
-                point.assigned_type = ItemType::Crate;    // このマスは木箱専用
+                point.assigned_type = ItemType::Slime;
             }
 
             spawner_points_.push_back(point);
@@ -73,14 +75,13 @@ void ComponentItemSpawner::Update()
         spawn_timer_ -= delta_time;
     }
 
-    // ターゲット地点が「空きかつ補充が必要」でなくなったら再検索
     if(target_point_index_ == -1 || !spawner_points_[target_point_index_].IsEmptyAndNeedsSpawn()) {
         target_point_index_ = GetEmptyPointIndex();
     }
 
     float3 current_pos = owner->GetTranslate();
 
-    // 補充が必要なマスが全くなければ上空退避
+    // 補充が必要なマスが無い場合は画面外に待機させておく
     if(target_point_index_ == -1) {
         float3 retreat_pos = float3(0.0f, 80.0f, -120.0f);
         float  dx          = retreat_pos.x - current_pos.x;
@@ -103,7 +104,6 @@ void ComponentItemSpawner::Update()
         return;
     }
 
-    // 目標地点へ移動して生成
     float3      target_pos     = spawner_points_[target_point_index_].position;
     const float flight_height  = 35.0f;
     target_pos.y              += flight_height;
@@ -137,19 +137,26 @@ void ComponentItemSpawner::Update()
 
 int ComponentItemSpawner::GetEmptyPointIndex()
 {
-    // 補充が必要な（＝消去されていて None でもない）マスをリストアップ
+    size_t           current_active_count = 0;
     std::vector<int> empty_indices;
+
     for(size_t i = 0; i < spawner_points_.size(); ++i) {
-        if(spawner_points_[i].IsEmptyAndNeedsSpawn()) {
+        // まだ場に存在しているアイテムをカウント
+        if(!spawner_points_[i].current_item_ptr.expired()) {
+            current_active_count++;
+        }
+        // 空いているマスを見つけます
+        else if(spawner_points_[i].IsEmptyAndNeedsSpawn()) {
             empty_indices.push_back(static_cast<int>(i));
         }
     }
 
-    if(empty_indices.empty()) {
+    // ステージ上のアイテムが上限に達していたら補充しない
+    if(current_active_count >= max_active_items_ || empty_indices.empty()) {
         return -1;
     }
 
-    // 複数ある場合はランダムに1個選んで補充に向かう
+    // 空きのスポーン位置の中からランダムに1つ選んでドラゴンに向かわせる
     std::random_device rd;
     std::mt19937       g(rd());
     std::shuffle(empty_indices.begin(), empty_indices.end(), g);
@@ -160,11 +167,13 @@ int ComponentItemSpawner::GetEmptyPointIndex()
 ObjectPtr ComponentItemSpawner::CreateItemInstance(ItemType type)
 {
     switch(type) {
-    /* クラス完成時にコメント解除    case ItemType::Crate:        return Scene::Object::Create<PoittersPoint::Crate>();    case ItemType::Slime:        return Scene::Object::Create<PoittersPoint::Slime>();    */
+    /* クラス完成時にコメント解除
+    case ItemType::Crate: return Scene::Object::Create<PoittersPoint::Crate>();
+    case ItemType::Slime: return Scene::Object::Create<PoittersPoint::Slime>();
+    */
     case ItemType::Crate:
     case ItemType::Slime:
     default:
-        // アセットが揃うまでは仮で Rock を出す
         return Scene::Object::Create<PoittersPoint::Rock>();
     }
 }
@@ -180,7 +189,6 @@ void ComponentItemSpawner::SpawnItemAt(int point_index)
     float3 spawn_pos  = spawner_points_[point_index].position;
     spawn_pos.y      += 34.0f;
 
-    // ★そのマスに割り当てられている「ItemType」のオブジェクトを生成！
     ItemType type_to_spawn = spawner_points_[point_index].assigned_type;
     auto     item          = CreateItemInstance(type_to_spawn);
 
