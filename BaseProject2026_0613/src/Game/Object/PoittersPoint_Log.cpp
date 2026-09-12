@@ -191,7 +191,6 @@ void Log::Update()
             grabbable->SetBounceOffset(0.0f);
         }
     }
-
 }
 
 void Log::GUI()
@@ -202,27 +201,37 @@ void Log::GUI()
 void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
     if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
+        // SEクールダウンタイマーの更新（DeltaTimeで減算）
+        if(throw_cool_down_ > 0.0f) {
+            throw_cool_down_ -= GetDeltaTime();
+            if(throw_cool_down_ < 0.0f) {
+                throw_cool_down_ = 0.0f;
+            }
+        }
+
         if(auto grabbable = GetComponent<ComponentGrabbable>()) {
             grabbable->SetCanGrab(true);
 
-            // 座標判定を行わず、着地状態だけチェック
+            // クールダウンタイマーが終了している時のみ判定
+            if(throw_cool_down_ <= 0.0f) {
+                // 【着地した瞬間の判定】
+                // 落下・移動中で、かつまだ接地状態になっていない瞬間にSEを鳴らす
+                if(!grabbable->IsGrounded() && grabbable->IsMoving()) {
+                    if(se_handle_ != -1) {
+                        PlaySoundMem(se_handle_, DX_PLAYTYPE_BACK);
+                        throw_cool_down_ = 1.0f;    // 連打防止（0.2秒間）
+                    }
+                    grabbable->Bounce();
+                }
+            }
+
+            // 着地後の跳ね抑制処理
             if(grabbable->IsGrounded()) {
                 grabbable->SetBounceOffset(0.0f);
             }
-            else if(grabbable->IsMoving()) {
-                grabbable->Bounce();
-
-                // ----------------------------------------------------
-                // 丸太を投げて地面に落ちた時に丸太のSEを流す
-                // ----------------------------------------------------
-                //PlaySoundFile("data/Game/LogSE/Log1.mp3", DX_PLAYTYPE_BACK);
-                //再生
-                if(se_handle_ != -1) {
-                    PlaySoundMem(se_handle_, DX_PLAYTYPE_BACK);
-                }
-            }
         }
     }
+
     // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
     Super::OnHit(hit_info);
 }
