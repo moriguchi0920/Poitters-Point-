@@ -1,4 +1,8 @@
-﻿#include "PoittersPoint_Player.h"
+//---------------------------------------------------------------------------
+//! @file   PoittersPoint_Player.cpp
+//! @brief  PoittersPoint_Player
+//---------------------------------------------------------------------------
+#include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Component/ComponentCameraController.h"
 #include "Game/Component/ComponentStateIdleWalk.h"
@@ -41,9 +45,18 @@ bool Player::Init()
     // 他者に掴まれて投げられるようにする
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
-    // カプセルコリジョンのコンポーネントを追加
-    AddComponent<ComponentCollisionCapsule>();
-    if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
+    if(auto idle = AddComponent<ComponentStateIdleWalk>()) {
+        idle->SetMoveSpeed(0.3f);
+        idle->SetRotateSpeed(20.0f);
+    }
+
+    // 重複追加を防ぐ安全な設定
+    auto collision = GetComponent<ComponentCollisionCapsule>();
+    if(!collision) {
+        collision = AddComponent<ComponentCollisionCapsule>();
+    }
+
+    if(collision) {
         collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
         collision->UseGravity();
         collision->SetRadius(3.8f);
@@ -69,19 +82,19 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
     if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
         // 投げた本人自身の場合はダメージなし
         if(grabbable->IsThrower(SharedThis())) {
-            __super::OnHit(hit_info);
+            Super::OnHit(hit_info);
             return;
         }
 
         // 地面で停止中はダメージなし
         if(!grabbable->IsMoving()) {
-            __super::OnHit(hit_info);
+            Super::OnHit(hit_info);
             return;
         }
 
         // 既にこのターゲットをHit済みならスルー(連続ヒット防止)
         if(grabbable->IsAlreadyHit(SharedThis())) {
-            __super::OnHit(hit_info);
+            Super::OnHit(hit_info);
             return;
         }
 
@@ -90,7 +103,7 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
     }
     else {
         // 弾などgrabbable以外は今まで通り
-        __super::OnHit(hit_info);
+        Super::OnHit(hit_info);
         return;
     }
 
@@ -98,25 +111,25 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
     if(auto hp = GetComponent<ComponentHitPoints>()) {
         hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
     }
-    __super::OnHit(hit_info);
+    Super::OnHit(hit_info);
 }
 
 void Player::OnEyeSight()
 {
-    auto   ObjArray = Scene::Object::GetArray<Object>();
-    float3 vec;
+    auto   ObjArray  = Scene::Object::GetArray<Object>();
+    float3 playerPos = GetTranslate();
+    float3 vec       = {0, 0, 1};
+
     if(auto model = GetComponent<ComponentModel>()) {
         vec = -model->GetWorldVectorAxisZ();
         normalize(vec);
     }
 
-    // 親から敵へのベクトル
-    float3 targetVec = {0, 0, 0};
-    // 一番近い敵への距離を保存する変数
-    float shortest = 1000.0f;
-    // 範囲for
+    float     shortest   = 1000.0f;
+    ObjectPtr target_obj = nullptr;
+
     for(auto& obj : ObjArray) {
-        if(obj == static_cast<ObjectPtr>(shared_from_this())) {
+        if(!obj || obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
         }
 

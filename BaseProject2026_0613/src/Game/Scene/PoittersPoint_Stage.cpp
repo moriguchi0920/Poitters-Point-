@@ -1,4 +1,4 @@
-﻿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Stage.cpp
 //! @brief  PoittersPointステージシーン
 //---------------------------------------------------------------------------
@@ -23,91 +23,27 @@
 
 namespace PoittersPoint {
 
-// namespace PoittersPoint
-
 //! @brief 初期化
 //! @return 初期化済み
 bool PoittersPoint_Stage::Init()
 {
-    // 最初に1回動作する
-    // ただし trueを返さなければ Initに何回も来る仕様。
-
-    // create<>(名前、transformがいるか、更新の優先順位、描画の優先順位);
-
-#if 1
+    // 地面生成
     Scene::Object::Create<Ground>();
-#else
-    // 地面生成(Component: モデル、モデルコリジョン)
-    {
-        auto ground = Scene::Object::Create<Object>("Ground");
-        Scene::Object::Create<PoittersPoint_Timer>();
-        ground->AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
-        ground->AddComponent<ComponentCollisionModel>();
-        if(auto collision = ground->GetComponent<ComponentCollisionModel>()) {
-            // 所属するグループを「GROUND」とします
-            collision->SetCollisionGroup(ComponentCollision::CollisionGroup::GROUND);
-            collision->AttachToModel();    // コリジョンをモデルに合わせる
-        }
-    }
-#endif
-#if 1    //プレイヤー作成
-    Scene::Object::Create<Player>();
-#else
-    // プレイヤー生成(Component: モデル、カプセルコリジョン、オブジェクトコントローラ)
-    {
-        auto player = Scene::Object::Create<Object>("Player");
-        player->SetTranslate({0, 5, 0});
-        player->AddComponent<ComponentModel>("data/Sample/Player/Model.mv1");
-        if(auto model = player->GetComponent<ComponentModel>()) {
-            model->SetAnimation({
-                {"idle", "data/Sample/Player/Anim/Idle.mv1", 1, 1.0f}, // Idle
-                {"walk", "data/Sample/Player/Anim/Walk.mv1", 1, 1.0f}  // Walk
-            });
-        }
-        player->AddComponent<ComponentCollisionCapsule>();
-        if(auto collision = player->GetComponent<ComponentCollisionCapsule>()) {
-            // 所属するグループを「PLAYER」とします
-            collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
-            // Collisionの重力を有効にします
-            collision->UseGravity();
-            collision->SetRadius(3.0f);     // コリジョンの半径を3.0 にする
-            collision->SetHeight(13.0f);    // コリジョンの高さを13.0 にする
-        }
-        player->AddComponent<ComponentObjectController>();
-        if(auto ctl = player->GetComponent<ComponentObjectController>()) {
-            ctl->SetMoveSpeed(0.3f);
-            ctl->SetRotateSpeed(20.0f);
-        }
-    }
-#endif
 
-#if 1
+    // プレイヤー作成
+    Scene::Object::Create<Player>();
+
+    // カメラ生成
     Scene::Object::Create<Camera>();
-#else
-    // カメラ生成(Component: モデル、カプセルコリジョン、オブジェクトコントローラ)
-    {
-        auto camera = Scene::Object::Create<Object>("Camera");    //オブジェクトをカメラという名前で生成
-        camera->AddComponent<ComponentCamera>();                  //カメラコンポーネントを付ける
-        if(auto c = camera->GetComponent<ComponentCamera>()) {
-            c->SetPositionAndTarget({0, 20, -50}, {0, 10, 0});
-        }
-        camera->AddComponent<ComponentSpringArm>();
-        if(auto c = camera->GetComponent<ComponentSpringArm>()) {
-            c->SetSpringArmObject("Player");
-        }
-    }
-#endif
+
+    // 敵の生成
     for(int i = 0; i < MAX_ENEMIES; i++) {
         Scene::Object::Create<Enemy>();
     }
 
-    //for(int i = 0; i < 5; i++) {
-    //    Scene::Object::Create<Bullet>();
-    //}
-
+    // オブジェクトの生成
     Scene::Object::Create<Rock>();
     Scene::Object::Create<Log>();
-
     Scene::Object::Create<Slime>();
 
     return true;
@@ -116,12 +52,11 @@ bool PoittersPoint_Stage::Init()
 //! @brief 更新
 void PoittersPoint_Stage::Update()
 {
-    // 毎フレーム動作する
     counter2++;
 
-    //テスト用
+    // テスト用
     if(auto obj = Scene::Object::Get<Object>("OBJ")) {
-        obj->AddTranslate({0.001, 0, 0});
+        obj->AddTranslate({0.001f, 0.0f, 0.0f});
     }
 
     printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
@@ -149,14 +84,13 @@ void PoittersPoint_Stage::Update()
                     canCreateEnemy = false;
                 }
             }
+        }
 
-            if(canCreateEnemy) {
-                // エネミーを生成する
-                createEnemy();
+        if(canCreateEnemy) {
+            createEnemy();
 
-                for(int i = 0; i < objs.size(); i++) {
-                    Scene::Object::Release(objs[i]);
-                }
+            for(size_t i = 0; i < objs.size(); i++) {
+                Scene::Object::Release(objs[i]);
             }
         }
     }
@@ -165,9 +99,7 @@ void PoittersPoint_Stage::Update()
 //! @brief GUI表示
 void PoittersPoint_Stage::GUI()
 {
-    // 入力(Int)で、privateにある counter を指定
     ImGui::InputInt("Counter", &counter);
-
     ImGui::InputInt("(Test)Counter2", &counter2);
     ImGui::InputInt("(Test)Counter3", &counter3);
 }

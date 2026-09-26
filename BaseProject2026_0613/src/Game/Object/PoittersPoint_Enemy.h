@@ -4,30 +4,33 @@
 //! @brief  PoittersPoint_Enemy
 //---------------------------------------------------------------------------
 #include <System/Scene.h>
+#include <System/Object.h>
+#include <System/Component/ComponentCollision.h>
 
 namespace PoittersPoint {
-// namespace PoittersPoint
 
+class Enemy;
 USING_PTR(Enemy);
+
 class Enemy : public Object
 {
 public:
-    BP_OBJECT_DECL(Enemy, "PoittersPoint::Enemy");
+    BP_OBJECT_DECL(Enemy, u8"エネミー");
 
     //! @brief 初期化
-    //! @return 初期化終了
     bool Init() override;
 
     //! @brief 更新
-    //! プレイヤーに向かって移動し、状態に応じたアニメーションを再生する
-    void Update();
+    void Update() override;
 
     //! @brief 当たり判定のコールバック
-    //! 当たり判定が行われたときに自動で呼び出される関数
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
-    bool is_dead    = false;    //!< 死亡済みかどうか
-    bool is_down    = false;    //!< ダウン状態かどうか
+    //! @brief 死亡処理を開始する
+    void SetDead();
+
+    bool is_dead    = false;    //!< 死亡（消滅）済みかどうか
+    bool is_down    = false;    //!< 死亡・ダウンアニメーション中かどうか
     bool is_running = false;    //!< 現在走っているかどうかのフラグ
 };
 

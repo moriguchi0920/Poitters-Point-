@@ -19,11 +19,20 @@ void ComponentPlayerState::Init()
 
     auto owner = GetOwner();
 
-    // オブジェクトの制御を行うコンポーネントを追加
-    owner->AddComponent<ComponentStateIdleWalk>();
+    // ★修正点: オブジェクトの制御を行うコンポーネントの重複防止
+    auto idle_walk = owner->GetComponent<ComponentStateIdleWalk>();
+    if(!idle_walk) {
+        idle_walk = owner->AddComponent<ComponentStateIdleWalk>();
+    }
 
-    // オブジェクトの体力を管理するコンポーネントを追加
-    owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
+    // ★修正点: 体力を管理するコンポーネントの重複防止
+    auto hp = owner->GetComponent<ComponentHitPoints>();
+    if(!hp) {
+        hp = owner->AddComponent<ComponentHitPoints>();
+    }
+    if(hp) {
+        hp->SetMaxAndCurrentHP(5.0f);
+    }
 
     can_grab_ = true;
 }
@@ -66,9 +75,6 @@ void ComponentPlayerState::Update()
                 }
             }
         }
-    }
-
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
     }
 
     // 掴みアニメーションが終了したら、掴み状態を完了させる
