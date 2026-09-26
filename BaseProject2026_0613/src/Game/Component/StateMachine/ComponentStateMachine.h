@@ -28,7 +28,13 @@ public:
 
     const std::string GetStateName() const;
 
-    void GrabbableHit(ObjectPtr target);
+    bool GrabbableHit(ObjectPtr target);
+
+    bool StartGrab();
+
+    bool FinishGrab();
+
+    void ReleaseGrabbingObj();
 
     bool GetCanGrab();
 
