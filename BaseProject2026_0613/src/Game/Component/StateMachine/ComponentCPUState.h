@@ -16,6 +16,10 @@ public:
 
     void GUI() override;
 
+    
+
+
+
 private:
     // タイマー完成後に置き換える仮タイマー
     float       time_count_;
@@ -38,6 +42,9 @@ private:
     };
 
     int cur_action_;
+    ObjectPtr GetNearestCharacter();
+    ObjectPtr GetNearestAttacker();
+    ObjectPtr GetNearestGrabbableObj();
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

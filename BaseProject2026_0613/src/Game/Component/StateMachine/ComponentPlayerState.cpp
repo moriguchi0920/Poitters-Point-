@@ -44,46 +44,19 @@ void ComponentPlayerState::Update()
                 }
                 // (投げ不可能 = アイテムはまだ持っていない)
                 else {
-                    // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
-                    auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
-                    // コンポーネントがあったら
-                    if(grabbable) {
-                        // 持ち上げ相手が持てる状態なら
-                        if(grabbable->GetCanGrab()) {
-                            // ステートをGrabステートに
-                            ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
-                            can_grab_ = false;
-                            grabbable->SetCanGrab(false);
-                        }
-                    }
+                    StartGrab();
                 }
             }
         }
     }
 
     // 現在のステートが掴みであるとき
-    if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
-        // 掴みモーションが終わったら
-        if(component_grab->GetIsFinished()) {
-            // 掴みオブジェクトがある時
-            if(!grabbing_object_ptr_.expired()) {
-                auto object = grabbing_object_ptr_.lock();
-
-                if(auto collider = object->GetComponent<ComponentCollision>()) {
-                    collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
-                }
-
-                auto grabbable = object->GetComponent<ComponentGrabbable>();
-                grabbable->SetIsGrabbed(true);
-
-                grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
-            }
-            can_throw_ = true;
-            if(character_casted_owner) {
-                ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
-            }
+    if(FinishGrab()) {
+        if(character_casted_owner) {
+            ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
         }
     }
+
 
     if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
         if(component_throw->GetIsFinished()) {
