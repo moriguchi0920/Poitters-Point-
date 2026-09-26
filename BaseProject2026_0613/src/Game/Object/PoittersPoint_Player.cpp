@@ -1,4 +1,4 @@
-﻿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Player.cpp
 //! @brief  PoittersPoint_Player
 //---------------------------------------------------------------------------
@@ -133,25 +133,42 @@ void Player::OnEyeSight()
             continue;
         }
 
-        if(auto grabbable = obj->GetComponent<ComponentGrabbable>()) {
-            float3 targetPos = obj->GetTranslate();
-            float3 targetVec = targetPos - playerPos;
-            float  distance  = sqrtf(targetVec.x * targetVec.x + targetVec.z * targetVec.z);
+        // 親の座標(斜めに当てたいので上に上げて判定)
+        float3 pos = GetTranslate() - vec * 0.5f + float3(0.0f, 1.0f, 0.0f);
+        // 敵の座標
+        float3 targetPos = obj->GetTranslate();
 
-            if(distance <= 100.0f && distance < shortest) {
-                if(grabbable->GetCanGrab()) {
-                    shortest   = distance;
-                    target_obj = obj;
+        // ベクトルを取得
+        targetVec = targetPos - pos;
+        // 親の正面ベクトルと敵へのベクトルの内積をとる
+        float targetDot = dot(normalize(vec), normalize(targetVec));
+        // 正規化ベクトル同士の内積なのでarccosで角度がとれる
+        float angle = acosf(targetDot);
+        // スカラー付きベクトルの長さは各要素の二乗を足したものの平方根でとれる
+        float distance = sqrtf(targetVec.x * targetVec.x + targetVec.y * targetVec.y + targetVec.z * targetVec.z);
+        // 内積と距離をかけて円錐の範囲にいるかをとる
+        float dotDis = distance * targetDot;
+
+        // 最短距離なら
+        if(distance <= shortest) {
+            // 最短距離を更新
+            shortest = distance;
+            // 円錐の角度内か
+            bool isInAngle = angle <= 3.14f * 0.45 && -3.14f * 0.45 <= angle;
+            // 距離は円錐の範囲内か
+            bool isInDistance = dotDis <= 50.0f;
+
+            // 両方満たしていたら
+            if(isInAngle && isInDistance) {
+                auto target = obj;
+                if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+                    auto player_state = GetComponent<ComponentPlayerState>();
+                    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
+                        player_state->GrabbableHit(target);
+                    }
                 }
             }
         }
     }
-
-    if(target_obj) {
-        if(auto player_state = GetComponent<ComponentPlayerState>()) {
-            player_state->GrabbableHit(target_obj);
-        }
-    }
 }
-
 }    // namespace PoittersPoint

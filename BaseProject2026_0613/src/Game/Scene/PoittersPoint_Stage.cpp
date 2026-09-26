@@ -1,4 +1,4 @@
-﻿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Stage.cpp
 //! @brief  PoittersPointステージシーン
 //---------------------------------------------------------------------------
@@ -9,6 +9,7 @@
 #include "Game/Object/PoittersPoint_Camera.h"
 #include "Game/Object/PoittersPoint_Enemy.h"
 #include "Game/Object/PoittersPoint_Rock.h"
+#include "Game/system/PoittersPoint_Timer.h"
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
 
@@ -58,21 +59,30 @@ void PoittersPoint_Stage::Update()
         obj->AddTranslate({0.001f, 0.0f, 0.0f});
     }
 
-    // Enemyという名前がついたObjectをVectorで取得
-    auto enemies   = Scene::Base::GetObjectsPtr<Object>("Enemy");
-    auto enemy_num = enemies.size();
+    printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
 
-    // 死亡カウント更新
-    auto released_enemy_num = MAX_ENEMIES - static_cast<int>(enemy_num);
-    enemy_dead_count        = released_enemy_num;
+    {
+        // Enemyという名前がついたObjectをVectorで複数取得
+        auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
 
-    // 敵が全滅した場合の再生成処理
-    if(MAX_ENEMIES <= released_enemy_num) {
-        bool canCreateEnemy = true;
-        auto objs           = Scene::Object::GetArray<Enemy>();
-        for(size_t i = 0; i < objs.size(); i++) {
-            if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
-                canCreateEnemy = false;
+        // Vectorのメソッドでサイズを取得
+        auto enemy_num = enemies.size();
+
+        // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
+        auto released_enemy_num = MAX_ENEMIES - enemy_num;
+        // 死亡カウントの中身に代入する
+        enemy_dead_count = released_enemy_num;
+
+        // もし死亡カウントがエネミーの上限数以上なら
+        if(MAX_ENEMIES <= released_enemy_num) {
+            //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
+
+            bool canCreateEnemy = true;
+            auto objs           = Scene::Object::GetArray<Enemy>();
+            for(int i = 0; i < objs.size(); i++) {
+                if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
+                    canCreateEnemy = false;
+                }
             }
         }
 
