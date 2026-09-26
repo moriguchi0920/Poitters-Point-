@@ -35,7 +35,7 @@ void ComponentPlayerState::Update()
     auto owner = GetOwner();
 
     // スペースキーが押された時の処理
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
+    if(Input::IsKeyDown(KEY_INPUT_E)) {
         // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
         if(owner->GetComponent<ComponentStateIdleWalk>()) {
             if(!grabbing_object_ptr_.expired()) {
@@ -68,7 +68,7 @@ void ComponentPlayerState::Update()
         }
     }
 
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
+    if(Input::IsKeyDown(KEY_INPUT_E)) {
     }
 
     // 掴みアニメーションが終了したら、掴み状態を完了させる

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <Game/Component/ComponentStateIdleWalk.h>
+#include <Game/Component/ComponentStatePlayerJump.h>
 
 void ComponentStateIdleWalk::Init()
 {
@@ -12,8 +13,19 @@ void ComponentStateIdleWalk::Update()
     __super::Update();
 
     // オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
+
+    // --- ジャンプキー(Jキー)が押されたらジャンプ状態へ遷移 ---
+    if(Input::IsKeyDown(key_jump_)) {
+        auto jump = owner->AddComponent<ComponentStatePlayerJump>();
+        jump->SetKeys(key_up_, key_down_, key_left_, key_right_, key_jump_);
+        jump->SetIsHolding(is_holding_);
+        jump->SetFrontRotate(front_rot_);
+
+        // 自身の（歩き状態）コンポーネントを削除して切り替え
+        owner->RemoveComponent(shared_from_this());
+        return;
+    }
 
     // 移動方向
     float3 dir{0, 0, 0};
@@ -85,13 +97,14 @@ const float ComponentStateIdleWalk::GetRotateSpeed() const
     return rot_speed_;
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int left, int right)
+ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int left, int right, int jump)
 {
-    // 移動キーの設定
+    // 移動キー・ジャンプキーの設定
     key_up_    = up;
     key_down_  = down;
     key_left_  = left;
     key_right_ = right;
+    key_jump_  = jump;
     return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
 }
 
