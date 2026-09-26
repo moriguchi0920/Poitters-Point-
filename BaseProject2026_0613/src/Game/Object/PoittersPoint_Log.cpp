@@ -188,7 +188,6 @@ void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
     }
     */
 
-
     //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
     //    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
     //        grabbable->SetCanGrab(true);
@@ -203,7 +202,7 @@ void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
     //    }
     //}
 
-if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
+    if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
         if(auto grabbable = GetComponent<ComponentGrabbable>()) {
             grabbable->SetCanGrab(true);
 
@@ -244,7 +243,6 @@ if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::Collision
     //            grabbable->SetBounceOffset(0.0f);
     //        }
     // }
-
 
     // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
     Super::OnHit(hit_info);

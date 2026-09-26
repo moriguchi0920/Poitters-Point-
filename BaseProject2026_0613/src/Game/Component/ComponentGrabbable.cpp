@@ -213,7 +213,7 @@ bool ComponentGrabbable::IsAlreadyHit(ObjectPtr target) const
 {
     // set.count：値が含まれている個数を返す
     // setは重複を許さないので、結果は必ず1（存在する）か0（存在しない）になる
-    return hit_targets_.count(target) > 0;
+    return (int)hit_targets_.count(target) > 0;
 }
 
 //============================================================================
