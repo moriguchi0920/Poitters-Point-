@@ -21,6 +21,8 @@
 #include <System/Component/ComponentSpringArm.h>
 #include <System/Component/ComponentObjectController.h>
 
+#include <Game/Component/ComponentKnockBack.h>
+
 namespace PoittersPoint {
 
 // namespace PoittersPoint
@@ -159,6 +161,19 @@ void PoittersPoint_Stage::Update()
                 }
             }
         }
+
+        // --- デバッグ表示: 各エネミーのノックバックベクトルを出力 ---
+        // 実行時コンソールで確認したい場合は printfDx を使います。
+        auto enemyArray = Scene::Object::GetArray<Enemy>();
+        for(auto& e : enemyArray) {
+            if(!e)
+                continue;
+            if(auto kb = e->GetComponent<ComponentKnockBack>()) {
+                auto v = kb->knockback_velocity;
+                printfDx("\nEnemy[%s] Knockback=(%.2f, %.2f, %.2f)", e->GetName().data(), v.x, v.y, v.z);
+            }
+        }
+        // --- デバッグ表示ここまで ---
     }
 }
 
