@@ -98,10 +98,9 @@ void Slime::OnHit(const ComponentCollision::HitInfo& hit_info)
 void Slime::Explode()
 {
     float3 myPos           = GetTranslate();
-    float  explosionRadius = 45.0f;
-    float  explosionDamage = 2.0f;
+    float  explosionRadius = 100.0f;    // ★範囲を 45.0f から 100.0f 等に広げてみる
+    float  explosionDamage = 999.0f;    // ★確実に倒すため大ダメージを設定してみる
 
-    // 範囲ダメージ処理
     auto objArray = Scene::Object::GetArray<Object>();
     for(auto& obj : objArray) {
         if(!obj || obj == static_cast<ObjectPtr>(shared_from_this())) {
@@ -110,16 +109,18 @@ void Slime::Explode()
 
         float3 targetPos = obj->GetTranslate();
         float3 vec       = targetPos - myPos;
-        float  distance  = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+
+        // 距離の計算（三次元距離）
+        float distance = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 
         if(distance <= explosionRadius) {
             if(auto hp = obj->GetComponent<ComponentHitPoints>()) {
-                hp->TakeDamage(explosionDamage);
+                hp->TakeDamage(explosionDamage);    // ダメージ送信
             }
         }
     }
 
-    // ★爆発エフェクトの生成（Scene::Object::Create を使用）
+    // 爆発エフェクトの生成
     auto explosion = Scene::Object::Create<SlimeExplosion>();
     if(explosion) {
         explosion->SetTranslate(myPos);

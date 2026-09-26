@@ -26,8 +26,11 @@ public:
     //! @brief 当たり判定のコールバック
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
-    bool is_dead    = false;    //!< 死亡済みかどうか
-    bool is_down    = false;    //!< ダウン状態かどうか
+    //! @brief 死亡処理を開始する
+    void SetDead();
+
+    bool is_dead    = false;    //!< 死亡（消滅）済みかどうか
+    bool is_down    = false;    //!< 死亡・ダウンアニメーション中かどうか
     bool is_running = false;    //!< 現在走っているかどうかのフラグ
 };
 

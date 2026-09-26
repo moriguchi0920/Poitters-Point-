@@ -5,7 +5,6 @@
 #include "PoittersPoint_Enemy.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Scene/PoittersPoint_GameOver.h"
-
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include <Game/Component/ComponentGrabbable.h>
@@ -73,9 +72,19 @@ void Enemy::Update()
 {
     Super::Update();
 
+    // ★ 爆発などの範囲ダメージ等でHPが0以下になった時のチェック
+    if(!is_down) {
+        if(auto hp = GetComponent<ComponentHitPoints>()) {
+            if(hp->GetHitPoints() <= 0.0f) {
+                SetDead();    // 死亡アニメーション開始処理を実行
+            }
+        }
+    }
+
     auto player = Scene::Object::Get<Object>("Player");
 
-    if(player && is_down == false && is_dead == false) {
+    // 生存中・移動処理
+    if(player && !is_down && !is_dead) {
         float3 vec    = player->GetTranslate() - GetTranslate();
         auto   length = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
         auto   model  = GetComponent<ComponentModel>();
@@ -103,13 +112,39 @@ void Enemy::Update()
         }
     }
 
-    if(!is_dead) {
+    // ★ 死亡アニメーション（"dead"）が終了したら完全に消去する処理
+    if(is_down && !is_dead) {
         if(auto model = GetComponent<ComponentModel>()) {
             if(!model->IsPlaying()) {
                 is_dead = true;
+                Scene::ReleaseObject(SharedThis());    // オブジェクト消去
             }
         }
     }
+}
+
+//============================================================================
+// 死亡開始処理
+//============================================================================
+void Enemy::SetDead()
+{
+    if(is_down)
+        return;
+
+    is_down = true;
+
+    // 死亡アニメーション再生
+    if(auto model = GetComponent<ComponentModel>()) {
+        model->PlayAnimation("dead", false);    // 1回のみ再生
+    }
+
+    // 当たり判定を削除（死体に攻撃が当たらないようにする）
+    if(auto col = GetComponent<ComponentCollisionCapsule>()) {
+        RemoveComponent<ComponentCollisionCapsule>();
+    }
+
+    // 死亡状態コンポーネントの付与
+    AddComponent<ComponentStateDead>();
 }
 
 //============================================================================
@@ -148,15 +183,7 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
             hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
 
             if(hp->GetHitPoints() <= 0.0f) {
-                is_down = true;
-
-                if(auto model = GetComponent<ComponentModel>()) {
-                    AddComponent<ComponentStateDead>();
-                }
-
-                if(auto col = GetComponent<ComponentCollisionCapsule>()) {
-                    RemoveComponent<ComponentCollisionCapsule>();
-                }
+                SetDead();    // 共通の死亡処理を呼び出す
             }
         }
     }
