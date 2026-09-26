@@ -24,7 +24,7 @@ bool Camera::Init()
 
     AddComponent<ComponentCamera>();    //カメラコンポーネントを付ける
     if(auto c = GetComponent<ComponentCamera>()) {
-        c->SetPositionAndTarget({0, 70, 120}, {0, 0, -60});
+        c->SetPositionAndTarget({0, 80, 205}, {0, 0, -60});
     }
 
     //// プレイヤーがいるなら追従カメラにする
