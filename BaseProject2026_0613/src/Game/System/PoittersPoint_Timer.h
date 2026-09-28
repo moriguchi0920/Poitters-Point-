@@ -16,35 +16,35 @@ public:
     //! @return 初期化済み
     bool Init();
 
-    void Update();
+    static void Update();
 
     //! @brief 時間の加算
     //! @param sec
-    void AddTime(float sec);
+    static void AddTime(float sec);
 
     //! @brief 時間の減算
     //! @param sec
-    void SubTime(float sec);
+    static void SubTime(float sec);
 
     //! @brief タイマーの状態設定
-    void SetPause(bool is_pause);
+    static void SetPause(bool is_pause);
 
     // 現在の残り時間をセット
-    void SetTime(float time);
+    static void SetTime(float time);
 
     // 制限時間の上限を設定
-    void SetMaxTime(float max_time);
+    static void SetMaxTime(float max_time);
 
     //! @brief 停止中かどうか
     //! @return
-    bool IsPaused();
+    static bool IsPaused();
 
     //! @brief タイムアップしたかどうか
     //! @return
-    bool IsTimeUp();
+    static bool IsTimeUp();
 
     // 現在の残り時間を取得する
-    float GetTimer();
+    static float GetTimer();
 
     void GUI();
 
