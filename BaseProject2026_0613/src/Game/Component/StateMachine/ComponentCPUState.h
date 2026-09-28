@@ -16,22 +16,13 @@ public:
 
     void GUI() override;
 
-    
-
-
-
 private:
-    // タイマー完成後に置き換える仮タイマー
-    float       time_count_;
     const float escape_offset_ = 20.0f;
 
-    // CPUの隙である思考時間であるかどうか
-    bool is_thinking_;
-
     // CPUの行動定数
-    enum CPU_ACTION
+    enum class CPU_ACTION
     {
-        ACTION_DEFAULT,
+        ACTION_THINK = 0,
         // ものを掴みに行く動き
         ACTION_GRAB,
         // ものを持っている相手を避ける動き
@@ -41,10 +32,10 @@ private:
         ACTION_NUM
     };
 
-    int cur_action_;
-    ObjectPtr GetNearestCharacter();
-    ObjectPtr GetNearestAttacker();
-    ObjectPtr GetNearestGrabbableObj();
+    CPU_ACTION cur_action_;
+    ObjectPtr  GetNearestCharacter();
+    ObjectPtr  GetNearestAttacker();
+    ObjectPtr  GetNearestGrabbableObj();
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

@@ -57,7 +57,6 @@ void ComponentPlayerState::Update()
         }
     }
 
-
     if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
         if(component_throw->GetIsFinished()) {
             if(character_casted_owner) {

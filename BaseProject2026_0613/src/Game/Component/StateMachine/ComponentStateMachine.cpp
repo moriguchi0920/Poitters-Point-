@@ -2,7 +2,7 @@
 #include <Game/Component/StateMachine/ComponentStateMachine.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
-#include<Game/Component/State/ComponentStateGrab.h>
+#include <Game/Component/State/ComponentStateGrab.h>
 
 void ComponentStateMachine::Init()
 {
@@ -65,7 +65,7 @@ bool ComponentStateMachine::GrabbableHit(ObjectPtr target)
     return false;
 }
 
-bool ComponentStateMachine::StartGrab(bool transition)
+bool ComponentStateMachine::StartGrab()
 {
     if(!grabbing_object_ptr_.expired()) {
         // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
@@ -114,8 +114,6 @@ bool ComponentStateMachine::FinishGrab()
     }
     return false;
 }
-
-
 
 void ComponentStateMachine::ReleaseGrabbingObj()
 {
