@@ -32,11 +32,28 @@ public:
 
     void Update() override;
 
+    void Draw() override;
+
     void LateDraw() override;
 
     void GUI() override;
 
 private:
+    enum class SelectState
+    {
+        SelectCharacter,     // キャラ選択中
+        FocusDecideButton    // 決定ボタン選択中
+    };
+
+    SelectState state_ = SelectState::SelectCharacter;    // 現在の状態
+
+    int selected_character_id_ = 0;    // 確定したキャラID
+
+    int select_idx_       = 0;     // 赤い枠
+    int Background_image_ = -1;    //背景
+
+    int se_cursor_ = -1;    // キャラ選択SE
+    int se_decide_ = -1;    // 決定SE
 };
 
 }    // namespace PoittersPoint
