@@ -40,6 +40,13 @@ void ComponentCPUState::Update()
     switch(cur_action_) {
     case CPU_ACTION::ACTION_THINK:
         {
+            if (auto component_think = owner->GetComponent<ComponentStateThink>())
+            {
+                if (component_think->GetFinished())
+                {
+
+                }
+            }
             break;
         }
 
@@ -55,16 +62,16 @@ void ComponentCPUState::Update()
         }
     case CPU_ACTION::ACTION_AVOID_ATTACKER:
         {
-            if(auto component_set_range_walk = owner->GetComponent<ComponentStateSetRangeWalk>()) {
-                if(component_set_range_walk->GetArrival() || component_set_range_walk->GetStopped()) {
+            if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
+                if(component_walk->GetArrival() || component_walk->GetStopped()) {
                 }
             }
             break;
         }
     case CPU_ACTION::ACTION_ATTACK:
         {
-            if(auto component_target_walk = owner->GetComponent<ComponentStateTargetWalk>()) {
-                if((component_target_walk->GetArrival() || component_target_walk->GetStopped()) && can_throw_) {
+            if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
+                if((component_walk->GetArrival() || component_walk->GetStopped()) && can_throw_) {
                     ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
                     can_throw_ = false;
                 }
@@ -104,6 +111,22 @@ void ComponentCPUState::GUI()
         }
     }
     ImGui::End();
+}
+
+void ComponentCPUState::ChangeAction(CPU_ACTION action)
+{
+    if(cur_action_ == action)
+        return;
+
+
+}
+
+void ComponentCPUState::ChangeActionFlexible()
+{
+}
+
+void ComponentCPUState::ChangeActionRandom()
+{
 }
 
 ObjectPtr ComponentCPUState::GetNearestCharacter()

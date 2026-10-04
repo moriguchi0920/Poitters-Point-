@@ -19,10 +19,10 @@ public:
     void                        SetTargetPtr(const ObjectPtr ptr);
     void                        ResetTargetPtr();
     const float3&               GetTargetPos();
-    bool                        GetArrival();
+    bool                        GetArrival() override;
 
     void GUI() override;
-    bool GetStopped();
+    bool GetStopped() override;
 
 private:
     float3    target_pos_;

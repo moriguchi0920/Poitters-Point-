@@ -19,11 +19,16 @@ public:
 
     void GUI() override;
 
+    bool GetArrival() override;
+    bool GetStopped() override;
+
 private:
     int key_up_    = KEY_INPUT_W;
     int key_down_  = KEY_INPUT_S;
     int key_left_  = KEY_INPUT_A;
     int key_right_ = KEY_INPUT_D;
+
+    float3 direction_;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
