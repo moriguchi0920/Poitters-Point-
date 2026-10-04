@@ -33,6 +33,11 @@ private:
     };
 
     CPU_ACTION cur_action_;
+
+    void ChangeAction(CPU_ACTION action);
+    void ChangeActionFlexible();
+    void ChangeActionRandom();
+
     ObjectPtr  GetNearestCharacter();
     ObjectPtr  GetNearestAttacker();
     ObjectPtr  GetNearestGrabbableObj();

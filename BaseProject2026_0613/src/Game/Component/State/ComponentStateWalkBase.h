@@ -28,6 +28,9 @@ public:
 
     void SetIsHolding(bool hold);
 
+    virtual bool GetArrival() = 0;
+    virtual bool GetStopped() = 0;
+
 protected:
     float move_speed_ = 0.3f;
     float rot_speed_  = 20.0f;

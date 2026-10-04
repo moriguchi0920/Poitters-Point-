@@ -29,6 +29,8 @@ void ComponentStateControllerWalk::Update()
     if(IsKey(key_left_))
         dir += {1, 0, 0};
 
+    direction_ = dir;
+
     // 移動キーが押されているか?
     if((float)length(dir) > 0.0f) {
         // 斜めが押されていることを考慮し、
@@ -108,6 +110,16 @@ void ComponentStateControllerWalk::GUI()
         }
     }
     ImGui::End();
+}
+
+bool ComponentStateControllerWalk::GetArrival()
+{
+    return false;
+}
+
+bool ComponentStateControllerWalk::GetStopped()
+{
+    return 0 < (float)length(direction_);
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateControllerWalk)

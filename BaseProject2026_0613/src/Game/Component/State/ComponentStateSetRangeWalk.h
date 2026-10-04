@@ -20,8 +20,8 @@ public:
     void SetWalkDirection(const float3& direction);
     void SetWalkDistance(const float& distance);
 
-    bool GetArrival();
-    bool GetStopped();
+    bool GetArrival() override;
+    bool GetStopped() override;
 
 protected:
     // 移動方向
