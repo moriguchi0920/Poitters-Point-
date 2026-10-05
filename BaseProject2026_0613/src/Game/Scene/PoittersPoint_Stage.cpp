@@ -1,4 +1,4 @@
-//---------------------------------------------------------------------------
+﻿//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Stage.cpp
 //! @brief  PoittersPointステージシーン
 //---------------------------------------------------------------------------
@@ -61,39 +61,39 @@ void PoittersPoint_Stage::Update()
 
     printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
 
-    {
-        // Enemyという名前がついたObjectをVectorで複数取得
-        auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
+    //{
+    //    // Enemyという名前がついたObjectをVectorで複数取得
+    //    auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
 
-        // Vectorのメソッドでサイズを取得
-        auto enemy_num = enemies.size();
+    //    // Vectorのメソッドでサイズを取得
+    //    auto enemy_num = enemies.size();
 
-        // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
-        auto released_enemy_num = MAX_ENEMIES - enemy_num;
-        // 死亡カウントの中身に代入する
-        enemy_dead_count = released_enemy_num;
+    //    // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
+    //    auto released_enemy_num = MAX_ENEMIES - enemy_num;
+    //    // 死亡カウントの中身に代入する
+    //    enemy_dead_count = released_enemy_num;
 
-        // もし死亡カウントがエネミーの上限数以上なら
-        if(MAX_ENEMIES <= released_enemy_num) {
-            //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
+    //    // もし死亡カウントがエネミーの上限数以上なら
+    //    if(MAX_ENEMIES <= released_enemy_num) {
+    //        //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
 
-            bool canCreateEnemy = true;
-            auto objs           = Scene::Object::GetArray<Enemy>();
-            for(int i = 0; i < objs.size(); i++) {
-                if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
-                    canCreateEnemy = false;
-                }
-            }
-        }
+    //        bool canCreateEnemy = true;
+    //        auto objs           = Scene::Object::GetArray<Enemy>();
+    //        for(int i = 0; i < objs.size(); i++) {
+    //            if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
+    //                canCreateEnemy = false;
+    //            }
+    //        }
+    //    }
 
-        if(canCreateEnemy) {
-            createEnemy();
+    //    if(canCreateEnemy) {
+    //        createEnemy();
 
-            for(size_t i = 0; i < objs.size(); i++) {
-                Scene::Object::Release(objs[i]);
-            }
-        }
-    }
+    //        for(size_t i = 0; i < objs.size(); i++) {
+    //            Scene::Object::Release(objs[i]);
+    //        }
+    //    }
+    //}
 }
 
 //! @brief GUI表示

@@ -1,4 +1,4 @@
-//---------------------------------------------------------------------------
+﻿//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Player.cpp
 //! @brief  PoittersPoint_Player
 //---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ void Player::OnEyeSight()
 
     float     shortest   = 1000.0f;
     ObjectPtr target_obj = nullptr;
-
+    float3    targetVec;
     for(auto& obj : ObjArray) {
         if(!obj || obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;

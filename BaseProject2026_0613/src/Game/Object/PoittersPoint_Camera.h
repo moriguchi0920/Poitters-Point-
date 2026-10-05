@@ -17,6 +17,19 @@ public:
     //! @brief 初期化
     //! @return 初期化終了
     bool Init() override;
+
+    //! @brief 更新処理
+    void Update() override;
+
+    //! @brief カメラシェイクを開始する
+    //! @param duration 揺れる時間（秒）
+    //! @param intensity 揺れの強さ（振幅）
+    static void Shake(float duration = 0.2f, float intensity = 1.0f);
+
+private:
+    // カメラシェイク用
+    static float shake_timer_;        //!< シェイク残り時間
+    static float shake_intensity_;    //!< 揺れの強さ
 };
 
 }    // namespace PoittersPoint
