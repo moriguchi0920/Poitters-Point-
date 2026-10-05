@@ -33,14 +33,18 @@ private:
     };
 
     CPU_ACTION cur_action_;
+    CPU_ACTION prev_action_;
 
-    void ChangeAction(CPU_ACTION action);
+    void StartThink();
     void ChangeActionFlexible();
     void ChangeActionRandom();
 
-    ObjectPtr  GetNearestCharacter();
-    ObjectPtr  GetNearestAttacker();
-    ObjectPtr  GetNearestGrabbableObj();
+    ObjectPtr GetNearestCharacter();
+    ObjectPtr GetNearestAttacker();
+    ObjectPtr GetNearestGrabbableObj();
+
+    bool IsAttackerNearby();
+    const float attacker_near_distance_ = 1.0f;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
