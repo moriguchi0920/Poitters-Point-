@@ -3,7 +3,7 @@
 //! @brief  PoittersPoint_Slime_Explosion
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Slime_Explosion.h"
-
+#include "Game/Object/PoittersPoint_Camera.h"
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 
@@ -25,6 +25,9 @@ bool SlimeExplosion::Init()
     // ★ 爆発SEの再生処理
     // DxLib標準関数の場合:
     PlaySoundFile("data/Game/SE/Explosion/Explosion08-2(Short).mp3", DX_PLAYTYPE_BACK);
+
+    // ★ 爆発時にカメラを揺らす（例: 0.3秒間、強さ2.0で画面を揺らす）
+    Camera::Shake(0.3f, 2.0f);
 
     return true;
 }
