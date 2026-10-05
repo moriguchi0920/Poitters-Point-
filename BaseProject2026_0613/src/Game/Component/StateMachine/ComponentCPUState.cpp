@@ -15,16 +15,11 @@ void ComponentCPUState::Init()
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
-    // オブジェクトの制御を行うコンポーネントを追加
-    if(character_casted_owner) {
-        auto component_range_walk = owner->AddComponent<ComponentStateSetRangeWalk>();
-        component_range_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
-        component_range_walk->SetWalkDirection({0.0f, 0.0f, 0.0f});
-        component_range_walk->SetWalkDistance(0.0f);
-    }
+
 
     can_grab_   = true;
     can_throw_  = false;
+    prev_action_ = CPU_ACTION::ACTION_THINK;
     cur_action_ = CPU_ACTION::ACTION_THINK;
     owner->AddComponent<ComponentStateThink>()->SetThinkingFinishTime(1.5f);
 }
@@ -40,11 +35,9 @@ void ComponentCPUState::Update()
     switch(cur_action_) {
     case CPU_ACTION::ACTION_THINK:
         {
-            if (auto component_think = owner->GetComponent<ComponentStateThink>())
-            {
-                if (component_think->GetFinished())
-                {
-
+            if(auto component_think = owner->GetComponent<ComponentStateThink>()) {
+                if(component_think->GetFinished()) {
+                    ChangeActionFlexible();
                 }
             }
             break;
@@ -54,9 +47,11 @@ void ComponentCPUState::Update()
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
                 if(!StartGrab()) {
+                    StartThink();
                 }
             }
             if(FinishGrab()) {
+                StartThink();
             }
             break;
         }
@@ -64,6 +59,7 @@ void ComponentCPUState::Update()
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
                 if(component_walk->GetArrival() || component_walk->GetStopped()) {
+                    StartThink();
                 }
             }
             break;
@@ -79,6 +75,7 @@ void ComponentCPUState::Update()
             if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
                 if(component_throw->GetIsFinished()) {
                     can_grab_ = true;
+                    StartThink();
                 }
             }
         }
@@ -113,16 +110,39 @@ void ComponentCPUState::GUI()
     ImGui::End();
 }
 
-void ComponentCPUState::ChangeAction(CPU_ACTION action)
+
+void ComponentCPUState::StartThink()
 {
-    if(cur_action_ == action)
-        return;
-
-
+    prev_action_ = cur_action_;
+    cur_action_ = CPU_ACTION::ACTION_THINK;
+    ChangeState<ComponentStateThink>();
 }
 
 void ComponentCPUState::ChangeActionFlexible()
 {
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    switch (prev_action_)
+    {
+        case CPU_ACTION::ACTION_THINK:
+        {
+                break;
+        }
+        case CPU_ACTION::ACTION_GRAB:
+        {
+            if(character_casted_owner) {
+                auto component_target_walk = ChangeState<ComponentStateTargetWalk>();
+                component_target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+                component_target_walk->SetTargetPtr(GetNearestCharacter());
+            }
+            cur_action_ = CPU_ACTION::ACTION_ATTACK;
+            break;
+        }
+        case CPU_ACTION::ACTION_ATTACK:
+        {
+
+        }
+    }
 }
 
 void ComponentCPUState::ChangeActionRandom()
@@ -158,8 +178,6 @@ ObjectPtr ComponentCPUState::GetNearestAttacker()
     auto owner = GetOwner();
     // キャラクターを配列で取得
     auto characters = Scene::Object::GetArray<PoittersPoint::Character>();
-    // 一番近いキャラクターのポインタ
-    ObjectPtr nearest_ptr = nullptr;
     // 一番近いものを持っているキャラクターのポインタ
     ObjectPtr attacker_ptr = nullptr;
     // キャラクターへの距離を比べる用のfloat最大値(キャラクターの中から一番近いものを求めるため)
@@ -179,8 +197,6 @@ ObjectPtr ComponentCPUState::GetNearestAttacker()
             if(dis < nearest_distance) {
                 // 最短距離を更新
                 nearest_distance = dis;
-                // 一番近いキャラクターとして登録
-                nearest_ptr = character;
                 // ものを持っていたら
                 if(state_machine->GetGrabbing()) {
                     // 攻撃者として登録
@@ -189,11 +205,7 @@ ObjectPtr ComponentCPUState::GetNearestAttacker()
             }
         }
     }
-    // 攻撃者がいなければ
-    if(attacker_ptr == nullptr) {
-        // 一番近いキャラクターを攻撃者として扱う
-        attacker_ptr = nearest_ptr;
-    }
+
     return attacker_ptr;
 }
 
@@ -226,6 +238,24 @@ ObjectPtr ComponentCPUState::GetNearestGrabbableObj()
         }
     }
     return targetPtr;
+}
+
+bool ComponentCPUState::IsAttackerNearby()
+{
+    auto owner = GetOwner();
+    if (auto obj = GetNearestAttacker())
+    {
+        float3 attacker_pos = obj->GetTranslate();
+        float3 owner_pos    = owner->GetTranslate();
+        float3 vec          = attacker_pos - owner_pos;
+        float  dis          = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+        if (dis < attacker_near_distance_)
+        {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 CEREAL_REGISTER_TYPE(ComponentCPUState)
