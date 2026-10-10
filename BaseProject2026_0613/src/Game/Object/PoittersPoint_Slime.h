@@ -4,33 +4,34 @@
 //! @brief  PoittersPoint_Slime
 //---------------------------------------------------------------------------
 #include <System/Scene.h>
+#include <System/Object.h>
+#include <System/Component/ComponentCollision.h>
 
 namespace PoittersPoint {
-// namespace PoittersPoint
 
+class Slime;
 USING_PTR(Slime);
+
 class Slime : public Object
 {
 public:
-    BP_OBJECT_DECL(Slime, "PoittersPoint::Slime");
+    BP_OBJECT_DECL(Slime, u8"スライム");
 
     //! @brief 初期化
-    //! @return 初期化終了
     bool Init() override;
 
     //! @brief 更新
-    //! キーを確認して弾を撃たせるために必要
     void Update() override;
 
     //! @brief GUI
-    //! GUIでの弾の速度調整のために必要
     void GUI() override;
 
     //! @brief 当たり判定のコールバック
-    //! 当たり判定が行われたときに自動で呼び出される関数
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
 private:
+    //! @brief 爆発処理
+    void Explode();
 };
 
 }    // namespace PoittersPoint
