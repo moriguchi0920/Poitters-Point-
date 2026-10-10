@@ -17,14 +17,14 @@ bool SlimeExplosion::Init()
     SetName("SlimeExplosion");
 
     // 爆発3Dモデルの設定
-    auto model = AddComponent<ComponentModel>("data/Game/effects/Explosion/Explosion.mv1");
+    auto model = AddComponent<ComponentModel>("data/Game/Models/Explosion/Explosion.mv1");
     if(model) {
         model->SetScaleAxisXYZ({1.0f, 1.0f, 1.0f});
     }
 
     // ★ 爆発SEの再生処理
     // DxLib標準関数の場合:
-    PlaySoundFile("data/Game/SE/Explosion/Explosion08-2(Short).mp3", DX_PLAYTYPE_BACK);
+    PlaySoundFile("data/Game/Models/Explosion/SE/Explosion08-2(Short).mp3", DX_PLAYTYPE_BACK);
 
     return true;
 }
