@@ -59,7 +59,39 @@ void PoittersPoint_Stage::Update()
         obj->AddTranslate({0.001f, 0.0f, 0.0f});
     }
 
+    // ===================================================
+    // ★ スライムの再生成（リスポーン）ロジック
+    // ===================================================
+    // フィールド上に存在するSlimeのリストを取得
+    auto slimes = Scene::Object::GetArray<Slime>();
+
+    if(slimes.empty()) {
+        // フィールド上にスライムが1体もいない場合、タイマーを進める
+        slime_respawn_timer_ += GetDeltaTime();
+
+        // 規定時間（5秒）経過したら再生成
+        if(slime_respawn_timer_ >= SLIME_RESPAWN_TIME) {
+            auto new_slime = Scene::Object::Create<Slime>();
+
+            // 初期出現位置を設定（例: 空中から降ってくるように配置）
+            if(new_slime) {
+                new_slime->SetTranslate({0.0f, 10.0f, 0.0f});
+            }
+
+            // タイマーをリセット
+            slime_respawn_timer_ = 0.0f;
+        }
+    }
+    else {
+        // スライムが存在している間はタイマーをリセットしておく
+        slime_respawn_timer_ = 0.0f;
+    }
+
+    // デバッグ表示
     printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
+    if(slimes.empty()) {
+        printfDx("\n SLIME RESPAWN IN: %.1f", SLIME_RESPAWN_TIME - slime_respawn_timer_);
+    }
 
     //{
     //    // Enemyという名前がついたObjectをVectorで複数取得

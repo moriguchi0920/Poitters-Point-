@@ -34,6 +34,10 @@ private:
     int counter  = 0;
     int counter2 = 1000;
     int counter3 = 2000;
+
+    // ★ スライム再生成（リスポーン）用変数
+    float                  slime_respawn_timer_ = 0.0f;    //!< 再生成カウントダウンタイマー
+    static constexpr float SLIME_RESPAWN_TIME   = 5.0f;    //!< 消滅してから再生成されるまでの秒数
 };
 
 }    // namespace PoittersPoint
