@@ -35,13 +35,13 @@ public:
 
 private:
     // ジャンプパラメータ
-    float jump_power_     = 1.7f;     // ジャンプの高さを出す
+    float jump_power_     = 2.0f;     // ジャンプの高さを出す
     float gravity_        = 0.05f;    // 重力をかけることで僅かな滞空時間を作る
     float air_move_speed_ = 0.4f;
     float rot_speed_      = 20.0f;    // 回転速度
 
     // 地上での踏ん張りタイマー
-    float startup_timer_ = 0.25f;   
+    float startup_timer_ = 0.25f;
 
     float3 jump_direction_{0, 0, 0};
     float  current_jump_velocity_ = 0.0f;

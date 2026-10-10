@@ -9,6 +9,7 @@
 #include "ComponentStateThrow.h"
 #include "ComponentGrabbable.h"
 #include "ComponentHitPoints.h"
+#include "ComponentStatePlayerJump.h"
 
 //===========================================================================
 // 初期化処理
@@ -34,34 +35,33 @@ void ComponentPlayerState::Update()
 
     auto owner = GetOwner();
 
-    // スペースキーが押された時の処理
+    // Eキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_E)) {
-        // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
-        if(owner->GetComponent<ComponentStateIdleWalk>()) {
-            if(!grabbing_object_ptr_.expired()) {
-                //(投げ可能 = すでにアイテムを持っている)
-                if(can_throw_) {
-                    // 投げ判定変数をfalseに
+        // オブジェクトが近くにある、または持っている状態
+        if(!grabbing_object_ptr_.expired()) {
+            // 【投げ処理】すでにアイテムを持っている (can_throw_ が true)
+            if(can_throw_) {
+                bool is_idle_walk = (owner->GetComponent<ComponentStateIdleWalk>() != nullptr);
+                bool is_jumping   = (owner->GetComponent<ComponentStatePlayerJump>() != nullptr);
+
+                // 地上(IdleWalk) または 空中(PlayerJump) のどちらでも投げを許可
+                if(is_idle_walk || is_jumping) {
                     can_throw_ = false;
-                    // 持ち上げ可能に
-                    can_grab_ = true;
-                    // Throwステートに変更
+                    can_grab_  = true;
+
+                    // Throwステートに変更（ジャンプ中ならジャンプステートからThrowステートへ遷移）
                     ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
                     grabbing_object_ptr_.reset();
                 }
-                // (投げ不可能 = アイテムはまだ持っていない)
-                else {
-                    // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
-                    auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
-                    // コンポーネントがあったら
-                    if(grabbable) {
-                        // 持ち上げ相手が持てる状態なら
-                        if(grabbable->GetCanGrab()) {
-                            // ステートをGrabステートに
-                            ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
-                            can_grab_ = false;
-                            grabbable->SetCanGrab(false);
-                        }
+            }
+            // 【持ち上げ処理】まだアイテムを持っていない (地上 IdleWalk のみ許可)
+            else if(owner->GetComponent<ComponentStateIdleWalk>()) {
+                auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
+                if(grabbable) {
+                    if(grabbable->GetCanGrab()) {
+                        ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
+                        can_grab_ = false;
+                        grabbable->SetCanGrab(false);
                     }
                 }
             }
