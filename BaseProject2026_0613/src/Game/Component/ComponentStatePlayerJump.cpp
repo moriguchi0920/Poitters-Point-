@@ -42,13 +42,13 @@ void ComponentStatePlayerJump::Init()
         jump_direction_ = {0, 0, 0};
     }
 
-    // アニメーション再生
+    // アニメーション再生（Init時に再生開始し、踏ん張りモーションから見せる）
     if(auto mdl = owner->GetComponent<ComponentModel>()) {
         if(is_holding_) {
-            mdl->PlayAnimationNoSame("grab jump", false);
+            mdl->PlayAnimation("grab jump", false);
         }
         else {
-            mdl->PlayAnimationNoSame("jump", false);
+            mdl->PlayAnimation("jump", false);
         }
     }
 }
@@ -60,6 +60,12 @@ void ComponentStatePlayerJump::Update()
     auto owner = GetOwner();
     if(!owner)
         return;
+
+    // 踏ん張り（溜め）動作中の処理
+    if(startup_timer_ > 0.0f) {
+        startup_timer_ -= GetDeltaTime();
+        return;    // 溜めが終わるまで上昇・空中移動を行わずに地上に留める
+    }
 
     // 水平移動処理
     if((float)length(jump_direction_) > 0.0f) {
@@ -87,7 +93,8 @@ void ComponentStatePlayerJump::Update()
             is_landing_    = true;
             landing_Timer_ = 0.15f;    // 着地時の硬直(0.15)
             if(auto mdl = owner->GetComponent<ComponentModel>()) {
-                mdl->PlayAnimationNoSame("land", false);
+                // "land" から "idle" (または "walk") に変更
+                mdl->PlayAnimationNoSame("idle", false);
             }
         }
 
@@ -174,6 +181,7 @@ void ComponentStatePlayerJump::GUI()
                 GetOwner()->RemoveComponent(shared_from_this());
 
             // ジャンプパラメータ調整
+            ImGui::DragFloat(u8"踏ん張り(溜め)時間", &startup_timer_, 0.01f, 0.0f, 1.0f);
             ImGui::DragFloat(u8"ジャンプ初速", &jump_power_, 0.05f);
             ImGui::DragFloat(u8"重力", &gravity_, 0.005f);
             ImGui::DragFloat(u8"空中移動速度", &air_move_speed_, 0.1f);

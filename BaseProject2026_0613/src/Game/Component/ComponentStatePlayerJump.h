@@ -40,6 +40,9 @@ private:
     float air_move_speed_ = 0.4f;
     float rot_speed_      = 20.0f;    // 回転速度
 
+    // 地上での踏ん張りタイマー
+    float startup_timer_ = 0.25f;   
+
     float3 jump_direction_{0, 0, 0};
     float  current_jump_velocity_ = 0.0f;
     float  ground_y_              = 0.0f;
@@ -68,6 +71,7 @@ private:
             CEREAL_NVP(gravity_),
             CEREAL_NVP(air_move_speed_),
             CEREAL_NVP(rot_speed_),
+            CEREAL_NVP(startup_timer_),
 
             CEREAL_NVP(key_up_),
             CEREAL_NVP(key_down_),
