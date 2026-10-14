@@ -28,8 +28,8 @@ public:
 
     void SetIsHolding(bool hold);
 
-    virtual bool GetArrival() = 0;
-    virtual bool GetStopped() = 0;
+    virtual bool GetArrival() { return false; }
+    virtual bool GetStopped() { return false; }
 
 protected:
     float move_speed_ = 0.3f;

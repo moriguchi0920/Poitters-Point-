@@ -15,13 +15,13 @@ void ComponentCPUState::Init()
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
 
-
-
-    can_grab_   = true;
-    can_throw_  = false;
-    prev_action_ = CPU_ACTION::ACTION_THINK;
-    cur_action_ = CPU_ACTION::ACTION_THINK;
-    owner->AddComponent<ComponentStateThink>()->SetThinkingFinishTime(1.5f);
+    can_grab_  = true;
+    can_throw_ = false;
+    // 思考はprevに入れないため、行動実績がない初期状態は
+    // 手が空いているATTACK後と同じ基準で最初の行動を決めさせる
+    prev_action_ = CPU_ACTION::ACTION_ATTACK;
+    cur_action_  = CPU_ACTION::ACTION_THINK;
+    owner->AddComponent<ComponentStateThink>()->SetThinkingFinishTime(think_time_);
 }
 
 void ComponentCPUState::Update()
@@ -46,7 +46,9 @@ void ComponentCPUState::Update()
     case CPU_ACTION::ACTION_GRAB:
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
-                if(!StartGrab()) {
+                // 掴み対象に当たって掴める状態になるまで歩き続ける
+                // 掴めずにたどり着けない/止まってしまったら考え直す
+                if(!StartGrab() && (component_walk->GetArrival() || component_walk->GetStopped())) {
                     StartThink();
                 }
             }
@@ -110,37 +112,128 @@ void ComponentCPUState::GUI()
     ImGui::End();
 }
 
-
 void ComponentCPUState::StartThink()
 {
-    prev_action_ = cur_action_;
-    cur_action_ = CPU_ACTION::ACTION_THINK;
-    ChangeState<ComponentStateThink>();
+    // 思考はprevに入れない
+    if(cur_action_ != CPU_ACTION::ACTION_THINK) {
+        prev_action_ = cur_action_;
+        cur_action_  = CPU_ACTION::ACTION_THINK;
+        ChangeState<ComponentStateThink>();
+    }
+}
+
+void ComponentCPUState::RestartThink()
+{
+    // 行動中の考え直しはStartThinkだとprevに記録してしまうため、思考時間だけ延長する
+    if(auto think = GetOwner()->GetComponent<ComponentStateThink>()) {
+        think->SetThinkingFinishTime(think->GetCurThinkingTime() + think_time_);
+    }
+}
+
+void ComponentCPUState::StartGrabAction(ObjectPtr target)
+{
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    if(!character_casted_owner || !target) {
+        return;
+    }
+
+    // 拾えるオブジェクトがあるところまで歩く
+    auto target_walk = ChangeState<ComponentStateTargetWalk>();
+    target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    target_walk->SetTargetPtr(target);
+
+    cur_action_ = CPU_ACTION::ACTION_GRAB;
+}
+
+void ComponentCPUState::StartAvoidAttacker()
+{
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    // ものを持っている最も近いキャラクターを取得
+    auto attacker = GetNearestAttacker();
+    if(!character_casted_owner || !attacker) {
+        return;
+    }
+
+    // 攻撃者から離れる方向に逃げる
+    float3 dir     = owner->GetTranslate() - attacker->GetTranslate();
+    dir.y          = 0.0f;
+    float  dir_len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+    if(dir_len < 0.001f) {
+        dir = {0.0f, 0.0f, 1.0f};
+    }
+    else {
+        dir = dir * (1.0f / dir_len);
+    }
+
+    // 攻撃者から離れる距離だけ歩く
+    auto range_walk = ChangeState<ComponentStateSetRangeWalk>();
+    range_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    range_walk->SetWalkDirection(dir);
+    range_walk->SetWalkDistance(escape_offset_);
+
+    cur_action_ = CPU_ACTION::ACTION_AVOID_ATTACKER;
+}
+
+void ComponentCPUState::StartAttackAction()
+{
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    if(!character_casted_owner) {
+        return;
+    }
+
+    // 最も近いキャラクターまで歩いて投げる
+    auto target_walk = ChangeState<ComponentStateTargetWalk>();
+    target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    target_walk->SetTargetPtr(GetNearestCharacter());
+
+    cur_action_ = CPU_ACTION::ACTION_ATTACK;
 }
 
 void ComponentCPUState::ChangeActionFlexible()
 {
-    auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
-    switch (prev_action_)
-    {
-        case CPU_ACTION::ACTION_THINK:
+    // 思考はprevに入れないため、このcaseに来ることはない(安全のため何もしない)
+    if(prev_action_ == CPU_ACTION::ACTION_THINK) {
+        return;
+    }
+
+    // 直前の行動ごとに次の行動を決める
+    // ACTIONを追加する場合は、caseとその行動を開始する関数を増やすだけで対応できる
+    switch(prev_action_) {
+    case CPU_ACTION::ACTION_ATTACK:
         {
-                break;
-        }
-        case CPU_ACTION::ACTION_GRAB:
-        {
-            if(character_casted_owner) {
-                auto component_target_walk = ChangeState<ComponentStateTargetWalk>();
-                component_target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
-                component_target_walk->SetTargetPtr(GetNearestCharacter());
+            // 投げた後は手が空いているため、近くにオブジェクトを持っている敵がいるなら逃げる
+            if(IsAttackerNearby()) {
+                StartAvoidAttacker();
             }
-            cur_action_ = CPU_ACTION::ACTION_ATTACK;
+            // 拾えるオブジェクトが近所にあるなら拾いに行く
+            else if(auto target = GetNearestGrabbableObj()) {
+                StartGrabAction(target);
+            }
+            else {
+                // どちらもない場合は考え直す
+                RestartThink();
+            }
             break;
         }
-        case CPU_ACTION::ACTION_ATTACK:
+    case CPU_ACTION::ACTION_AVOID_ATTACKER:
         {
-
+            // 逃げた後は基本的にオブジェクトを拾いに行く
+            if(auto target = GetNearestGrabbableObj()) {
+                StartGrabAction(target);
+            }
+            else {
+                RestartThink();
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_GRAB:
+        {
+            // 拾った後は敵にものを投げに行く
+            StartAttackAction();
+            break;
         }
     }
 }
@@ -193,15 +286,12 @@ ObjectPtr ComponentCPUState::GetNearestAttacker()
             float3 vec = character->GetTranslate() - owner->GetTranslate();
             // ベクトルから距離を取得
             float dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-            // 距離を比較して最短距離であれば
-            if(dis < nearest_distance) {
+            // ものを持っている最も近いキャラクターを攻撃者とする
+            if(state_machine->GetGrabbing() && dis < nearest_distance) {
                 // 最短距離を更新
                 nearest_distance = dis;
-                // ものを持っていたら
-                if(state_machine->GetGrabbing()) {
-                    // 攻撃者として登録
-                    attacker_ptr = character;
-                }
+                // 攻撃者として登録
+                attacker_ptr = character;
             }
         }
     }
@@ -243,18 +333,16 @@ ObjectPtr ComponentCPUState::GetNearestGrabbableObj()
 bool ComponentCPUState::IsAttackerNearby()
 {
     auto owner = GetOwner();
-    if (auto obj = GetNearestAttacker())
-    {
+    if(auto obj = GetNearestAttacker()) {
         float3 attacker_pos = obj->GetTranslate();
         float3 owner_pos    = owner->GetTranslate();
         float3 vec          = attacker_pos - owner_pos;
         float  dis          = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-        if (dis < attacker_near_distance_)
-        {
+        if(dis < attacker_near_distance_) {
             return true;
         }
     }
-    
+
     return false;
 }
 
