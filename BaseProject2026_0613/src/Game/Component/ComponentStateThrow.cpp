@@ -10,8 +10,19 @@ void ComponentStateThrow::Init()
 
     SetName<Component>("State Throw");
     auto owner = GetOwner();
+
+    is_released_ = false;
+
     if(auto model = owner->GetComponent<ComponentModel>()) {
-        model->PlayAnimationNoSame("throw");
+        if(is_in_air_) {
+            // ★空中投げ：ThrowFast を上半身のみ 1.5倍速で再生
+            // PlayAnimationEx の引数（name, node, loop, blend_time, start_time）
+            model->PlayAnimationEx("throw_fast", "mixamorig:Spine", false);
+        }
+        else {
+            // ★地上投げ：通常版（1.0倍速）を全身で再生
+            model->PlayAnimationNoSame("throw", false);
+        }
     }
 }
 
@@ -19,71 +30,77 @@ void ComponentStateThrow::Update()
 {
     __super::Update();
 
-    // オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
-    if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
-        // オーナーの投げるアニメーションが0.42以上であれば
-        if(0.65 <= model->GetAnimationTime()) {
-            // シェアードポインタに変換
-            // バレットがあれば(nullptrかチェック)
+    auto owner            = GetOwner();
+    bool was_in_air_start = is_in_air_;
+
+    // ★1. 空中投げの移動処理（カプセル本体の物理移動）
+    if(is_in_air_) {
+        float effective_gravity = is_released_ ? gravity_ : (gravity_ * 0.1f);
+
+        owner->AddTranslate({0.0f, current_velocity_, 0.0f}, true);
+        current_velocity_ -= effective_gravity;
+
+        // ★投げ切るまでは着地しない（ジャンプ＋投げを保つ）
+        if(is_released_) {
+            auto pos = owner->GetTranslate();
+            if(pos.y <= ground_y_) {
+                pos.y = ground_y_;
+                owner->SetTranslate(pos);
+                is_in_air_ = false;    // 着地
+            }
+        }
+    }
+
+    if(auto model = owner->GetComponent<ComponentModel>()) {
+        // ★2. 空中投げ：モデルのY座標を固定（ルートモーションの打ち消し）
+        if(was_in_air_start) {
+            matrix mat        = model->GetMatrix();
+            mat.translate().y = 0.0f;
+            model->SetMatrix(mat);
+        }
+
+        // 手離し判定閾値（1.5倍速の ThrowFast に合わせて手離しタイミングも 0.20f 付近に調整）
+        float release_threshold = was_in_air_start ? 0.20f : 0.65f;
+
+        // 手を離す処理
+        if(!is_released_ && release_threshold <= model->GetAnimationTime()) {
             if(auto throw_object = throw_weak_ptr_.lock()) {
-                // アタッチモデルを取り外す
                 throw_object->RemoveComponent<ComponentAttachModel>();
 
                 auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
                 grabbable->SetIsGrabbed(false);
 
-                const float3 up_len = {0.0f, 5.0f, 0.0f};
-                float3       vec    = {0.0f, 1.0f, 0.0f};
-
-                // GetOnwer：オーナー(自分がAddComponentされたObject)を取得します
-                // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
-                auto   owner = GetOwner();
-                matrix mat   = matrix::identity();
+                float3 vec = {0.0f, 1.0f, 0.0f};
                 if(auto model = owner->GetComponent<ComponentModel>()) {
-                    // モデルの完全な向きは、GetWorldMatrix()でとる必要があります。
-                    mat = model->GetWorldMatrix();
-
                     constexpr float front_len = 5.0f;
+                    vec                       = -(model->GetWorldVectorAxisZ() * front_len);
+                }
 
-                    vec = -(model->GetWorldVectorAxisZ() * front_len);
-                }
-                if(auto throw_object = throw_weak_ptr_.lock()) {
-                    auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
-                    throw_object->AddTranslate(vec * 5.0f);
-                    grabbable->SetTranslation(vec * 5.0f);
-                }
-                // 投げるモーションが終わったので当たり判定を
+                throw_object->AddTranslate(vec * 5.0f);
+                grabbable->SetTranslation(vec * 5.0f);
+
                 if(auto collider = throw_object->GetComponent<ComponentCollision>()) {
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
                 }
 
-                // 投げ主を記録（自分自身への初期ダメージをスキップするため）
-                if(auto grabbable = throw_object->GetComponent<ComponentGrabbable>()) {
-                    grabbable->SetThrower(GetOwnerPtr());
-                }
+                grabbable->SetThrower(GetOwnerPtr());
 
                 throw_weak_ptr_.reset();
-                //ChangeState<ComponentStateIdleWalk>();
+                is_released_ = true;
             }
-
-            /*
-            * // ここに実装すると投擲コンポーネントがプレイヤーに依存するのでだめだが、
-            * こういった実装をするとコンボも可能
-            if(Input::IsKeyDown(KEY_INPUT_SPACE))
-            {
-                RemoveThisComponent();
-                model->AddComponent<ComponentStateThrow2>;
-            }
-            */
         }
 
-        // アニメーションが止まっているか
-        if(!model->IsPlaying()) {
-            // 自分自身を取り除く
+        // アニメーション再生終了時のクリーンアップ処理
+        bool is_playing = was_in_air_start ? model->IsExPlaying("mixamorig:Spine") : model->IsPlaying();
+
+        if(!is_playing) {
+            matrix mat        = model->GetMatrix();
+            mat.translate().y = 0.0f;
+            model->SetMatrix(mat);
+
             RemoveThisComponent();
-            // 歩きのコンポーネントを再付与する
-            GetOwner()->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
+            auto idle = owner->AddComponent<ComponentStateIdleWalk>();
+            idle->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
         }
     }
 }
@@ -92,25 +109,17 @@ void ComponentStateThrow::GUI()
 {
     __super::GUI();
 
-    // GUI内に出現させる
     ImGui::Begin(GetOwner()->GetName().data());
     {
-        ImGui::Separator();    // 線が出てくる
+        ImGui::Separator();
         if(ImGui::TreeNode("State Throw")) {
-            //-------------------------------------------------------
-            // 共通部分(共通化したい)
-
-            // 有効/無効
             bool enable = GetStatus(StatusBit::Enable);
             if(ImGui::Checkbox(u8"有効", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            // GUI上でオーナーから自分(SampleObjectController)を削除します
             if(ImGui::Button(u8"削除"))
                 GetOwner()->RemoveComponent(shared_from_this());
-            //-------------------------------------------------------
 
-            //if(ImGui::TreeNode("State IdleWalk")) とセット
             ImGui::TreePop();
         }
     }
