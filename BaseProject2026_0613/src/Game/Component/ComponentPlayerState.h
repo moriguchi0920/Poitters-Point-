@@ -26,8 +26,6 @@ public:
 
     void GrabbableHit(ObjectPtr target);
 
-
-
 private:
     ObjectWeakPtr grabbing_object_ptr_;
 
