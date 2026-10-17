@@ -29,7 +29,7 @@ private:
     ObjectPtr target_ptr_;
 
     float       stopping_time_;
-    const float stop_judge_time_ = 0.5f;
+    const float stop_judge_time_ = 1.0f;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
