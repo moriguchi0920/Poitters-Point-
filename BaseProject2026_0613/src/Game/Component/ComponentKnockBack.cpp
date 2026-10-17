@@ -86,7 +86,7 @@ void ComponentKnockBack::OnHitComponent(const HitInfo& hit_info)
         float  velMag   = sqrtf(throwVel.x * throwVel.x + throwVel.y * throwVel.y + throwVel.z * throwVel.z);
 
         // 調整係数（必要ならチューニング）
-        float baseForce   = 5.0f;
+        float baseForce   = 50.0f;
         float damageBonus = grabbable->GetDamage() * 0.5f;
         float force       = velMag * baseForce + damageBonus;
 
