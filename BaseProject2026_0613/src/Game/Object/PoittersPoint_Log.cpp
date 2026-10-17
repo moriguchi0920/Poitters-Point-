@@ -28,8 +28,6 @@ bool Log::Init()
     }
 
     // 丸太の形状に合致する単一カプセル衝突
-    // 5つに分割していた個別カプセルを1つに統合し、
-    // 重力・反発・跳ね返りの競合を解消
     auto col = AddComponent<ComponentCollisionCapsule>();
     if(col) {
         col->SetRadius(3.0f);
@@ -38,10 +36,8 @@ bool Log::Init()
         col->UseGravity(true);
         col->SetGravity(-0.2f);
         col->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY |
-                                  (u32)ComponentCollision::CollisionGroup::GROUND |
-                                  (u32)ComponentCollision::CollisionGroup::ITEM |
-                                  (u32)ComponentCollision::CollisionGroup::PLAYER);
+        col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
+                                  (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
         col->SetMass(200.0f);
     }
 
@@ -52,7 +48,7 @@ bool Log::Init()
     }
 
     //SE
-    se_handle_ = LoadSoundMem("data/Game/LogSE/Log1.mp3");
+    se_handle_       = LoadSoundMem("data/Game/LogSE/Log1.mp3");
     throw_cool_down_ = 0.0f;
 
     // 転がり計算用に前フレームの位置を初期化
@@ -103,7 +99,7 @@ void Log::PostPhysics()
         // 丸太（X軸を中心とするシリンダー）の転がり：
         // 水平移動量 / 半径 = 回転角（ラジアン）
         // ラジアンを度に変換: * (180 / PI)
-        float radius = 3.0f;
+        float radius    = 3.0f;
         float angle_deg = (horiz_dist / radius) * 57.2957795f;    // 180.0f / 3.14159265f
 
         // Z方向の移動が進行方向の時は負の回転（右手座標系）
@@ -111,8 +107,8 @@ void Log::PostPhysics()
             angle_deg = -angle_deg;
 
         // X軸周りに累積回転
-        float3 rot = GetRotationAxisXYZ();
-        rot.x += angle_deg;
+        float3 rot  = GetRotationAxisXYZ();
+        rot.x      += angle_deg;
         SetRotationAxisXYZ(rot);
     }
 }
