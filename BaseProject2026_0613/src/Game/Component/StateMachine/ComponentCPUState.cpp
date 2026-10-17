@@ -48,8 +48,9 @@ void ComponentCPUState::Update()
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
                 // 掴み対象に当たって掴める状態になるまで歩き続ける
                 // 掴めずにたどり着けない/止まってしまったら考え直す
-                if(!StartGrab() && (component_walk->GetArrival() || component_walk->GetStopped())) {
-                    StartThink();
+                if((component_walk->GetArrival() || component_walk->GetStopped())) {
+                    if(!StartGrab())
+                        StartThink();
                 }
             }
             if(FinishGrab()) {
@@ -118,7 +119,8 @@ void ComponentCPUState::StartThink()
     if(cur_action_ != CPU_ACTION::ACTION_THINK) {
         prev_action_ = cur_action_;
         cur_action_  = CPU_ACTION::ACTION_THINK;
-        ChangeState<ComponentStateThink>();
+        auto think   = ChangeState<ComponentStateThink>();
+        think->SetThinkingFinishTime(think->GetCurThinkingTime() + think_time_);
     }
 }
 
@@ -157,9 +159,9 @@ void ComponentCPUState::StartAvoidAttacker()
     }
 
     // 攻撃者から離れる方向に逃げる
-    float3 dir     = owner->GetTranslate() - attacker->GetTranslate();
-    dir.y          = 0.0f;
-    float  dir_len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+    float3 dir    = owner->GetTranslate() - attacker->GetTranslate();
+    dir.y         = 0.0f;
+    float dir_len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
     if(dir_len < 0.001f) {
         dir = {0.0f, 0.0f, 1.0f};
     }
@@ -231,8 +233,25 @@ void ComponentCPUState::ChangeActionFlexible()
         }
     case CPU_ACTION::ACTION_GRAB:
         {
-            // 拾った後は敵にものを投げに行く
-            StartAttackAction();
+            if(GetGrabbing()) {
+                // 拾った後は敵にものを投げに行く
+                StartAttackAction();
+            }
+            else {
+                // 拾えなかったので攻撃後と同じ動作
+                // 投げた後は手が空いているため、近くにオブジェクトを持っている敵がいるなら逃げる
+                if(IsAttackerNearby()) {
+                    StartAvoidAttacker();
+                }
+                // 拾えるオブジェクトが近所にあるなら拾いに行く
+                else if(auto target = GetNearestGrabbableObj()) {
+                    StartGrabAction(target);
+                }
+                else {
+                    // どちらもない場合は考え直す
+                    RestartThink();
+                }
+            }
             break;
         }
     }

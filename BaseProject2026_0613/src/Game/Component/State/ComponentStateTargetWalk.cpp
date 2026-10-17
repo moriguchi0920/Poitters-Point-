@@ -6,6 +6,7 @@ void ComponentStateTargetWalk::Init()
     __super::Init();
     SetName<Component>("State Target Walk");
     ResetTargetPtr();
+    stopping_time_ = 0.0f;
 }
 
 void ComponentStateTargetWalk::Update()
@@ -47,6 +48,7 @@ void ComponentStateTargetWalk::Update()
                 mdl->PlayAnimationNoSame("walk", true);
             }
         }
+        stopping_time_ = 0.0f;
     }
     else {
         stopping_time_ += GetDeltaTime();
