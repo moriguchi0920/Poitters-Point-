@@ -12,6 +12,8 @@
 #include "Game/system/PoittersPoint_Timer.h"
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
+#include "Game/Object/PoittersPoint_Wall.h"
+
 
 #include <System/Scene.h>
 #include <System/Component/Component.h>
@@ -104,12 +106,12 @@ bool PoittersPoint_Stage::Init()
     //for(int i = 0; i < 5; i++) {
     //    Scene::Object::Create<Bullet>();
     //}
+    Scene::Object::Create<Wall>();
 
     Scene::Object::Create<Rock>();
     Scene::Object::Create<Log>();
 
     Scene::Object::Create<Slime>();
-
     return true;
 }
 

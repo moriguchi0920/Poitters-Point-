@@ -41,11 +41,20 @@ bool Enemy::Init()
         model->SetScaleAxisXYZ({0.12f, 0.12f, 0.12f});
     }
 
-    // ラムダ式
-    auto randomRange = [](int start, int end) { return start + rand() % ((end - start) + 1); };
+    //// ラムダ式
+    //                  auto randomRange = [](int start, int end) { return start + rand() % ((end - start) + 1); };
 
-    //SetTranslate({30, 5, -30});
-    SetTranslate({randomRange(-150, 150), 50, randomRange(-150, 150)});
+    ////SetTranslate({30, 5, -30});
+    //SetTranslate({randomRange(-150, 150), 50, randomRange(-150, 150)});
+
+    // 原点 (0, 0, 0) を中心とした半径 50 以内の円形範囲にランダム配置
+    float theta = ((float)rand() / RAND_MAX) * DX_TWO_PI_F;    // 0 ～ 2π のランダムな角度
+    float r     = sqrtf((float)rand() / RAND_MAX) * 50.0f;     // 0 ～ 50 のランダムな半径（面積が均等になるように調整）
+
+    float x = cosf(theta) * r;
+    float z = sinf(theta) * r;
+
+    SetTranslate({x, 50.0f, z});    // Y軸の高さは50から落下させる想定
 
     AddComponent<ComponentCollisionCapsule>()
         // 所属するグループを「ENEMY」とします
