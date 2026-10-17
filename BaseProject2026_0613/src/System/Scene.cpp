@@ -417,7 +417,7 @@ void Scene::Base::applyObjectSignalState(ObjectPtr obj, bool is_pause, bool forc
         // コンポーネントのUpdate/Draw状態を取得
         const bool component_update_blocked = object_update_blocked || !component->GetStatus(::Component::StatusBit::Enable) ||
                                               (is_pause && !component->GetStatus(::Component::StatusBit::DisablePause));
-        const bool component_draw_blocked = object_draw_blocked || !component->GetStatus(::Component::StatusBit::Enable);
+        const bool component_draw_blocked   = object_draw_blocked || !component->GetStatus(::Component::StatusBit::Enable);
 
         // コンポーネントの状態に応じてシグナル状態を変更
         if(force_sync || !cache.initialized_ || comp_state.update_blocked_ != component_update_blocked) {

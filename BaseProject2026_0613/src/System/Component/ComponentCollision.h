@@ -123,7 +123,6 @@ public:
         ETC    = 7,
         LOG    = 8,
 
-
 #if 0
 		WALL2	= 8,
 		GROUND2	= 9,
