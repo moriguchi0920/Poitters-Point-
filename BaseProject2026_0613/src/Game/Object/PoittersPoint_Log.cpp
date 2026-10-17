@@ -18,107 +18,32 @@ bool Log::Init()
     // 親(継承元の基底クラス)のInit関数を呼ぶ
     // これがなければabort()が呼ばれる
     Super::Init();
-    //__super::Init();
 
     SetTranslate({10.0f, 10.0f, -20.0f});
 
     SetName("Log");
     auto model = AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
     if(model) {
-        // 丸太だけに限定してカラー（ディフューズ色）を設定する
-        // ※お使いの ComponentModel に用意されている設定関数を呼び出します
-
-        // パターンA: モデルの色を指定できる関数がある場合
-        // model->SetColor({ 0.5f, 0.3f, 0.1f, 1.0f }); // 茶色
-
-        // パターンB: マテリアルを取得して設定する場合
-        // auto material = model->GetMaterial(0);
-        // if(material) material->SetDiffuse({ 0.5f, 0.3f, 0.1f, 1.0f });
+        // モデルの読み込み成功時の追加設定はここに
     }
 
-    // 左
-    auto col1 = AddComponent<ComponentCollisionCapsule>();
-    if(col1) {
-        col1->SetRadius(3.0f);
-        col1->SetHeight(5.0f);
-        col1->SetTranslate({-8.5f, 2.0f, 0.0f});
+    // 丸太の形状に合致する単一カプセル衝突
+    // 5つに分割していた個別カプセルを1つに統合し、
+    // 重力・反発・跳ね返りの競合を解消
+    auto col = AddComponent<ComponentCollisionCapsule>();
+    if(col) {
+        col->SetRadius(3.0f);
+        col->SetHeight(5.0f);
 
-        col1->UseGravity(true);
-        col1->SetGravity(-0.2f);
-        col1->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col1->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col1->SetMass(200.0f);
+        col->UseGravity(true);
+        col->SetGravity(-0.2f);
+        col->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+        col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY |
+                                  (u32)ComponentCollision::CollisionGroup::GROUND |
+                                  (u32)ComponentCollision::CollisionGroup::ITEM |
+                                  (u32)ComponentCollision::CollisionGroup::PLAYER);
+        col->SetMass(200.0f);
     }
-
-    // 真ん中
-    auto col2 = AddComponent<ComponentCollisionCapsule>();
-    if(col2) {
-        col2->SetRadius(3.0f);
-        col2->SetHeight(5.0f);
-        col2->SetTranslate({0.0f, 3.0f, 0.0f});
-
-        col2->UseGravity(true);
-        col2->SetGravity(-0.2f);
-        col2->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col2->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::ETC |
-                                   (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col2->SetMass(200.0f);
-    }
-
-    // 右
-    auto col3 = AddComponent<ComponentCollisionCapsule>();
-    if(col3) {
-        col3->SetRadius(3.0f);
-        col3->SetHeight(5.0f);
-        col3->SetTranslate({8.5f, 3.0f, 0.0f});
-
-        col3->UseGravity(true);
-        col3->SetGravity(-0.2f);
-        col3->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col3->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col3->SetMass(200.0f);
-    }
-
-    // 右2
-    auto col4 = AddComponent<ComponentCollisionCapsule>();
-    if(col4) {
-        col4->SetRadius(3.0f);
-        col4->SetHeight(5.0f);
-        col4->SetTranslate({-16.0f, 3.0f, 0.0f});
-
-        col4->UseGravity(true);
-        col4->SetGravity(-0.2f);
-        col4->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col4->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col4->SetMass(200.0f);
-    }
-
-    // 左２
-    auto col5 = AddComponent<ComponentCollisionCapsule>();
-    if(col5) {
-        col5->SetRadius(3.0f);
-        col5->SetHeight(5.0f);
-        col5->SetTranslate({16.0f, 3.0f, 0.0f});
-
-        col5->UseGravity(true);
-        col5->SetGravity(-0.2f);
-        col5->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col5->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col5->SetMass(200.0f);
-    }
-
-    const float3 col_offsets[] = {
-        { -8.5f, 2.0f, 0.0f},
-        {  0.0f, 3.0f, 0.0f},
-        {  8.5f, 3.0f, 0.0f},
-        {-16.0f, 3.0f, 0.0f},
-        { 16.0f, 3.0f, 0.0f}
-    };
 
     auto grabbable = AddComponent<ComponentGrabbable>();
     if(grabbable) {
@@ -126,19 +51,14 @@ bool Log::Init()
         grabbable->SetLiftTime(1.0f);
     }
 
-    //AddComponent<ComponentCollisionModel>();
-    //if(auto collision = GetComponent<ComponentCollisionModel>()) {
-    //    collision->AttachToModel();    // コリジョンをモデルに合わせる
-    //}
-
     //SE
     se_handle_ = LoadSoundMem("data/Game/LogSE/Log1.mp3");
-    //throw_cool_down_ = 0.0f;
-    //is_bounced_      = false;
+    throw_cool_down_ = 0.0f;
 
-    // 転がり関連の初期化
-    is_rolling_ = false;
-    roll_speed_ = 0.0f;
+    // 転がり計算用に前フレームの位置を初期化
+    prev_pos_ = GetTranslate();
+
+    SetScaleAxisXYZ({1.0f});
 
     return true;
 }
@@ -147,49 +67,53 @@ void Log::Update()
 {
     __super::Update();
 
-    // 地面に固定されている時は跳ねを抑える
-    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
-            grabbable->SetBounceOffset(0.0f);
-        }
+    // 物理演算前の位置を記録（PostPhysicsで転がり回転に使用）
+    prev_pos_ = GetTranslate();
+
+    auto grabbable = GetComponent<ComponentGrabbable>();
+    if(!grabbable)
+        return;
+
+    // 接地中かつ静止中は跳ねを抑制
+    if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
+        grabbable->SetBounceOffset(0.0f);
     }
+}
 
-    // 地面に固定されている時は無駄な力を抑え込んで滑りを止める
-    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
-            grabbable->SetBounceOffset(0.0f);
-        }
-    }
+void Log::PostPhysics()
+{
+    __super::PostPhysics();
 
-    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        // 転がるアニメーション＆移動処理
-        if(is_rolling_ && roll_speed_ > 0.01f) {
-            // 現在の座標と回転を取得
-            float3 pos = GetTranslate();
-            float3 rot = GetRotationAxisXYZ();
+    auto grabbable = GetComponent<ComponentGrabbable>();
+    if(!grabbable)
+        return;
 
-            // 速度に合わせて移動 ( roll_dir_ 方向へ移動 )
-            pos += roll_dir_ * roll_speed_ * GetDeltaTime();
+    // 空中中は視覚的な転がり回転をしない
+    if(!grabbable->IsGrounded())
+        return;
 
-            // 速度に合わせてX軸回りに転がる（回転）
-            rot.x += roll_speed_ * 2.0f * GetDeltaTime();
+    // 物理演算による移動量を取得
+    float3 delta = GetTranslate() - prev_pos_;
 
-            SetTranslate(pos);
-            SetRotationAxisXYZ(rot);
+    // 水平面（XZ）の移動量
+    float3 horiz_delta = {delta.x, 0.0f, delta.z};
+    float  horiz_dist  = length(horiz_delta);
 
-            // 地面の摩擦によって減速（毎フレーム92%に減衰）
-            roll_speed_ *= 0.92f;
+    if(horiz_dist > 0.001f) {
+        // 丸太（X軸を中心とするシリンダー）の転がり：
+        // 水平移動量 / 半径 = 回転角（ラジアン）
+        // ラジアンを度に変換: * (180 / PI)
+        float radius = 3.0f;
+        float angle_deg = (horiz_dist / radius) * 57.2957795f;    // 180.0f / 3.14159265f
 
-            // 十分遅くなったら転がり停止
-            if(roll_speed_ <= 0.05f) {
-                roll_speed_ = 0.0f;
-                is_rolling_ = false;
-            }
-        }
-        else if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
-            // 完全接地時
-            grabbable->SetBounceOffset(0.0f);
-        }
+        // Z方向の移動が進行方向の時は負の回転（右手座標系）
+        if(delta.z < 0.0f)
+            angle_deg = -angle_deg;
+
+        // X軸周りに累積回転
+        float3 rot = GetRotationAxisXYZ();
+        rot.x += angle_deg;
+        SetRotationAxisXYZ(rot);
     }
 }
 
@@ -215,11 +139,11 @@ void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
             // クールダウンタイマーが終了している時のみ判定
             if(throw_cool_down_ <= 0.0f) {
                 // 【着地した瞬間の判定】
-                // 落下・移動中で、かつまだ接地状態になっていない瞬間にSEを鳴らす
+                // 落下・移動中で、かつまだ接地状態になっていない瞬間にSEを鳴らしバウンド
                 if(!grabbable->IsGrounded() && grabbable->IsMoving()) {
                     if(se_handle_ != -1) {
                         PlaySoundMem(se_handle_, DX_PLAYTYPE_BACK);
-                        throw_cool_down_ = 1.0f;    // 連打防止（0.2秒間）
+                        throw_cool_down_ = 1.0f;    // 連打防止
                     }
                     grabbable->Bounce();
                 }

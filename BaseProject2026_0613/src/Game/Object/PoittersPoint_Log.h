@@ -30,14 +30,16 @@ public:
     //! 当たり判定が行われたときに自動で呼び出される関数
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
-private:
-    bool  is_bounced_this_frame_ = false;    //同一フレーム内でのバウンド重複防止フラグ
-    int   se_handle_ = -1;       //SEのメモリハンドル
+    //! @brief 物理シミュレーション後処理
+    //! 移動量に基づいて視覚的な転がり回転を適用する
+    void PostPhysics() override;
 
-    //転がり演出用フラグ・変数
-    bool   is_rolling_ = false;        // 転がり中フラグ
-    float  roll_speed_ = 0.0f;         // 転がるスピード (回転・移動速度)
-    float3 roll_dir_   = {0, 0, 1};    // 転がる方向
+private:
+    bool is_bounced_this_frame_ = false;    //同一フレーム内でのバウンド重複防止フラグ
+    int  se_handle_             = -1;       //SEのメモリハンドル
+    float throw_cool_down_      = 0.0f;     //SE連続再生防止クールダウンタイマー
+
+    float3 prev_pos_{0, 0, 0};    // 物理演算前の位置（転がり回転計算用）
 };
 
 }    // namespace PoittersPoint
