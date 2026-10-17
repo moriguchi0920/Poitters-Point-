@@ -35,9 +35,9 @@ public:
     void PostPhysics() override;
 
 private:
-    bool is_bounced_this_frame_ = false;    //同一フレーム内でのバウンド重複防止フラグ
-    int  se_handle_             = -1;       //SEのメモリハンドル
-    float throw_cool_down_      = 0.0f;     //SE連続再生防止クールダウンタイマー
+    bool  is_bounced_this_frame_ = false;    //同一フレーム内でのバウンド重複防止フラグ
+    int   se_handle_             = -1;       //SEのメモリハンドル
+    float throw_cool_down_       = 0.0f;     //SE連続再生防止クールダウンタイマー
 
     float3 prev_pos_{0, 0, 0};    // 物理演算前の位置（転がり回転計算用）
 };
