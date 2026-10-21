@@ -70,9 +70,60 @@ void Log::Update()
     if(!grabbable)
         return;
 
+    bool is_grabbed = grabbable->GetIsGrabbed();
+
+    // 投擲検出：掴まれた→離された の遷移
+    if(was_grabbed_prev_ && !is_grabbed) {
+        // ComponentStateThrow が設定した grabbable translation_ を速度として取得
+        velocity_ = grabbable->GetTranslation();
+        // grabbable の translation_ をゼロにして二重移動を防ぐ
+        grabbable->SetTranslation({0, 0, 0});
+        // 投擕直後のフレームで速度適用をスキップ（投擲衝動は既に適用済み）
+        just_thrown_ = true;
+    }
+    was_grabbed_prev_ = is_grabbed;
+
+    // 掴まれている時は速度をリセット
+    if(is_grabbed) {
+        velocity_ = {0, 0, 0};
+    }
+
     // 接地中かつ静止中は跳ねを抑制
     if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
         grabbable->SetBounceOffset(0.0f);
+    }
+}
+
+//! @brief 物理シミュレーション前処理
+void Log::PrePhysics()
+{
+    // gravity_ は LateUpdate で ComponentCollision が設定し、
+    // __super::PrePhysics で消費される。
+    // 接地中は重力変位が極め小さい（衝突でリセットされる）。
+    // 落下中は蓄積して大きくなる。
+    float gravity_mag = (float)length(gravity_);
+    is_on_ground_     = (gravity_mag < 0.05f);
+
+    __super::PrePhysics();
+
+    auto grabbable = GetComponent<ComponentGrabbable>();
+    if(!grabbable)
+        return;
+
+    // 掴まれている場合は速度を適用しない
+    if(grabbable->GetIsGrabbed())
+        return;
+
+    // 投擲直後のフレームは速度適用をスキップ（投擲衝動は既に ComponentStateThrow が適用済み）
+    if(just_thrown_) {
+        just_thrown_ = false;
+        return;
+    }
+
+    // 速度を適用（水平成分のみ、重力は ComponentCollision が処理）
+    float3 horiz_v = {velocity_.x, 0.0f, velocity_.z};
+    if((float)length(horiz_v) > 0.001f) {
+        AddTranslate(horiz_v);
     }
 }
 
@@ -84,12 +135,26 @@ void Log::PostPhysics()
     if(!grabbable)
         return;
 
-    // 空中中は視覚的な転がり回転をしない
-    if(!grabbable->IsGrounded())
-        return;
-
     // 物理演算による移動量を取得
     float3 delta = GetTranslate() - prev_pos_;
+
+    // 落下中は接地状態をクリア
+    if(delta.y < -0.5f) {
+        is_on_ground_ = false;
+    }
+
+    // 未掴みの場合、摩擦で速度を減衰（空中・接地問わず常に減衰）
+    if(!grabbable->GetIsGrabbed()) {
+        velocity_      *= 0.9f;
+        float3 horiz_v  = {velocity_.x, 0.0f, velocity_.z};
+        if((float)length(horiz_v) < 0.01f) {
+            velocity_ = {0, 0, 0};
+        }
+    }
+
+    // 空中中は視覚的な転がり回転をしない
+    if(!is_on_ground_)
+        return;
 
     // 水平面（XZ）の移動量
     float3 horiz_delta = {delta.x, 0.0f, delta.z};
@@ -100,7 +165,7 @@ void Log::PostPhysics()
         // 水平移動量 / 半径 = 回転角（ラジアン）
         // ラジアンを度に変換: * (180 / PI)
         float radius    = 3.0f;
-        float angle_deg = (horiz_dist / radius) * 57.2957795f;    // 180.0f / 3.14159265f
+        float angle_deg = (horiz_dist / radius) * 57.2957795f;
 
         // Z方向の移動が進行方向の時は負の回転（右手座標系）
         if(delta.z < 0.0f)
