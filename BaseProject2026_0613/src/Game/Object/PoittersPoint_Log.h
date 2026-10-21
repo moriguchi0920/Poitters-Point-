@@ -30,6 +30,10 @@ public:
     //! 当たり判定が行われたときに自動で呼び出される関数
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
+    //! @brief 物理シミュレーション前処理
+    //! 投擲後の移動速度を適用する
+    void PrePhysics() override;
+
     //! @brief 物理シミュレーション後処理
     //! 移動量に基づいて視覚的な転がり回転を適用する
     void PostPhysics() override;
@@ -39,7 +43,11 @@ private:
     int   se_handle_             = -1;       //SEのメモリハンドル
     float throw_cool_down_       = 0.0f;     //SE連続再生防止クールダウンタイマー
 
-    float3 prev_pos_{0, 0, 0};    // 物理演算前の位置（転がり回転計算用）
+    float3 prev_pos_{0, 0, 0};           // 物理演算前の位置（転がり回転計算用）
+    float3 velocity_{0, 0, 0};           // 転がり用の水平速度
+    bool   was_grabbed_prev_ = false;    // 投擲検出用：前フレームの掴まれ状態
+    bool   just_thrown_      = false;    // 投擲直後のフレーム：速度適用をスキップ
+    bool   is_on_ground_     = false;    // 接地状態（持続）
 };
 
 }    // namespace PoittersPoint
