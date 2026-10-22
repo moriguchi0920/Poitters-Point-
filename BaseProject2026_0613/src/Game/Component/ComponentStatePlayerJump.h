@@ -25,7 +25,7 @@ public:
     float GetGravity() const;
     float GetAirMoveSpeed() const;
 
-    // ★ ComponentPlayerState からジャンプ状態を引き継ぐための Getter
+    // ComponentPlayerState からジャンプ状態を引き継ぐための Getter
     float GetVelocityY() const { return current_jump_velocity_; }
     float GetGroundY() const { return ground_y_; }
 
