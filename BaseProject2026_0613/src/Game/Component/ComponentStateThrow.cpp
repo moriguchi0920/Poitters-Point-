@@ -50,7 +50,6 @@ void ComponentStateThrow::Update()
                 }
                 if(auto throw_object = throw_weak_ptr_.lock()) {
                     auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
-                    throw_object->AddTranslate(vec * 5.0f);
                     grabbable->SetTranslation(vec * 5.0f);
                 }
                 // 投げるモーションが終わったので当たり判定を

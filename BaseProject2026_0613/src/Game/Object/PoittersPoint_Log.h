@@ -45,9 +45,18 @@ private:
 
     float3 prev_pos_{0, 0, 0};           // 物理演算前の位置（転がり回転計算用）
     float3 velocity_{0, 0, 0};           // 転がり用の水平速度
+    float3 throw_velocity_{0, 0, 0};     // 投擲速度（空中飛行用）
     bool   was_grabbed_prev_ = false;    // 投擲検出用：前フレームの掴まれ状態
     bool   just_thrown_      = false;    // 投擲直後のフレーム：速度適用をスキップ
     bool   is_on_ground_     = false;    // 接地状態（持続）
+    bool   was_on_ground_    = false;    // 前フレームの接地状態
+
+    //--- 挙動調整用パラメータ ---
+    float k_air_drag_     = 0.999f;    //!< 空気抵抗（空中時の速度減衰率）
+    float k_friction_     = 0.96f;     //!< 転がり摩擦（接地時の速度減衰率）
+    float k_landing_loss_ = 0.7f;      //!< 着地時に失う水平速度の割合
+    float k_throw_up_     = 3.0f;      //!< 投擲時の上方向衝動
+    float k_roll_radius_  = 3.0f;      //!< 転がり半径（コライダー半径と一致）
 };
 
 }    // namespace PoittersPoint
