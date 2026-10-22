@@ -16,7 +16,14 @@ enum face
 
 constexpr int MAX_MOUSE_BUTTON                = 8;
 constexpr int MOUSE_BUTTONS[MAX_MOUSE_BUTTON] = {
-    MOUSE_INPUT_LEFT, MOUSE_INPUT_RIGHT, MOUSE_INPUT_MIDDLE, MOUSE_INPUT_1, MOUSE_INPUT_2, MOUSE_INPUT_3, MOUSE_INPUT_4, MOUSE_INPUT_5,
+    MOUSE_INPUT_LEFT,
+    MOUSE_INPUT_RIGHT,
+    MOUSE_INPUT_MIDDLE,
+    MOUSE_INPUT_1,
+    MOUSE_INPUT_2,
+    MOUSE_INPUT_3,
+    MOUSE_INPUT_4,
+    MOUSE_INPUT_5,
     // これ以降のマウスのボタンの押下状態を取得する場合は、
     // 事前にSetUseDirectInputFlagを実行する必要がある
     //MOUSE_INPUT_6,    MOUSE_INPUT_7,     MOUSE_INPUT_8

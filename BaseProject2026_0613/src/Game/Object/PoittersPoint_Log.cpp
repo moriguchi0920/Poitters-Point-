@@ -28,10 +28,21 @@ bool Log::Init()
     }
 
     // 丸太の形状に合致する単一カプセル衝突
+    // カプセルは初期で縦向きだが、丸太は横向きなので回転させる
     auto col = AddComponent<ComponentCollisionCapsule>();
     if(col) {
         col->SetRadius(3.0f);
-        col->SetHeight(5.0f);
+        col->SetHeight(46.33f);
+        col->SetTranslate({23.36f, 3.3f, 0.0f});
+
+        // カプセルを横向き（丸太の長軸に沿わせる）に回転
+        // 回転: {-90, 90, 0} (度)
+        float matrixT[3], matrixR[3], matrixS[3];
+        DecomposeMatrixToComponents(col->GetMatrixFloat(), matrixT, matrixR, matrixS);
+        matrixR[0] = -90.0f;
+        matrixR[1] = 90.0f;
+        matrixR[2] = 0.0f;
+        RecomposeMatrixFromComponents(matrixT, matrixR, matrixS, col->GetMatrixFloat());
 
         col->UseGravity(true);
         col->SetGravity(-0.2f);
@@ -74,18 +85,26 @@ void Log::Update()
 
     // 投擲検出：掴まれた→離された の遷移
     if(was_grabbed_prev_ && !is_grabbed) {
-        // ComponentStateThrow が設定した grabbable translation_ を速度として取得
-        velocity_ = grabbable->GetTranslation();
+        // ComponentStateThrow が設定した grabbable translation_ を水平速度として取得
+        // ComponentGrabbable::Update() は既に __super::Update() で移動を適用済みのため、
+        // just_thrown_ を立てて PrePhysics での速度適用をスキップする
+        velocity_       = grabbable->GetTranslation();
+        throw_velocity_ = velocity_;
         // grabbable の translation_ をゼロにして二重移動を防ぐ
         grabbable->SetTranslation({0, 0, 0});
-        // 投擕直後のフレームで速度適用をスキップ（投擲衝動は既に適用済み）
+        // 上方向の衝動を一度だけ与える（重力は ComponentCollision が処理）
+        AddTranslate({0.0f, k_throw_up_, 0.0f});
         just_thrown_ = true;
     }
     was_grabbed_prev_ = is_grabbed;
 
     // 掴まれている時は速度をリセット
     if(is_grabbed) {
-        velocity_ = {0, 0, 0};
+        velocity_       = {0, 0, 0};
+        throw_velocity_ = {0, 0, 0};
+        just_thrown_    = false;
+        is_on_ground_   = false;
+        was_on_ground_  = false;
     }
 
     // 接地中かつ静止中は跳ねを抑制
@@ -120,7 +139,7 @@ void Log::PrePhysics()
         return;
     }
 
-    // 速度を適用（水平成分のみ、重力は ComponentCollision が処理）
+    // 速度を適用（水平成分のみ、鉛直は重力で処理）
     float3 horiz_v = {velocity_.x, 0.0f, velocity_.z};
     if((float)length(horiz_v) > 0.001f) {
         AddTranslate(horiz_v);
@@ -142,13 +161,38 @@ void Log::PostPhysics()
     if(delta.y < -0.5f) {
         is_on_ground_ = false;
     }
+    // 衝突システムの接地判定を併用（1フレーム遅れの gravity_ 検出を補正）
+    if(grabbable->IsGrounded()) {
+        is_on_ground_ = true;
+    }
 
-    // 未掴みの場合、摩擦で速度を減衰（空中・接地問わず常に減衰）
+    // 空中→接地の遷移を検出
+    bool landed_this_frame = (!was_on_ground_ && is_on_ground_);
+    was_on_ground_         = is_on_ground_;
+
+    // 未掴みの場合、空中・接地で異なる減衰を適用
     if(!grabbable->GetIsGrabbed()) {
-        velocity_      *= 0.9f;
-        float3 horiz_v  = {velocity_.x, 0.0f, velocity_.z};
+        if(is_on_ground_) {
+            // 接地中：転がり摩擦
+            velocity_ *= k_friction_;
+            // 着地の瞬間: 水平速度の一部を失う
+            if(landed_this_frame) {
+                float3 horiz  = {velocity_.x, 0.0f, velocity_.z};
+                horiz        *= k_landing_loss_;
+                velocity_.x   = horiz.x;
+                velocity_.z   = horiz.z;
+            }
+            velocity_.y = 0.0f;
+        }
+        else {
+            // 空中：空気抵抗（軽減）
+            velocity_ *= k_air_drag_;
+        }
+
+        float3 horiz_v = {velocity_.x, 0.0f, velocity_.z};
         if((float)length(horiz_v) < 0.01f) {
-            velocity_ = {0, 0, 0};
+            velocity_.x = 0.0f;
+            velocity_.z = 0.0f;
         }
     }
 
@@ -164,7 +208,7 @@ void Log::PostPhysics()
         // 丸太（X軸を中心とするシリンダー）の転がり：
         // 水平移動量 / 半径 = 回転角（ラジアン）
         // ラジアンを度に変換: * (180 / PI)
-        float radius    = 3.0f;
+        float radius    = k_roll_radius_;
         float angle_deg = (horiz_dist / radius) * 57.2957795f;
 
         // Z方向の移動が進行方向の時は負の回転（右手座標系）
@@ -181,6 +225,18 @@ void Log::PostPhysics()
 void Log::GUI()
 {
     __super::GUI();
+
+    ImGui::Begin("Log Physics");
+    ImGui::Text(u8"水平速度 : %.3f", (float)length(float3(velocity_.x, 0, velocity_.z)));
+    ImGui::Text(u8"鉛直速度 : %.3f", velocity_.y);
+    ImGui::Text(u8"接地中 : %s", is_on_ground_ ? u8"はい" : u8"いいえ");
+    ImGui::Separator();
+    ImGui::DragFloat(u8"空気抵抗", &k_air_drag_, 0.001f, 0.5f, 1.0f, "%.3f");
+    ImGui::DragFloat(u8"転がり摩擦", &k_friction_, 0.001f, 0.5f, 1.0f, "%.3f");
+    ImGui::DragFloat(u8"着地速度損失", &k_landing_loss_, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat(u8"投擲上方向速度", &k_throw_up_, 0.1f, 0.0f, 100.0f, "%.2f");
+    ImGui::DragFloat(u8"転がり半径", &k_roll_radius_, 0.1f, 0.1f, 100.0f, "%.2f");
+    ImGui::End();
 }
 
 void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
