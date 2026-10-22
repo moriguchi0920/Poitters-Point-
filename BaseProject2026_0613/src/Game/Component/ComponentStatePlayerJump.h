@@ -39,7 +39,7 @@ public:
 
 private:
     // ジャンプパラメータ
-    float jump_power_     = 2.0f;     // ジャンプの高さを出す
+    float jump_power_     = 3.2f;     // ジャンプの高さを出す
     float gravity_        = 0.05f;    // 重力をかけることで僅かな滞空時間を作る
     float air_move_speed_ = 0.4f;
     float rot_speed_      = 20.0f;    // 回転速度
