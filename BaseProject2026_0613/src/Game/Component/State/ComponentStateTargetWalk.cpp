@@ -17,8 +17,8 @@ void ComponentStateTargetWalk::Update()
     // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
 
-    if(target_ptr_) {
-        target_pos_ = target_ptr_->GetTranslate();
+    if(!target_ptr_.expired()) {
+        target_pos_ = target_ptr_.lock()->GetTranslate();
     }
 
     // 移動方向
@@ -69,14 +69,14 @@ ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetTargetPos(const float3&
     return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
 }
 
-void ComponentStateTargetWalk::SetTargetPtr(const ObjectPtr ptr)
+void ComponentStateTargetWalk::SetTargetPtr(const ObjectWeakPtr ptr)
 {
     target_ptr_ = ptr;
 }
 
 void ComponentStateTargetWalk::ResetTargetPtr()
 {
-    target_ptr_ = nullptr;
+    target_ptr_.reset();
 }
 
 const float3& ComponentStateTargetWalk::GetTargetPos()

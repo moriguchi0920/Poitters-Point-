@@ -42,13 +42,13 @@ private:
     void ChangeActionRandom();
 
     //! ACTIONを開始する(ACTIONを追加する場合は開始関数とChangeActionFlexibleのcaseを追加する)
-    void StartGrabAction(ObjectPtr target);
+    void StartGrabAction(ObjectWeakPtr target);
     void StartAvoidAttacker();
     void StartAttackAction();
 
-    ObjectPtr GetNearestCharacter();
-    ObjectPtr GetNearestAttacker();
-    ObjectPtr GetNearestGrabbableObj();
+    ObjectWeakPtr GetNearestCharacter();
+    ObjectWeakPtr GetNearestAttacker();
+    ObjectWeakPtr GetNearestGrabbableObj();
 
     bool        IsAttackerNearby();
     const float attacker_near_distance_ = 1.0f;

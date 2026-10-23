@@ -132,11 +132,11 @@ void ComponentCPUState::RestartThink()
     }
 }
 
-void ComponentCPUState::StartGrabAction(ObjectPtr target)
+void ComponentCPUState::StartGrabAction(ObjectWeakPtr target)
 {
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
-    if(!character_casted_owner || !target) {
+    if(!character_casted_owner || target.expired()) {
         return;
     }
 
@@ -154,12 +154,12 @@ void ComponentCPUState::StartAvoidAttacker()
     auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
     // ものを持っている最も近いキャラクターを取得
     auto attacker = GetNearestAttacker();
-    if(!character_casted_owner || !attacker) {
+    if(!character_casted_owner || attacker.expired()) {
         return;
     }
 
     // 攻撃者から離れる方向に逃げる
-    float3 dir    = owner->GetTranslate() - attacker->GetTranslate();
+    float3 dir    = owner->GetTranslate() - attacker.lock()->GetTranslate();
     dir.y         = 0.0f;
     float dir_len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
     if(dir_len < 0.001f) {
@@ -211,7 +211,7 @@ void ComponentCPUState::ChangeActionFlexible()
                 StartAvoidAttacker();
             }
             // 拾えるオブジェクトが近所にあるなら拾いに行く
-            else if(auto target = GetNearestGrabbableObj()) {
+            else if(auto target = GetNearestGrabbableObj().lock()) {
                 StartGrabAction(target);
             }
             else {
@@ -223,7 +223,7 @@ void ComponentCPUState::ChangeActionFlexible()
     case CPU_ACTION::ACTION_AVOID_ATTACKER:
         {
             // 逃げた後は基本的にオブジェクトを拾いに行く
-            if(auto target = GetNearestGrabbableObj()) {
+            if(auto target = GetNearestGrabbableObj().lock()) {
                 StartGrabAction(target);
             }
             else {
@@ -244,7 +244,7 @@ void ComponentCPUState::ChangeActionFlexible()
                     StartAvoidAttacker();
                 }
                 // 拾えるオブジェクトが近所にあるなら拾いに行く
-                else if(auto target = GetNearestGrabbableObj()) {
+                else if(auto target = GetNearestGrabbableObj().lock()) {
                     StartGrabAction(target);
                 }
                 else {
@@ -261,7 +261,7 @@ void ComponentCPUState::ChangeActionRandom()
 {
 }
 
-ObjectPtr ComponentCPUState::GetNearestCharacter()
+ObjectWeakPtr ComponentCPUState::GetNearestCharacter()
 {
     auto owner = GetOwner();
     // キャラクターを配列で取得
@@ -282,10 +282,10 @@ ObjectPtr ComponentCPUState::GetNearestCharacter()
             }
         }
     }
-    return nearest_ptr;
+    return std::weak_ptr(nearest_ptr);
 }
 
-ObjectPtr ComponentCPUState::GetNearestAttacker()
+ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 {
     auto owner = GetOwner();
     // キャラクターを配列で取得
@@ -315,10 +315,10 @@ ObjectPtr ComponentCPUState::GetNearestAttacker()
         }
     }
 
-    return attacker_ptr;
+    return std::weak_ptr(attacker_ptr);
 }
 
-ObjectPtr ComponentCPUState::GetNearestGrabbableObj()
+ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
 {
     auto owner = GetOwner();
     // ターゲットとなるオブジェクトを取得(ターゲットは仮で岩のみとする)
@@ -346,13 +346,13 @@ ObjectPtr ComponentCPUState::GetNearestGrabbableObj()
             targetPtr = target;
         }
     }
-    return targetPtr;
+    return std::weak_ptr(targetPtr);
 }
 
 bool ComponentCPUState::IsAttackerNearby()
 {
     auto owner = GetOwner();
-    if(auto obj = GetNearestAttacker()) {
+    if(auto obj = GetNearestAttacker().lock()) {
         float3 attacker_pos = obj->GetTranslate();
         float3 owner_pos    = owner->GetTranslate();
         float3 vec          = attacker_pos - owner_pos;
