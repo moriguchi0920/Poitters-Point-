@@ -16,7 +16,7 @@ public:
     void Update() override;
 
     ComponentStateTargetWalkPtr SetTargetPos(const float3& position);
-    void                        SetTargetPtr(const ObjectPtr ptr);
+    void                        SetTargetPtr(const ObjectWeakPtr ptr);
     void                        ResetTargetPtr();
     const float3&               GetTargetPos();
     bool                        GetArrival() override;
@@ -26,7 +26,7 @@ public:
 
 private:
     float3    target_pos_;
-    ObjectPtr target_ptr_;
+    ObjectWeakPtr target_ptr_;
 
     float       stopping_time_;
     const float stop_judge_time_ = 1.0f;
