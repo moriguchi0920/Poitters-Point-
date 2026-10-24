@@ -8,8 +8,9 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentState)
 void ComponentStateThink::Init()
 {
     __super::Init();
-    thinking_time        = 0.0f;
-    thinking_finish_time = 0.0f;
+    // Init()はAddComponentされた翌フレームに走るため、ここで思考時間をリセットすると
+    // AddComponent後にSetThinkingFinishTime()した値が消えてしまう
+    // 初期値はメンバの初期値に任せる
 }
 
 void ComponentStateThink::Update()
