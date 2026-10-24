@@ -125,5 +125,18 @@ bool ComponentGrabbable::IsMoving()
     return ((translation_.x < -0.01f || 0.01f < translation_.x) || (translation_.z < -0.01f || 0.01f < translation_.z));
 }
 
+//============================================================================
+// ダメージ値を設定(投げ物ごとに異なるダメージを持たせる)
+//============================================================================
+void ComponentGrabbable::SetDamage(float damage)
+{
+    damage_ = damage;
+}
+
+bool ComponentGrabbable::IsThrower(ObjectPtr target) const
+{
+    return thrower_.lock() == target;
+}
+
 CEREAL_REGISTER_TYPE(ComponentGrabbable)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentGrabbable)

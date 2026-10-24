@@ -1,7 +1,7 @@
 ﻿#include "ComponentItemSpawner.h"
 #include "Game/Object/PoittersPoint_Rock.h"
 // #include "Game/Object/PoittersPoint_Crate.h"  // モデル到着時にコメント解除
-// #include "Game/Object/PoittersPoint_Slime.h"  // モデル到着時にコメント解除
+#include "Game/Object/PoittersPoint_Slime.h"  // モデル到着時にコメント解除
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include <cmath>
@@ -173,6 +173,7 @@ ObjectPtr ComponentItemSpawner::CreateItemInstance(ItemType type)
     */
     case ItemType::Crate:
     case ItemType::Slime:
+        return Scene::Object::Create<PoittersPoint::Slime>();
     default:
         return Scene::Object::Create<PoittersPoint::Rock>();
     }

@@ -28,14 +28,21 @@ public:
     void          Bounce();
     bool          IsGrounded();
     bool          IsMoving();
+    //! @brief ダメージ値を設定(投げ物ごとに異なるダメージを持たせる)
+    void SetDamage(float damage);
+    //! @brief 投げ主か判定
+    bool IsThrower(ObjectPtr target) const;
 
 private:
     float lift_time_;
     float bounce_offset_;
     bool  is_grabbed_;
     bool  can_grab_this_;
+    float  damage_;    //!< このオブジェクトのダメージ値
 
     float3 translation_;
+
+    ObjectWeakPtr thrower_;    //!< 投げた本人（ダメージスキップ用）
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
