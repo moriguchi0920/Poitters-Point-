@@ -8,8 +8,7 @@
 #include <Game/Component/ComponentStateGrab.h>
 #include <Game/Component/ComponentStateThrow.h>
 #include <Game/Component/ComponentGrabbable.h>
-#include <Game/Component/ComponentHitPoints.h>
-#include <Game/Object/PoittersPoint_Character.h>
+#include <Game/Object/PoittersPoint_Player.h>
 
 //===========================================================================
 // 初期化処理
@@ -18,15 +17,12 @@ void ComponentPlayerState::Init()
 {
     __super::Init();
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     // オブジェクトの制御を行うコンポーネントを追加
     if(character_casted_owner) {
         owner->AddComponent<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     }
-
-    // オブジェクトの体力を管理するコンポーネントを追加
-    owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
     can_grab_ = true;
 }
@@ -39,7 +35,7 @@ void ComponentPlayerState::Update()
     __super::Update();
 
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     // スペースキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
