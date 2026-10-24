@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/State/ComponentState.h>
+#include <Game/Component/ComponentState.h>
 
 USING_PTR(ComponentStateWalkBase);
 

@@ -1,13 +1,13 @@
 ﻿#pragma once
-#include <Game/Component/StateMachine/ComponentCPUState.h>
-#include <Game/Component/State/ComponentStateTargetWalk.h>
-#include <Game/Component/State/ComponentStateGrab.h>
-#include <Game/Component/State/ComponentStateThrow.h>
+#include <Game/Component/ComponentCPUState.h>
+#include <Game/Component/ComponentStateTargetWalk.h>
+#include <Game/Component/ComponentStateGrab.h>
+#include <Game/Component/ComponentStateThrow.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Rock.h>
 #include <Game/Object/PoittersPoint_Character.h>
-#include <Game/Component/State/ComponentStateSetRangeWalk.h>
-#include <Game/Component/State/ComponentStateThink.h>
+#include <Game/Component/ComponentStateSetRangeWalk.h>
+#include <Game/Component/ComponentStateThink.h>
 
 void ComponentCPUState::Init()
 {

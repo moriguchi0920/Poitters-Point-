@@ -5,10 +5,10 @@
 #include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Component/ComponentCameraController.h"
-#include "Game/Component/State/ComponentStateControllerWalk.h"
-#include "Game/Component/State/ComponentStateThrow.h"
-#include "Game/Component/StateMachine/ComponentPlayerState.h"
-#include "Game/Component/StateMachine/ComponentStateMachine.h"
+#include "Game/Component/ComponentStateControllerWalk.h"
+#include "Game/Component/ComponentStateThrow.h"
+#include "Game/Component/ComponentPlayerState.h"
+#include "Game/Component/ComponentStateMachine.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>

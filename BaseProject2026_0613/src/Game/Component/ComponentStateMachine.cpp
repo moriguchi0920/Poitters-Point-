@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include <Game/Component/StateMachine/ComponentStateMachine.h>
+#include <Game/Component/ComponentStateMachine.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
-#include <Game/Component/State/ComponentStateGrab.h>
+#include <Game/Component/ComponentStateGrab.h>
 
 void ComponentStateMachine::Init()
 {

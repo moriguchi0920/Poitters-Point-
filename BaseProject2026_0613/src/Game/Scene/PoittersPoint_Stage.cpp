@@ -18,8 +18,8 @@
 #include <System/Component/ComponentCollisionCapsule.h>
 #include <System/Component/ComponentSpringArm.h>
 #include <System/Component/ComponentObjectController.h>
-#include <Game/Component/StateMachine/ComponentPlayerState.h>
-#include <Game/Component/StateMachine/ComponentCPUState.h>
+#include <Game/Component/ComponentPlayerState.h>
+#include <Game/Component/ComponentCPUState.h>
 
 namespace PoittersPoint {
 
