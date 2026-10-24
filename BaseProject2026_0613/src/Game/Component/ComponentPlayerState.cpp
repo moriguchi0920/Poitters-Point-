@@ -1,11 +1,19 @@
 ﻿#pragma once
+//---------------------------------------------------------------------------
+//! @file   ComponentPlayerState.cpp
+//! @brief  プレイヤー状態制御コンポーネント
+//---------------------------------------------------------------------------
 #include <Game/Component/ComponentPlayerState.h>
 #include <Game/Component/ComponentStateControllerWalk.h>
 #include <Game/Component/ComponentStateGrab.h>
 #include <Game/Component/ComponentStateThrow.h>
 #include <Game/Component/ComponentGrabbable.h>
+#include <Game/Component/ComponentHitPoints.h>
 #include <Game/Object/PoittersPoint_Character.h>
 
+//===========================================================================
+// 初期化処理
+//===========================================================================
 void ComponentPlayerState::Init()
 {
     __super::Init();
@@ -17,9 +25,15 @@ void ComponentPlayerState::Init()
         owner->AddComponent<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     }
 
+    // オブジェクトの体力を管理するコンポーネントを追加
+    owner->AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
+
     can_grab_ = true;
 }
 
+//===========================================================================
+// 更新処理
+//===========================================================================
 void ComponentPlayerState::Update()
 {
     __super::Update();
@@ -29,7 +43,7 @@ void ComponentPlayerState::Update()
 
     // スペースキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
-        // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
+        // 現在のステートがControllerWalkであり、持っているオブジェクトが存在していて投げられるとき
         if(owner->GetComponent<ComponentStateControllerWalk>()) {
             if(!grabbing_object_ptr_.expired()) {
                 //(投げ可能 = すでにアイテムを持っている)
@@ -66,10 +80,16 @@ void ComponentPlayerState::Update()
     }
 }
 
+//===========================================================================
+// 更新後処理
+//===========================================================================
 void ComponentPlayerState::LateUpdate()
 {
 }
 
+//===========================================================================
+// GUI処理
+//===========================================================================
 void ComponentPlayerState::GUI()
 {
     __super::GUI();

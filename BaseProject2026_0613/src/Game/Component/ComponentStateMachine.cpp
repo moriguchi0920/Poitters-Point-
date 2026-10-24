@@ -106,6 +106,9 @@ bool ComponentStateMachine::FinishGrab()
                 auto grabbable = object->GetComponent<ComponentGrabbable>();
                 grabbable->SetIsGrabbed(true);
 
+                // 投げ直後に誰にも当たるようにヒット記録をクリアする
+                grabbable->ClearHitTargets();
+
                 grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
             }
             can_throw_ = true;
