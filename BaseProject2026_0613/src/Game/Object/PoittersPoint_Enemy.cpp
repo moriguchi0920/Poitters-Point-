@@ -74,6 +74,10 @@ bool Enemy::Init()
 
     AddComponent<ComponentKnockBack>();
 
+    // コリジョン以外のコンポーネントにも当たりを返すようにする
+    // これが有効でないと KnockBack の OnHitComponent が呼ばれない
+    SetStatus(Object::StatusBit::OnHitAllComponent, true);
+
     return true;
 }
 
@@ -180,8 +184,10 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
             return;
         }
 
-        // 初Hitなら記録してダメージ処理へ
-        grabbable->AddHitTarget(SharedThis());
+        // 初Hitならダメージ処理へ
+        //grabbable->AddHitTarget(SharedThis());
+        // Hitの記録(grabbable->AddHitTarget)は KnockBack の OnHitComponent 側で行う。
+        // ここで記録すると、ノックバック前に IsAlreadyHit で弾かれて飛ばなくなる
     }
     else {
         // 弾などgrabbable以外は今まで通りのHit処理を行う
