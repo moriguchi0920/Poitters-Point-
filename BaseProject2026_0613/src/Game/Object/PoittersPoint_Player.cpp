@@ -36,10 +36,12 @@ bool Player::Init()
 
     SetTranslate({0, 8, 0});
 
-    // プレイヤー状態制御コンポーネントの追加
-    AddComponent<ComponentPlayerState>();
+    // ステートマシン(プレイヤー入力/CPU)は生成側のStageで付与する
     // 他者に掴まれて投げられるようにする
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
+
+    // 体力を管理するコンポーネントを追加
+    AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
     // カプセルコリジョンのコンポーネントを追加
     AddComponent<ComponentCollisionCapsule>();
@@ -67,9 +69,9 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 
     // 当たった相手が掴める状態なら掴み対象として記録する(CPU側動作)
     if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
-        auto player_state = GetComponent<ComponentPlayerState>();
-        if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-            player_state->GrabbableHit(hitter);
+        auto state_machine = GetComponent<ComponentStateMachine>();
+        if(state_machine && grabbable->GetCanGrab()) {
+            state_machine->GrabbableHit(hitter->SharedThis());
         }
     }
 
@@ -157,13 +159,36 @@ void Player::OnEyeSight()
             if(isInAngle && isInDistance) {
                 auto target = obj;
                 if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-                    auto player_state = GetComponent<ComponentPlayerState>();
-                    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-                        player_state->GrabbableHit(target);
+                    // プレイヤー入力側の状態がいる場合のみ視界検知を反映する(CPUは接触時に掴みに行く)
+                    if(auto player_state = GetComponent<ComponentPlayerState>()) {
+                        if(player_state->can_grab_ && grabbable->GetCanGrab()) {
+                            player_state->GrabbableHit(target);
+                        }
                     }
                 }
             }
         }
     }
 }
+
+void Player::SetCharacterStatus(const CharacterData& data)
+{
+    // 代入
+    model_path_      = data.model_path_;
+    anims_           = data.anims_;
+    local_scale_     = data.local_scale_;
+    move_speed_      = data.move_speed_;
+    throw_power_     = data.throw_power_;
+    lift_time_ratio_ = data.lift_time_ratio_;
+    // 入力されたアニメーションとスケールをモデルに反映する
+    if(auto model = GetComponent<ComponentModel>()) {
+        model->SetAnimation(anims_)->SetScaleAxisXYZ(local_scale_);
+    }
+}
+
+float Player::GetMoveSpeed()
+{
+    return move_speed_;
+}
+
 }    // namespace PoittersPoint

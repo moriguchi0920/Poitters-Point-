@@ -5,7 +5,7 @@
 #include <Game/Component/ComponentStateThrow.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Rock.h>
-#include <Game/Object/PoittersPoint_Character.h>
+#include <Game/Object/PoittersPoint_Player.h>
 #include <Game/Component/ComponentStateSetRangeWalk.h>
 #include <Game/Component/ComponentStateThink.h>
 
@@ -13,7 +13,7 @@ void ComponentCPUState::Init()
 {
     __super::Init();
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     can_grab_  = true;
     can_throw_ = false;
@@ -29,7 +29,7 @@ void ComponentCPUState::Update()
     __super::Update();
 
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     // 行動ごとの更新
     switch(cur_action_) {
@@ -135,7 +135,7 @@ void ComponentCPUState::RestartThink()
 void ComponentCPUState::StartGrabAction(ObjectWeakPtr target)
 {
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
     if(!character_casted_owner || target.expired()) {
         return;
     }
@@ -151,7 +151,7 @@ void ComponentCPUState::StartGrabAction(ObjectWeakPtr target)
 void ComponentCPUState::StartAvoidAttacker()
 {
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
     // ものを持っている最も近いキャラクターを取得
     auto attacker = GetNearestAttacker();
     if(!character_casted_owner || attacker.expired()) {
@@ -181,7 +181,7 @@ void ComponentCPUState::StartAvoidAttacker()
 void ComponentCPUState::StartAttackAction()
 {
     auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Character*>(owner);
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
     if(!character_casted_owner) {
         return;
     }
@@ -265,7 +265,7 @@ ObjectWeakPtr ComponentCPUState::GetNearestCharacter()
 {
     auto owner = GetOwner();
     // キャラクターを配列で取得
-    auto characters = Scene::Object::GetArray<PoittersPoint::Character>();
+    auto characters = Scene::Object::GetArray<PoittersPoint::Player>();
     // 一番近いオブジェクトのポインタ
     ObjectPtr nearest_ptr = nullptr;
     // キャラクターへの距離を比べる用のfloat最大値(キャラクターの中から一番近いものを求めるため)
@@ -289,7 +289,7 @@ ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 {
     auto owner = GetOwner();
     // キャラクターを配列で取得
-    auto characters = Scene::Object::GetArray<PoittersPoint::Character>();
+    auto characters = Scene::Object::GetArray<PoittersPoint::Player>();
     // 一番近いものを持っているキャラクターのポインタ
     ObjectPtr attacker_ptr = nullptr;
     // キャラクターへの距離を比べる用のfloat最大値(キャラクターの中から一番近いものを求めるため)

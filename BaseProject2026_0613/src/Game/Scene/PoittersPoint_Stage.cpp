@@ -4,7 +4,6 @@
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Stage.h"
 #include "PoittersPoint_GameOver.h"
-#include "Game/Object/PoittersPoint_Character.h"
 #include "Game/Object/PoittersPoint_Player.h"
 #include "Game/Object/PoittersPoint_Ground.h"
 #include "Game/Object/PoittersPoint_Camera.h"
@@ -67,8 +66,9 @@ bool PoittersPoint_Stage::Init()
                              0.3f,
                              1.0f,
                              1.0f);
-    auto          player = Scene::Object::Create<Character>();
+    auto          player = Scene::Object::Create<Player>();
     player->SetCharacterStatus(playerdata);
+    // プレイヤー入力用のステートマシンをここで付与する(Player::Initでは付与しない)
     player->AddComponent<ComponentPlayerState>();
 
     //Scene::Object::Create<Player>();
@@ -133,8 +133,11 @@ bool PoittersPoint_Stage::Init()
                            0.3f,
                            1.0f,
                            1.0f);
-    auto          cpu_character = Scene::Object::Create<Character>();
+    auto          cpu_character = Scene::Object::Create<Player>();
+    cpu_character->SetName("CPU1");
     cpu_character->SetCharacterStatus(cpu_data);
+    cpu_character->SetTranslate({20.0f, 8.0f, 0.0f});
+    // CPU用のステートマシンをここで付与する(Player::Initでは付与しない)
     cpu_character->AddComponent<ComponentCPUState>();
 
     //for(int i = 0; i < 5; i++) {
