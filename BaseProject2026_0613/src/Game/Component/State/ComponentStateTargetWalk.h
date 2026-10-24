@@ -25,7 +25,7 @@ public:
     bool GetStopped() override;
 
 private:
-    float3    target_pos_;
+    float3        target_pos_;
     ObjectWeakPtr target_ptr_;
 
     float       stopping_time_;

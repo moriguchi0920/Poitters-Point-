@@ -5,7 +5,9 @@ void ComponentStateTargetWalk::Init()
 {
     __super::Init();
     SetName<Component>("State Target Walk");
-    ResetTargetPtr();
+    // AddComponentされたInit()は翌フレームに走るため、ここでResetTargetPtr()をすると
+    // AddComponent後にSetTargetPtr()した対象が消えてしまう
+    // weak_ptrは生成時点で空なのでリセットは不要
     stopping_time_ = 0.0f;
 }
 

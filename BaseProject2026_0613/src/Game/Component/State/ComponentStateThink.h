@@ -44,8 +44,8 @@ public:
     bool GetFinished();
 
 private:
-    float thinking_time;
-    float thinking_finish_time;
+    float thinking_time        = 0.0f;
+    float thinking_finish_time = 0.0f;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
