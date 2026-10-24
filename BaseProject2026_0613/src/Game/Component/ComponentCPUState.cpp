@@ -49,6 +49,12 @@ void ComponentCPUState::Update()
                 // 掴み対象に当たって掴める状態になるまで歩き続ける
                 // 掴めずにたどり着けない/止まってしまったら考え直す
                 if((component_walk->GetArrival() || component_walk->GetStopped())) {
+                    // 接触で記録されていなければ視線判定で捕らえた対象を掴み対象として記録する
+                    if(grabbing_object_ptr_.expired() && character_casted_owner) {
+                        if(auto sight = character_casted_owner->GetEyeSightTarget().lock()) {
+                            GrabbableHit(sight);
+                        }
+                    }
                     if(!StartGrab())
                         StartThink();
                 }
@@ -321,6 +327,19 @@ ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
 {
     auto owner = GetOwner();
+    // プレイヤー/CPU共通の視線判定で捕らえた対象があればそれを優先して掴みに行く
+    if(auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner)) {
+        if(auto sight = character_casted_owner->GetEyeSightTarget().lock()) {
+            if(sight != owner->SharedThis()) {
+                if(auto grabbable = sight->GetComponent<ComponentGrabbable>()) {
+                    if(grabbable->GetCanGrab() && !grabbable->GetIsGrabbed()) {
+                        return std::weak_ptr(sight);
+                    }
+                }
+            }
+        }
+    }
+    // 視線に掴める対象がない場合は従来どおり最寄りの岩を探す
     // ターゲットとなるオブジェクトを取得(ターゲットは仮で岩のみとする)
     auto      targets   = Scene::Object::GetArray<PoittersPoint::Rock>();
     ObjectPtr targetPtr = nullptr;

@@ -3,7 +3,6 @@
 #include "Game/Component/ComponentCameraController.h"
 #include "Game/Component/ComponentStateControllerWalk.h"
 #include "Game/Component/ComponentStateThrow.h"
-#include "Game/Component/ComponentPlayerState.h"
 #include "Game/Component/ComponentStateMachine.h"
 
 #include <System/Scene.h>
@@ -159,16 +158,22 @@ void Player::OnEyeSight()
             if(isInAngle && isInDistance) {
                 auto target = obj;
                 if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-                    // プレイヤー入力側の状態がいる場合のみ視界検知を反映する(CPUは接触時に掴みに行く)
-                    if(auto player_state = GetComponent<ComponentPlayerState>()) {
-                        if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-                            player_state->GrabbableHit(target);
-                        }
+                    // 視線で捕らえた対象を保持する(プレイヤーとCPU共通)
+                    eyesight_target_ = target;
+                    // ステートマシンがあれば掴み対象として記録する
+                    // 人間はスペースキーでStartGrab、CPUはACTION_GRABの到達時にStartGrabする
+                    if(auto state_machine = GetComponent<ComponentStateMachine>()) {
+                        state_machine->GrabbableHit(target);
                     }
                 }
             }
         }
     }
+}
+
+const ObjectWeakPtr& Player::GetEyeSightTarget() const
+{
+    return eyesight_target_;
 }
 
 void Player::SetCharacterStatus(const CharacterData& data)
