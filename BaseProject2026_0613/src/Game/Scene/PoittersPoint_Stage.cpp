@@ -1,9 +1,10 @@
-ï»¿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Stage.cpp
-//! @brief  PoittersPointã‚¹ãƒ†ãƒ¼ã‚¸ã‚·ãƒ¼ãƒ³
+//! @brief  PoittersPointƒXƒe[ƒWƒV[ƒ“
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Stage.h"
 #include "PoittersPoint_GameOver.h"
+#include "PoittersPoint_Clear.h"
 #include "Game/Object/PoittersPoint_Player.h"
 #include "Game/Object/PoittersPoint_Ground.h"
 #include "Game/Object/PoittersPoint_Camera.h"
@@ -25,35 +26,35 @@ namespace PoittersPoint {
 
 // namespace PoittersPoint
 
-//! @brief åˆæœŸåŒ–
-//! @return åˆæœŸåŒ–æ¸ˆã¿
+//! @brief ‰Šú‰»
+//! @return ‰Šú‰»Ï‚İ
 bool PoittersPoint_Stage::Init()
 {
-    // æœ€åˆã«1å›å‹•ä½œã™ã‚‹
-    // ãŸã ã— trueã‚’è¿”ã•ãªã‘ã‚Œã° Initã«ä½•å›ã‚‚æ¥ã‚‹ä»•æ§˜ã€‚
+    // Å‰‚É1‰ñ“®ì‚·‚é
+    // ‚½‚¾‚µ true‚ğ•Ô‚³‚È‚¯‚ê‚Î Init‚É‰½‰ñ‚à—ˆ‚éd—lB
 
-    // create<>(åå‰ã€transformãŒã„ã‚‹ã‹ã€æ›´æ–°ã®å„ªå…ˆé †ä½ã€æç”»ã®å„ªå…ˆé †ä½);
+    // create<>(–¼‘OAtransform‚ª‚¢‚é‚©AXV‚Ì—Dæ‡ˆÊA•`‰æ‚Ì—Dæ‡ˆÊ);
 
 #if 1
     Scene::Object::Create<Ground>();
 #else
-    // åœ°é¢ç”Ÿæˆ(Component: ãƒ¢ãƒ‡ãƒ«ã€ãƒ¢ãƒ‡ãƒ«ã‚³ãƒªã‚¸ãƒ§ãƒ³)
+    // ’n–Ê¶¬(Component: ƒ‚ƒfƒ‹Aƒ‚ƒfƒ‹ƒRƒŠƒWƒ‡ƒ“)
     {
         auto ground = Scene::Object::Create<Object>("Ground");
         Scene::Object::Create<PoittersPoint_Timer>();
         ground->AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
         ground->AddComponent<ComponentCollisionModel>();
         if(auto collision = ground->GetComponent<ComponentCollisionModel>()) {
-            // æ‰€å±ã™ã‚‹ã‚°ãƒ«ãƒ¼ãƒ—ã‚’ã€ŒGROUNDã€ã¨ã—ã¾ã™
+            // Š‘®‚·‚éƒOƒ‹[ƒv‚ğuGROUNDv‚Æ‚µ‚Ü‚·
             collision->SetCollisionGroup(ComponentCollision::CollisionGroup::GROUND);
-            collision->AttachToModel();    // ã‚³ãƒªã‚¸ãƒ§ãƒ³ã‚’ãƒ¢ãƒ‡ãƒ«ã«åˆã‚ã›ã‚‹
+            collision->AttachToModel();    // ƒRƒŠƒWƒ‡ƒ“‚ğƒ‚ƒfƒ‹‚É‡‚í‚¹‚é
         }
     }
 #endif
-#if 1    //ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ä½œæˆ
+#if 1    //ƒvƒŒƒCƒ„[ì¬
     Scene::Object::Create<Player>();
 #else
-    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ç”Ÿæˆ(Component: ãƒ¢ãƒ‡ãƒ«ã€ã‚«ãƒ—ã‚»ãƒ«ã‚³ãƒªã‚¸ãƒ§ãƒ³ã€ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ©)
+    // ƒvƒŒƒCƒ„[¶¬(Component: ƒ‚ƒfƒ‹AƒJƒvƒZƒ‹ƒRƒŠƒWƒ‡ƒ“AƒIƒuƒWƒFƒNƒgƒRƒ“ƒgƒ[ƒ‰)
     {
         auto player = Scene::Object::Create<Object>("Player");
         player->SetTranslate({0, 5, 0});
@@ -66,12 +67,12 @@ bool PoittersPoint_Stage::Init()
         }
         player->AddComponent<ComponentCollisionCapsule>();
         if(auto collision = player->GetComponent<ComponentCollisionCapsule>()) {
-            // æ‰€å±ã™ã‚‹ã‚°ãƒ«ãƒ¼ãƒ—ã‚’ã€ŒPLAYERã€ã¨ã—ã¾ã™
+            // Š‘®‚·‚éƒOƒ‹[ƒv‚ğuPLAYERv‚Æ‚µ‚Ü‚·
             collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
-            // Collisionã®é‡åŠ›ã‚’æœ‰åŠ¹ã«ã—ã¾ã™
+            // Collision‚Ìd—Í‚ğ—LŒø‚É‚µ‚Ü‚·
             collision->UseGravity();
-            collision->SetRadius(3.0f);     // ã‚³ãƒªã‚¸ãƒ§ãƒ³ã®åŠå¾„ã‚’3.0 ã«ã™ã‚‹
-            collision->SetHeight(13.0f);    // ã‚³ãƒªã‚¸ãƒ§ãƒ³ã®é«˜ã•ã‚’13.0 ã«ã™ã‚‹
+            collision->SetRadius(3.0f);     // ƒRƒŠƒWƒ‡ƒ“‚Ì”¼Œa‚ğ3.0 ‚É‚·‚é
+            collision->SetHeight(13.0f);    // ƒRƒŠƒWƒ‡ƒ“‚Ì‚‚³‚ğ13.0 ‚É‚·‚é
         }
         player->AddComponent<ComponentObjectController>();
         if(auto ctl = player->GetComponent<ComponentObjectController>()) {
@@ -84,10 +85,10 @@ bool PoittersPoint_Stage::Init()
 #if 1
     Scene::Object::Create<Camera>();
 #else
-    // ã‚«ãƒ¡ãƒ©ç”Ÿæˆ(Component: ãƒ¢ãƒ‡ãƒ«ã€ã‚«ãƒ—ã‚»ãƒ«ã‚³ãƒªã‚¸ãƒ§ãƒ³ã€ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ©)
+    // ƒJƒƒ‰¶¬(Component: ƒ‚ƒfƒ‹AƒJƒvƒZƒ‹ƒRƒŠƒWƒ‡ƒ“AƒIƒuƒWƒFƒNƒgƒRƒ“ƒgƒ[ƒ‰)
     {
-        auto camera = Scene::Object::Create<Object>("Camera");    //ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ã‚«ãƒ¡ãƒ©ã¨ã„ã†åå‰ã§ç”Ÿæˆ
-        camera->AddComponent<ComponentCamera>();                  //ã‚«ãƒ¡ãƒ©ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’ä»˜ã‘ã‚‹
+        auto camera = Scene::Object::Create<Object>("Camera");    //ƒIƒuƒWƒFƒNƒg‚ğƒJƒƒ‰‚Æ‚¢‚¤–¼‘O‚Å¶¬
+        camera->AddComponent<ComponentCamera>();                  //ƒJƒƒ‰ƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ•t‚¯‚é
         if(auto c = camera->GetComponent<ComponentCamera>()) {
             c->SetPositionAndTarget({0, 20, -50}, {0, 10, 0});
         }
@@ -113,13 +114,13 @@ bool PoittersPoint_Stage::Init()
     return true;
 }
 
-//! @brief æ›´æ–°
+//! @brief XV
 void PoittersPoint_Stage::Update()
 {
-    // æ¯ãƒ•ãƒ¬ãƒ¼ãƒ å‹•ä½œã™ã‚‹
+    // –ˆƒtƒŒ[ƒ€“®ì‚·‚é
     counter2++;
 
-    //ãƒ†ã‚¹ãƒˆç”¨
+    //ƒeƒXƒg—p
     if(auto obj = Scene::Object::Get<Object>("OBJ")) {
         obj->AddTranslate({0.001, 0, 0});
     }
@@ -127,18 +128,18 @@ void PoittersPoint_Stage::Update()
     printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
 
     {
-        // Enemyã¨ã„ã†åå‰ãŒã¤ã„ãŸObjectã‚’Vectorã§è¤‡æ•°å–å¾—
+        // Enemy‚Æ‚¢‚¤–¼‘O‚ª‚Â‚¢‚½Object‚ğVector‚Å•¡”æ“¾
         auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
 
-        // Vectorã®ãƒ¡ã‚½ãƒƒãƒ‰ã§ã‚µã‚¤ã‚ºã‚’å–å¾—
+        // Vector‚Ìƒƒ\ƒbƒh‚ÅƒTƒCƒY‚ğæ“¾
         auto enemy_num = enemies.size();
 
-        // ã‚¨ãƒãƒŸãƒ¼ã®ä¸Šé™æ•°ã‹ã‚‰å…ˆã»ã©å–å¾—ã—ãŸã‚µã‚¤ã‚ºã‚’å¼•ã„ã¦ãƒªãƒªãƒ¼ã‚¹æ¸ˆã¿ã®ã‚¨ãƒãƒŸãƒ¼æ•°ã‚’æ±‚ã‚ã‚‹
+        // ƒGƒlƒ~[‚ÌãŒÀ”‚©‚çæ‚Ù‚Çæ“¾‚µ‚½ƒTƒCƒY‚ğˆø‚¢‚ÄƒŠƒŠ[ƒXÏ‚İ‚ÌƒGƒlƒ~[”‚ğ‹‚ß‚é
         auto released_enemy_num = MAX_ENEMIES - enemy_num;
-        // æ­»äº¡ã‚«ã‚¦ãƒ³ãƒˆã®ä¸­èº«ã«ä»£å…¥ã™ã‚‹
+        // €–SƒJƒEƒ“ƒg‚Ì’†g‚É‘ã“ü‚·‚é
         enemy_dead_count = released_enemy_num;
 
-        // ã‚‚ã—æ­»äº¡ã‚«ã‚¦ãƒ³ãƒˆãŒã‚¨ãƒãƒŸãƒ¼ã®ä¸Šé™æ•°ä»¥ä¸Šãªã‚‰
+        // ‚à‚µ€–SƒJƒEƒ“ƒg‚ªƒGƒlƒ~[‚ÌãŒÀ”ˆÈã‚È‚ç
         if(MAX_ENEMIES <= released_enemy_num) {
             //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
 
@@ -151,21 +152,18 @@ void PoittersPoint_Stage::Update()
             }
 
             if(canCreateEnemy) {
-                // ã‚¨ãƒãƒŸãƒ¼ã‚’ç”Ÿæˆã™ã‚‹
-                createEnemy();
-
-                for(int i = 0; i < objs.size(); i++) {
-                    Scene::Object::Release(objs[i]);
-                }
+                // ‘S–Å‚µ‚½‚çƒNƒŠƒAƒV[ƒ“‚Ö
+                Scene::Change(Scene::GetScene<PoittersPoint_Clear>());
+                return;
             }
         }
     }
 }
 
-//! @brief GUIè¡¨ç¤º
+//! @brief GUI•\¦
 void PoittersPoint_Stage::GUI()
 {
-    // å…¥åŠ›(Int)ã§ã€privateã«ã‚ã‚‹ counter ã‚’æŒ‡å®š
+    // “ü—Í(Int)‚ÅAprivate‚É‚ ‚é counter ‚ğw’è
     ImGui::InputInt("Counter", &counter);
 
     ImGui::InputInt("(Test)Counter2", &counter2);
