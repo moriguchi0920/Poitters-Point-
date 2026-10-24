@@ -1,30 +1,28 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/StateMachine/ComponentStateMachine.h>
+#include <Game/Component/ComponentState.h>
 
-USING_PTR(ComponentPlayerState);
+USING_PTR(ComponentStateThrow);
 
-namespace PoittersPoint {
-class Player;
-}
-
-class ComponentPlayerState : public ComponentStateMachine
+class ComponentStateThrow : public ComponentState
 {
 public:
-    friend class PoittersPoint::Player;
-
-    BP_COMPONENT_DECL(ComponentPlayerState, u8"プレイヤー状態制御コンポーネント");
+    BP_COMPONENT_DECL(ComponentStateThrow, u8"投擲攻撃コンポーネント");
 
     void Init() override;
 
     void Update() override;
 
-    void LateUpdate() override;
-
     void GUI() override;
 
+    void SetThrowObject(ObjectWeakPtr object_ptr);
+
+    bool GetIsFinished();
+
 private:
+    ObjectWeakPtr throw_weak_ptr_;
+
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -36,4 +34,4 @@ private:
     CEREAL_SAVELOAD(arc, ver) { arc(cereal::make_nvp("Component", cereal::base_class<Component>(this))); }
 };
 
-CEREAL_CLASS_VERSION(ComponentPlayerState, 1);
+CEREAL_CLASS_VERSION(ComponentStateThrow, 1);

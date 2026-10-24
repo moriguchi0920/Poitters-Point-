@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <Game/Component/ComponentGrabbable.h>
-#include <Game/Component/State/ComponentStateControllerWalk.h>
+#include <Game/Component/ComponentStateControllerWalk.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 void ComponentGrabbable::Init()

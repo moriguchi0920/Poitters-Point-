@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <Game/Component/State/ComponentStateWalkBase.h>
+#include <Game/Component/ComponentStateWalkBase.h>
 
 void ComponentStateWalkBase::Init()
 {

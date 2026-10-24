@@ -5,7 +5,7 @@
 #include "PoittersPoint_Character.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
-#include <Game/Component/StateMachine/ComponentStateMachine.h>
+#include <Game/Component/ComponentStateMachine.h>
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>

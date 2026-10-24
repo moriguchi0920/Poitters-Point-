@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <System/Scene.h>
 #include <System/Component/Component.h>
-#include <Game/Component/StateMachine/ComponentStateMachine.h>
+#include <Game/Component/ComponentStateMachine.h>
 
 USING_PTR(ComponentCPUState);
 

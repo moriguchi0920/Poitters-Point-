@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include <Game/Component/StateMachine/ComponentPlayerState.h>
-#include <Game/Component/State/ComponentStateControllerWalk.h>
-#include <Game/Component/State/ComponentStateGrab.h>
-#include <Game/Component/State/ComponentStateThrow.h>
+#include <Game/Component/ComponentPlayerState.h>
+#include <Game/Component/ComponentStateControllerWalk.h>
+#include <Game/Component/ComponentStateGrab.h>
+#include <Game/Component/ComponentStateThrow.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Character.h>
 

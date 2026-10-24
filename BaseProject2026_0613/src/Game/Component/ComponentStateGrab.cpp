@@ -1,24 +1,35 @@
 ﻿#pragma once
-#include <Game/Component/State/ComponentStateDodge.h>
+#include <Game/Component/ComponentStateGrab.h>
 #include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
-void ComponentStateDodge::Init()
+void ComponentStateGrab::Init()
 {
     __super::Init();
-    SetName<Component>("State Dodge");
 
-    // GetOnwer：オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
+    SetName<Component>("State Grab");
+
     auto owner = GetOwner();
+    if(auto model = owner->GetComponent<ComponentModel>()) {
+        model->PlayAnimationNoSame("lift up");
+    }
 }
 
-void ComponentStateDodge::Update()
+void ComponentStateGrab::Update()
 {
+    lift_time_ -= GetDeltaTime();
+    if(lift_time_ < 0.0f) {
+        finished_  = true;
+        auto owner = GetOwner();
+        if(auto model = owner->GetComponent<ComponentModel>()) {
+            model->PlayAnimationNoSame("grab idle");
+        }
+    }
+
     __super::Update();
 }
 
-void ComponentStateDodge::GUI()
+void ComponentStateGrab::GUI()
 {
     __super::GUI();
 
@@ -26,7 +37,7 @@ void ComponentStateDodge::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State Dodge")) {
+        if(ImGui::TreeNode("State Grab")) {
             //-------------------------------------------------------
             // 共通部分(共通化したい)
 
@@ -47,5 +58,15 @@ void ComponentStateDodge::GUI()
     ImGui::End();
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateDodge)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateDodge)
+void ComponentStateGrab::SetLiftTime(float time)
+{
+    lift_time_ = time;
+}
+
+bool ComponentStateGrab::GetIsFinished()
+{
+    return finished_;
+}
+
+CEREAL_REGISTER_TYPE(ComponentStateGrab)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateGrab)

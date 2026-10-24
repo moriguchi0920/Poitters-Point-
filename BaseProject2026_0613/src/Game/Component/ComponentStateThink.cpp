@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <Game/Component/State/ComponentState.h>
+#include <Game/Component/ComponentState.h>
 #include "ComponentStateThink.h"
 
 CEREAL_REGISTER_TYPE(ComponentState)
