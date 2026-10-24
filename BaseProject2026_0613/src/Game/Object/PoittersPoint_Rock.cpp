@@ -36,6 +36,7 @@ bool Rock::Init()
     auto grabbable = AddComponent<ComponentGrabbable>();
     grabbable->SetBounceOffset(0.2f);
     grabbable->SetLiftTime(1.0f);
+    grabbable->SetDamage(1.0f);    // ダメージ設定
 
     //AddComponent<ComponentCollisionModel>();
     //if(auto collision = GetComponent<ComponentCollisionModel>()) {

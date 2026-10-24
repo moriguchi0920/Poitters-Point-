@@ -16,7 +16,7 @@ public:
     void GUI() override
     {
         __super::GUI();
-
+        /*
         // GUI内に出現させる
         ImGui::Begin(GetOwner()->GetName().data());
         {
@@ -35,6 +35,7 @@ public:
             }
         }
         ImGui::End();
+        */
     }
 
     //! @brief 現在のステートを取得する
