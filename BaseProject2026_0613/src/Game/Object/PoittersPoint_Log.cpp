@@ -24,16 +24,20 @@ bool Log::Init()
     SetName("Log");
     auto model = AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
     if(model) {
-        // モデルの読み込み成功時の追加設定はここに
+        // 丸太の物理軸（Y=+3.3 位置）をオブジェクト原点へ一致させるためモデルをローカルで -3.3 下げる
+        // カプセル側も同量移動させるため、見た目と当たり判定の相対配置は変わらない
+        model->SetTranslate({0.0f, -3.3f, 0.0f});
     }
 
-    // 丸太の形状に合致する単一カプセル衝突
+    // 丸太の形状に合致する単一カプセル(ComponentCollisionModelはリグなどがないのかアタッチ出来ない)
     // カプセルは初期で縦向きだが、丸太は横向きなので回転させる
     auto col = AddComponent<ComponentCollisionCapsule>();
     if(col) {
         col->SetRadius(3.0f);
         col->SetHeight(46.33f);
-        col->SetTranslate({23.36f, 3.3f, 0.0f});
+        // 軸をオブジェクト原点(Y=0)へ移す（モデルを -3.3 した分と相殺して見た目は不変）
+        // これにより X 軸回転が丸太の物理軸まわりの pure な転がりになり首振りが消える
+        col->SetTranslate({23.36f, 0.0f, 0.0f});
 
         // カプセルを横向き（丸太の長軸に沿わせる）に回転
         // 回転: {-90, 90, 0} (度)
@@ -44,6 +48,7 @@ bool Log::Init()
         matrixR[2] = 0.0f;
         RecomposeMatrixFromComponents(matrixT, matrixR, matrixS, col->GetMatrixFloat());
 
+        // 重力を適用
         col->UseGravity(true);
         col->SetGravity(-0.2f);
         col->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
@@ -88,10 +93,16 @@ void Log::Update()
         // ComponentStateThrow が設定した grabbable translation_ を水平速度として取得
         // ComponentGrabbable::Update() は既に __super::Update() で移動を適用済みのため、
         // just_thrown_ を立てて PrePhysics での速度適用をスキップする
-        velocity_       = grabbable->GetTranslation();
-        throw_velocity_ = velocity_;
+        float3 raw_velocity = grabbable->GetTranslation();
+        velocity_           = raw_velocity * k_throw_power_;
+        throw_velocity_     = velocity_;
         // grabbable の translation_ をゼロにして二重移動を防ぐ
         grabbable->SetTranslation({0, 0, 0});
+        // 既に適用済みで大きすぎる跳ね戻し（ホップ）の一部を水平方向だけ相殺する
+        float3 hop_cancel = {raw_velocity.x * k_hop_cancel_, 0.0f, raw_velocity.z * k_hop_cancel_};
+        if((float)length(hop_cancel) > 0.001f) {
+            AddTranslate(-hop_cancel, false, true);
+        }
         // 上方向の衝動を一度だけ与える（重力は ComponentCollision が処理）
         AddTranslate({0.0f, k_throw_up_, 0.0f});
         just_thrown_ = true;
@@ -196,26 +207,17 @@ void Log::PostPhysics()
         }
     }
 
-    // 空中中は視覚的な転がり回転をしない
-    if(!is_on_ground_)
+    // 掴まれている間は手の動きが転がりにならないよう回転しない
+    if(grabbable->GetIsGrabbed())
         return;
 
-    // 水平面（XZ）の移動量
-    float3 horiz_delta = {delta.x, 0.0f, delta.z};
-    float  horiz_dist  = length(horiz_delta);
+    // 転がりは Z 方向の移動のみで適用（丸太の長軸 X 方向の滑りは回転しない）
+    // 原点が物理軸と一致したので空中でも同じ回転を続けて自然な転倒に見える
+    if((fabs(delta.z) > 0.001f) && (k_roll_radius_ > 0.001f)) {
+        // 水平移動量 / 半径 = 回転角（ラジアン）を度に変換
+        float angle_deg = (delta.z / k_roll_radius_) * 57.2957795f;
 
-    if(horiz_dist > 0.001f) {
-        // 丸太（X軸を中心とするシリンダー）の転がり：
-        // 水平移動量 / 半径 = 回転角（ラジアン）
-        // ラジアンを度に変換: * (180 / PI)
-        float radius    = k_roll_radius_;
-        float angle_deg = (horiz_dist / radius) * 57.2957795f;
-
-        // Z方向の移動が進行方向の時は負の回転（右手座標系）
-        if(delta.z < 0.0f)
-            angle_deg = -angle_deg;
-
-        // X軸周りに累積回転
+        // X軸周りに累積回転（+Z 移動 → +X 回転）
         float3 rot  = GetRotationAxisXYZ();
         rot.x      += angle_deg;
         SetRotationAxisXYZ(rot);
@@ -235,6 +237,8 @@ void Log::GUI()
     ImGui::DragFloat(u8"転がり摩擦", &k_friction_, 0.001f, 0.5f, 1.0f, "%.3f");
     ImGui::DragFloat(u8"着地速度損失", &k_landing_loss_, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(u8"投擲上方向速度", &k_throw_up_, 0.1f, 0.0f, 100.0f, "%.2f");
+    ImGui::DragFloat(u8"投擲出力", &k_throw_power_, 0.01f, 0.05f, 1.0f, "%.2f");
+    ImGui::DragFloat(u8"跳ね戻し相殺", &k_hop_cancel_, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(u8"転がり半径", &k_roll_radius_, 0.1f, 0.1f, 100.0f, "%.2f");
     ImGui::End();
 }
