@@ -238,7 +238,7 @@ void Log::GUI()
     ImGui::DragFloat(u8"着地速度損失", &k_landing_loss_, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(u8"投擲上方向速度", &k_throw_up_, 0.1f, 0.0f, 100.0f, "%.2f");
     ImGui::DragFloat(u8"投擲出力", &k_throw_power_, 0.01f, 0.05f, 1.0f, "%.2f");
-    ImGui::DragFloat(u8"跳ね戻し相殺", &k_hop_cancel_, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat(u8"水平相殺", &k_hop_cancel_, 0.01f, 0.0f, 2.0f, "%.2f");
     ImGui::DragFloat(u8"転がり半径", &k_roll_radius_, 0.1f, 0.1f, 100.0f, "%.2f");
     ImGui::End();
 }

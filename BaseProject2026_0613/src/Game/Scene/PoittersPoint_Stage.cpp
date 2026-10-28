@@ -9,6 +9,8 @@
 #include "Game/Object/PoittersPoint_Camera.h"
 #include "Game/Object/PoittersPoint_Enemy.h"
 #include "Game/Object/PoittersPoint_Rock.h"
+#include "Game/system/PoittersPoint_Timer.h"
+#include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
 
 #include <System/Scene.h>
@@ -38,6 +40,7 @@ bool PoittersPoint_Stage::Init()
     // 地面生成(Component: モデル、モデルコリジョン)
     {
         auto ground = Scene::Object::Create<Object>("Ground");
+        Scene::Object::Create<PoittersPoint_Timer>();
         ground->AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
         ground->AddComponent<ComponentCollisionModel>();
         if(auto collision = ground->GetComponent<ComponentCollisionModel>()) {
@@ -105,6 +108,8 @@ bool PoittersPoint_Stage::Init()
     Scene::Object::Create<Rock>();
     Scene::Object::Create<Log>();
 
+    Scene::Object::Create<Slime>();
+
     return true;
 }
 
@@ -119,7 +124,7 @@ void PoittersPoint_Stage::Update()
         obj->AddTranslate({0.001, 0, 0});
     }
 
-    printfDx("\nDEAD ENEMY: %d", enemy_dead_count);
+    printfDx("\n DEAD ENEMY: %d", enemy_dead_count);
 
     {
         // Enemyという名前がついたObjectをVectorで複数取得

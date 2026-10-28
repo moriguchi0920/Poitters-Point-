@@ -58,7 +58,7 @@ private:
     float k_throw_up_     = 3.0f;      //!< 投擲時の上方向衝動
     float k_roll_radius_  = 3.0f;      //!< 転がり半径（コライダー半径と一致）
     float k_throw_power_  = 0.2f;      //!< 投擲速度のスケーリング
-    float k_hop_cancel_   = 0.5f;      //!< 投擲フレームの跳ね戻し相殺率
+    float k_hop_cancel_   = 1.53f;     //!< 投擲フレームの水平相殺率（develop側のAddTranslate分を含む）
 };
 
 }    // namespace PoittersPoint
