@@ -30,6 +30,7 @@ public:
 
     virtual bool GetArrival() { return false; }
     virtual bool GetStopped() { return false; }
+    virtual bool GetNearby() { return false; }
 
 protected:
     float move_speed_ = 0.3f;

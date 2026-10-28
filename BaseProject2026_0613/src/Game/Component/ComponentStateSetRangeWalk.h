@@ -22,6 +22,7 @@ public:
 
     bool GetArrival() override;
     bool GetStopped() override;
+    bool GetNearby() override;
 
 protected:
     // 移動方向

@@ -23,6 +23,7 @@ public:
 
     void GUI() override;
     bool GetStopped() override;
+    bool GetNearby() override;
 
 private:
     float3        target_pos_;

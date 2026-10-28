@@ -136,5 +136,13 @@ bool ComponentStateTargetWalk::GetStopped()
     return stop_judge_time_ < stopping_time_;
 }
 
+bool ComponentStateTargetWalk::GetNearby()
+{
+    auto owner     = GetOwner();
+    auto translate = owner->GetTranslate();
+    auto vec       = target_pos_ - translate;
+    return fabsf(vec.x) < 10.0 && fabsf(vec.y) < 10.0 && fabsf(vec.z) < 10.0;
+}
+
 CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateTargetWalk)

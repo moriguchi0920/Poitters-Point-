@@ -50,8 +50,9 @@ private:
     ObjectWeakPtr GetNearestAttacker();
     ObjectWeakPtr GetNearestGrabbableObj();
 
-    bool        IsAttackerNearby();
-    const float attacker_near_distance_ = 1.0f;
+    bool          IsAttackerNearby();
+    const float   attacker_near_distance_ = 1.0f;
+    ObjectWeakPtr target_want_grab_;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

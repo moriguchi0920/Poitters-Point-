@@ -105,5 +105,10 @@ bool ComponentStateSetRangeWalk::GetStopped()
     return stop_judge_time_ < stopping_time_;
 }
 
+bool ComponentStateSetRangeWalk::GetNearby()
+{
+    return walk_distance_ < 1.0f;
+}
+
 CEREAL_REGISTER_TYPE(ComponentStateWalkBase)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateWalkBase)
