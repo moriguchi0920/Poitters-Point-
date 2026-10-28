@@ -288,7 +288,7 @@ void ComponentModel::GUI()
             auto GUIAnimation = [this]() {
                 constexpr int item_count = 5;
                 auto          flags      = ImGuiTableFlags_Resizable | ImGuiTableFlags_Borders | ImGuiTableFlags_Sortable |    //
-                                           ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_ScrollY;
+                             ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_ScrollY;
 
                 bool change = false;
 

@@ -50,6 +50,7 @@ void ComponentStateThrow::Update()
                 }
                 if(auto throw_object = throw_weak_ptr_.lock()) {
                     auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
+                    throw_object->AddTranslate(vec * 5.0f);
                     grabbable->SetTranslation(vec * 5.0f);
                 }
                 // 投げるモーションが終わったので当たり判定を
@@ -57,8 +58,13 @@ void ComponentStateThrow::Update()
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
                 }
 
+                // 投げ主を記録（自分自身への初期ダメージをスキップするため）
+                if(auto grabbable = throw_object->GetComponent<ComponentGrabbable>()) {
+                    grabbable->SetThrower(GetOwnerPtr());
+                }
+
                 throw_weak_ptr_.reset();
-                ChangeState<ComponentStateIdleWalk>();
+                //ChangeState<ComponentStateIdleWalk>();
             }
 
             /*

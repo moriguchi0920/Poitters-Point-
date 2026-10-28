@@ -18,18 +18,17 @@ public:
     //! @return 初期化終了
     bool Init() override;
 
-    //! @brief
+    //! @brief 更新
+    //! プレイヤーに向かって移動し、状態に応じたアニメーションを再生する
     void Update();
 
     //! @brief 当たり判定のコールバック
     //! 当たり判定が行われたときに自動で呼び出される関数
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
-    bool is_dead = false;
-
-    bool is_down = false;
-
-    bool is_running = false;    // 現在走っているかどうかのフラグ
+    bool is_dead    = false;    //!< 死亡済みかどうか
+    bool is_down    = false;    //!< ダウン状態かどうか
+    bool is_running = false;    //!< 現在走っているかどうかのフラグ
 };
 
 }    // namespace PoittersPoint
