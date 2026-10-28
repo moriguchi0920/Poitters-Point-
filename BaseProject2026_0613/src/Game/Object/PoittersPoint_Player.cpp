@@ -66,14 +66,6 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
     auto hitter = hit_info.hit_collision_->GetOwner();
 
-    // 当たった相手が掴める状態なら掴み対象として記録する(CPU側動作)
-    if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
-        auto state_machine = GetComponent<ComponentStateMachine>();
-        if(state_machine && grabbable->GetCanGrab()) {
-            state_machine->GrabbableHit(hitter->SharedThis());
-        }
-    }
-
     // ヒットした相手が掴めるもの(=投げられて移動中)か判定
     if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
         // 投げた本人自身の場合はダメージなし

@@ -46,15 +46,17 @@ void ComponentCPUState::Update()
     case CPU_ACTION::ACTION_GRAB:
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
-                // 掴み対象に当たって掴める状態になるまで歩き続ける
-                // 掴めずにたどり着けない/止まってしまったら考え直す
-                if((component_walk->GetArrival() || component_walk->GetStopped())) {
-                    // 接触で記録されていなければ視線判定で捕らえた対象を掴み対象として記録する
-                    if(grabbing_object_ptr_.expired() && character_casted_owner) {
-                        if(auto sight = character_casted_owner->GetEyeSightTarget().lock()) {
-                            GrabbableHit(sight);
+                if(auto target = target_want_grab_.lock()) {
+                    if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+                        if(!grabbable->GetCanGrab()) {
+                            StartThink();
+                            target_want_grab_.reset();
                         }
                     }
+                }
+                // 掴み対象に当たって掴める状態になるまで歩き続ける
+                // 掴めずにたどり着けない/止まってしまったら考え直す
+                if((component_walk->GetNearby() || component_walk->GetStopped())) {
                     if(!StartGrab())
                         StartThink();
                 }
@@ -76,7 +78,7 @@ void ComponentCPUState::Update()
     case CPU_ACTION::ACTION_ATTACK:
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
-                if((component_walk->GetArrival() || component_walk->GetStopped()) && can_throw_) {
+                if((component_walk->GetNearby() || component_walk->GetStopped()) && can_throw_) {
                     ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
                     can_throw_ = false;
                 }
@@ -145,7 +147,7 @@ void ComponentCPUState::StartGrabAction(ObjectWeakPtr target)
     if(!character_casted_owner || target.expired()) {
         return;
     }
-
+    target_want_grab_ = target;
     // 拾えるオブジェクトがあるところまで歩く
     auto target_walk = ChangeState<ComponentStateTargetWalk>();
     target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
@@ -330,7 +332,7 @@ ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
     // プレイヤー/CPU共通の視線判定で捕らえた対象があればそれを優先して掴みに行く
     if(auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner)) {
         if(auto sight = character_casted_owner->GetEyeSightTarget().lock()) {
-            if(sight != owner->SharedThis()) {
+            if(sight != owner->SharedThis() && !std::dynamic_pointer_cast<PoittersPoint::Player>(sight)) {
                 if(auto grabbable = sight->GetComponent<ComponentGrabbable>()) {
                     if(grabbable->GetCanGrab() && !grabbable->GetIsGrabbed()) {
                         return std::weak_ptr(sight);

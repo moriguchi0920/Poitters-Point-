@@ -1,0 +1,30 @@
+[DxLib]
+UseUTF8=False
+
+[System]
+
+; タイトル名
+Title=BaseProject2026
+
+; エディタ起動
+GUIEditor=True
+ShowGrid=True
+ShowFPS=True
+ShowMouse=True
+DebugKeys=True
+
+; フルスクリーン起動
+CheckFullScreen=False
+FullScreen=False
+
+; スクリーンサイズ
+ScreenSize = {1280, 720}
+
+; スクリーン背景色
+ClearColor = {0.5,0.5,0.5}
+
+; シーン
+[Scene]
+
+; 初期に読み込むシーン
+Start = "Tutorial_01"
