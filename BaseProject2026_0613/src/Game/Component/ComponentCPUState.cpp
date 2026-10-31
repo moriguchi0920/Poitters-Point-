@@ -31,6 +31,14 @@ void ComponentCPUState::Update()
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
+    if (auto grabbable = owner->GetComponent<ComponentGrabbable>())
+    {
+        if (grabbable->GetIsGrabbed())
+        {
+            return;
+        }
+    }
+
     // 行動ごとの更新
     switch(cur_action_) {
     case CPU_ACTION::ACTION_THINK:
@@ -198,6 +206,7 @@ void ComponentCPUState::StartAttackAction()
     auto target_walk = ChangeState<ComponentStateTargetWalk>();
     target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     target_walk->SetTargetPtr(GetNearestCharacter());
+    target_walk->SetIsHolding(true);
 
     cur_action_ = CPU_ACTION::ACTION_ATTACK;
 }
@@ -329,19 +338,6 @@ ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
 {
     auto owner = GetOwner();
-    // プレイヤー/CPU共通の視線判定で捕らえた対象があればそれを優先して掴みに行く
-    if(auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner)) {
-        if(auto sight = character_casted_owner->GetEyeSightTarget().lock()) {
-            if(sight != owner->SharedThis() && !std::dynamic_pointer_cast<PoittersPoint::Player>(sight)) {
-                if(auto grabbable = sight->GetComponent<ComponentGrabbable>()) {
-                    if(grabbable->GetCanGrab() && !grabbable->GetIsGrabbed()) {
-                        return std::weak_ptr(sight);
-                    }
-                }
-            }
-        }
-    }
-    // 視線に掴める対象がない場合は従来どおり最寄りの岩を探す
     // ターゲットとなるオブジェクトを取得(ターゲットは仮で岩のみとする)
     auto      targets   = Scene::Object::GetArray<PoittersPoint::Rock>();
     ObjectPtr targetPtr = nullptr;
