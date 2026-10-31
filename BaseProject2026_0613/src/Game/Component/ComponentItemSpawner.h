@@ -13,6 +13,7 @@ enum class ItemType
     Crate,      // 木箱
     Slime,      // スライム
     Missile,    // ミサイル
+    Log,        // 丸太
 };
 
 struct SpawnerPoint

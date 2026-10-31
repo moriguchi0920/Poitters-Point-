@@ -1,7 +1,8 @@
 ﻿#include "ComponentItemSpawner.h"
 #include "Game/Object/PoittersPoint_Rock.h"
 // #include "Game/Object/PoittersPoint_Crate.h"  // モデル到着時にコメント解除
-#include "Game/Object/PoittersPoint_Slime.h"  // モデル到着時にコメント解除
+#include "Game/Object/PoittersPoint_Slime.h"    // モデル到着時にコメント解除
+#include "Game/Object/PoittersPoint_Log.h"
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include <cmath>
@@ -24,7 +25,7 @@ void ComponentItemSpawner::Init()
     std::mt19937       gen(rd());
     // 各マスの中心座標から少しずらしてまばらに生成している感を出す
     std::uniform_real_distribution<float> offset_dist(-8.0f, 8.0f);
-    std::uniform_int_distribution<int>    type_dist(1, 2);    // 1: Crate, 2: Slime
+    std::uniform_int_distribution<int>    type_dist(1, 3);    // 1: Crate, 2: Slime, 3: Log
 
     const int   grid_size = 4;    // スポーンは4*4
     const float start_pos = -45.0f;
@@ -38,13 +39,16 @@ void ComponentItemSpawner::Init()
             SpawnerPoint point;
             point.position = float3(px, 0.0f, pz);
 
+            int type = type_dist(gen);
             if(type_dist(gen) == 1) {
                 point.assigned_type = ItemType::Crate;
             }
-            else {
+            else if(type == 2) {
                 point.assigned_type = ItemType::Slime;
             }
-
+            else {
+                point.assigned_type = ItemType::Log;
+            }
             spawner_points_.push_back(point);
         }
     }
@@ -172,8 +176,11 @@ ObjectPtr ComponentItemSpawner::CreateItemInstance(ItemType type)
     case ItemType::Slime: return Scene::Object::Create<PoittersPoint::Slime>();
     */
     case ItemType::Crate:
+        return Scene::Object::Create<PoittersPoint::Rock>();
     case ItemType::Slime:
         return Scene::Object::Create<PoittersPoint::Slime>();
+    case ItemType::Log:
+        return Scene::Object::Create<PoittersPoint::Log>();
     default:
         return Scene::Object::Create<PoittersPoint::Rock>();
     }
