@@ -155,7 +155,23 @@ void Player::OnEyeSight()
                     // ステートマシンがあれば掴み対象として記録する
                     // 人間はスペースキーでStartGrab、CPUはACTION_GRABの到達時にStartGrabする
                     if(auto state_machine = GetComponent<ComponentStateMachine>()) {
-                        state_machine->GrabbableHit(target);
+                        // プレイヤーよりもオブジェクトの持ち上げを優先
+                        if (std::dynamic_pointer_cast<PoittersPoint::Player>(target))
+                        {
+                            // 判定内にオブジェクトがいない場合のみ
+                            if (!state_machine->IsGrabTargetExist())
+                            {
+                                // 対象を持ち上げられるとして登録
+                                state_machine->GrabbableHit(target);
+                            }
+                        }
+                        // プレイヤー以外なら
+                        else
+                        {
+                            // そのまま登録
+                            state_machine->GrabbableHit(target);
+                        }
+                        
                     }
                 }
             }

@@ -78,6 +78,7 @@ bool ComponentStateMachine::StartGrab()
                 ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
                 can_grab_ = false;
                 grabbable->SetCanGrab(false);
+                GetOwner()->GetComponent<ComponentGrabbable>()->SetCanGrab(false);
                 return true;
             }
             else {
@@ -131,6 +132,11 @@ bool ComponentStateMachine::GetCanGrab()
 bool ComponentStateMachine::GetGrabbing()
 {
     return !grabbing_object_ptr_.expired() && !can_grab_;
+}
+
+bool ComponentStateMachine::IsGrabTargetExist()
+{
+    return !grabbing_object_ptr_.expired();
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateMachine)

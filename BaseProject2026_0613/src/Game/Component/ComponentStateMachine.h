@@ -40,6 +40,8 @@ public:
 
     bool GetGrabbing();
 
+    bool IsGrabTargetExist();
+
 protected:
     bool          can_grab_;
     bool          can_throw_;

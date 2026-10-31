@@ -32,10 +32,20 @@ void ComponentPlayerState::Init()
 //===========================================================================
 void ComponentPlayerState::Update()
 {
+
+
     __super::Update();
 
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+
+    if (auto grabbable = owner->GetComponent<ComponentGrabbable>())
+    {
+        if (grabbable->GetIsGrabbed())
+        {
+            return;
+        }
+    }
 
     // スペースキーが押された時の処理
     if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
