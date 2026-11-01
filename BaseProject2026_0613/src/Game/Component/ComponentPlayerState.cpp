@@ -9,6 +9,7 @@
 #include "ComponentStateThrow.h"
 #include "ComponentGrabbable.h"
 #include "ComponentHitPoints.h"
+#include "ComponentStatePlayerJump.h"
 
 //===========================================================================
 // 初期化処理
@@ -34,41 +35,51 @@ void ComponentPlayerState::Update()
 
     auto owner = GetOwner();
 
-    // スペースキーが押された時の処理
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
-        // 現在のステートがIdleWalkであり、持っているオブジェクトが存在していて投げられるとき
-        if(owner->GetComponent<ComponentStateIdleWalk>()) {
-            if(!grabbing_object_ptr_.expired()) {
-                //(投げ可能 = すでにアイテムを持っている)
-                if(can_throw_) {
-                    // 投げ判定変数をfalseに
+    // Eキーが押された時の処理
+    if(Input::IsKeyDown(KEY_INPUT_E)) {
+        // オブジェクトが近くにある、または持っている状態
+        if(!grabbing_object_ptr_.expired()) {
+            // 【投げ処理】すでにアイテムを持っている (can_throw_ が true)
+            if(can_throw_) {
+                bool is_idle_walk = (owner->GetComponent<ComponentStateIdleWalk>() != nullptr);
+
+                // ジャンプステートの取得
+                auto jump_comp  = owner->GetComponent<ComponentStatePlayerJump>();
+                bool is_jumping = (jump_comp != nullptr);
+
+                // 地上(IdleWalk) または 空中(PlayerJump) のどちらでも投げを許可
+                if(is_idle_walk || is_jumping) {
                     can_throw_ = false;
-                    // 持ち上げ可能に
-                    can_grab_ = true;
+                    can_grab_  = true;
+
                     // Throwステートに変更
-                    ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
+                    auto state_throw = ChangeState<ComponentStateThrow>();
+                    state_throw->SetThrowObject(grabbing_object_ptr_);
+
+                    // ★空中投げ（ジャンプ中）の場合は is_in_air_ を true にして SetInAir を呼ぶ
+                    if(is_jumping) {
+                        float v_y      = jump_comp->GetVelocityY();
+                        float ground_y = jump_comp->GetGroundY();
+                        float gravity  = jump_comp->GetGravity();
+
+                        state_throw->SetInAir(true, v_y, ground_y, gravity);
+                    }
+
                     grabbing_object_ptr_.reset();
                 }
-                // (投げ不可能 = アイテムはまだ持っていない)
-                else {
-                    // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
-                    auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
-                    // コンポーネントがあったら
-                    if(grabbable) {
-                        // 持ち上げ相手が持てる状態なら
-                        if(grabbable->GetCanGrab()) {
-                            // ステートをGrabステートに
-                            ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
-                            can_grab_ = false;
-                            grabbable->SetCanGrab(false);
-                        }
+            }
+            // 【持ち上げ処理】まだアイテムを持っていない (地上 IdleWalk のみ許可)
+            else if(owner->GetComponent<ComponentStateIdleWalk>()) {
+                auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
+                if(grabbable) {
+                    if(grabbable->GetCanGrab()) {
+                        ChangeState<ComponentStateGrab>()->SetLiftTime(grabbable->GetLiftTime());
+                        can_grab_ = false;
+                        grabbable->SetCanGrab(false);
                     }
                 }
             }
         }
-    }
-
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
     }
 
     // 掴みアニメーションが終了したら、掴み状態を完了させる
@@ -120,14 +131,14 @@ void ComponentPlayerState::GUI()
         ImGui::Separator();    // 線が出てくる
         if(ImGui::TreeNode("Player State")) {
             //-------------------------------------------------------
-            // 共通部分(共通化したい)
+            // 共通部分
 
             // 有効/無効
             bool enable = GetStatus(StatusBit::Enable);
             if(ImGui::Checkbox(u8"有効", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            // GUI上でオーナーから自分(SampleObjectController)を削除します
+            // GUI上でオーナーから自分を削除します
             if(ImGui::Button(u8"削除"))
                 GetOwner()->RemoveComponent(shared_from_this());
             //-------------------------------------------------------
