@@ -1,14 +1,14 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateIdleWalk.h>
+#include <Game/Component/ComponentStateControllerWalk.h>
 #include <Game/Component/ComponentStatePlayerJump.h>
 
-void ComponentStateIdleWalk::Init()
+void ComponentStateControllerWalk::Init()
 {
     __super::Init();
     SetName<Component>("State IdleWalk");
 }
 
-void ComponentStateIdleWalk::Update()
+void ComponentStateControllerWalk::Update()
 {
     __super::Update();
 
@@ -40,6 +40,8 @@ void ComponentStateIdleWalk::Update()
 
     if(IsKey(key_left_))
         dir += {1, 0, 0};
+
+    direction_ = dir;
 
     // 移動キーが押されているか?
     if((float)length(dir) > 0.0f) {
@@ -76,28 +78,7 @@ void ComponentStateIdleWalk::Update()
     }
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetMoveSpeed(const float speed)
-{
-    move_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
-}
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetRotateSpeed(const float speed)
-{
-    rot_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
-}
-
-const float ComponentStateIdleWalk::GetMoveSpeed() const
-{
-    return move_speed_;
-}
-
-const float ComponentStateIdleWalk::GetRotateSpeed() const
-{
-    return rot_speed_;
-}
-
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int left, int right, int jump)
+ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetKeys(int up, int down, int left, int right, int jump)
 {
     // 移動キー・ジャンプキーの設定
     key_up_    = up;
@@ -105,10 +86,10 @@ ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int 
     key_left_  = left;
     key_right_ = right;
     key_jump_  = jump;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
+    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
 }
 
-void ComponentStateIdleWalk::GUI()
+void ComponentStateControllerWalk::GUI()
 {
     __super::GUI();
 
@@ -116,7 +97,7 @@ void ComponentStateIdleWalk::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State IdleWalk")) {
+        if(ImGui::TreeNode("State ControllerWalk")) {
             //-------------------------------------------------------
             // 共通部分
 
@@ -144,10 +125,15 @@ void ComponentStateIdleWalk::GUI()
     ImGui::End();
 }
 
-void ComponentStateIdleWalk::SetIsHolding(bool hold)
+bool ComponentStateControllerWalk::GetArrival()
 {
-    is_holding_ = hold;
+    return false;
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateIdleWalk)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateIdleWalk)
+bool ComponentStateControllerWalk::GetStopped()
+{
+    return 0 < (float)length(direction_);
+}
+
+CEREAL_REGISTER_TYPE(ComponentStateControllerWalk)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateControllerWalk)

@@ -2,47 +2,34 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>
+#include <Game/Component/ComponentStateWalkBase.h>
 
-USING_PTR(ComponentStateIdleWalk);
+USING_PTR(ComponentStateControllerWalk);
 
-class ComponentStateIdleWalk : public ComponentState
+class ComponentStateControllerWalk : public ComponentStateWalkBase
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateIdleWalk, u8"停止・歩きコンポーネント");
+    BP_COMPONENT_DECL(ComponentStateControllerWalk, u8"停止・歩きコンポーネント");
 
     void Init() override;
 
     void Update() override;
 
-    ComponentStateIdleWalkPtr SetMoveSpeed(const float speed);
-
-    ComponentStateIdleWalkPtr SetRotateSpeed(const float speed);
-
-    ComponentStateIdleWalkPtr SetKeys(int up, int down, int left, int right, int jump = KEY_INPUT_J);
-
-    const float GetMoveSpeed() const;
-    const float GetRotateSpeed() const;
-
-    inline const void  SetFrontRotate(float rotate) { front_rot_ = rotate; }
-    inline const float GetFrontRotate() const { return front_rot_; }
+    ComponentStateControllerWalkPtr SetKeys(int up, int down, int left, int right, int jump = KEY_INPUT_SPACE);
 
     void GUI() override;
 
-    void SetIsHolding(bool hold);
+    bool GetArrival() override;
+    bool GetStopped() override;
 
 private:
-    float move_speed_ = 0.3f;
-    float rot_speed_  = 20.0f;
-
     int key_up_    = KEY_INPUT_W;
     int key_down_  = KEY_INPUT_S;
     int key_left_  = KEY_INPUT_A;
     int key_right_ = KEY_INPUT_D;
     int key_jump_  = KEY_INPUT_SPACE;
 
-    float front_rot_ = 0.0f;    // <前方ベクトルの回転角度(0-360度)
-
-    bool is_holding_;
+    float3 direction_;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
@@ -69,4 +56,4 @@ private:
     }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateIdleWalk, 1);
+CEREAL_CLASS_VERSION(ComponentStateControllerWalk, 1);
