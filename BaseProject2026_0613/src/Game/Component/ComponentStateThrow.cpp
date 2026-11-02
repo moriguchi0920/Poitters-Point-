@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <Game/Component/ComponentStateThrow.h>
-#include "ComponentStateIdleWalk.h"
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
 
@@ -90,17 +90,12 @@ void ComponentStateThrow::Update()
             }
         }
 
-        // アニメーション再生終了時のクリーンアップ処理
-        bool is_playing = was_in_air_start ? model->IsExPlaying("mixamorig:Spine") : model->IsPlaying();
-
-        if(!is_playing) {
+        // 空中投げのアニメーション終了時はルートモーションのY補正を解除する
+        // (ステート遷移はステートマシン側の GetIsFinished ポーリングで行う)
+        if(was_in_air_start && !model->IsExPlaying("mixamorig:Spine")) {
             matrix mat        = model->GetMatrix();
             mat.translate().y = 0.0f;
             model->SetMatrix(mat);
-
-            RemoveThisComponent();
-            auto idle = owner->AddComponent<ComponentStateIdleWalk>();
-            idle->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
         }
     }
 }
@@ -129,6 +124,15 @@ void ComponentStateThrow::GUI()
 void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
 {
     throw_weak_ptr_ = object_ptr;
+}
+
+bool ComponentStateThrow::GetIsFinished()
+{
+    // アニメーションが止まっているか(空中投げは上半身レイヤーの再生終了も待つ)
+    if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
+        return !model->IsPlaying() && !model->IsExPlaying("mixamorig:Spine");
+    }
+    return false;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateThrow)

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "hlsl++_common.h"
 
@@ -284,6 +284,11 @@ namespace hlslpp
 		{
 			hlslpp_assert(N >= 0 && N <= 2);
 			return f32[N];
+		}
+
+		float* RawArray()
+		{
+			return f32;
 		}
 
 		union

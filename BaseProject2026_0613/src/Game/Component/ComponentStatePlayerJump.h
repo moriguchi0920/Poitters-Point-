@@ -37,6 +37,10 @@ public:
     void SetIsHolding(bool hold);
     bool IsLanding() const { return is_landing_; }
 
+    //! CPUのジャンプとして扱う設定(CPUは入力キーを読まず直上ジャンプする)
+    void SetIsCPU(bool cpu);
+    bool GetIsCPU() const { return is_cpu_; }
+
 private:
     // ジャンプパラメータ
     float jump_power_     = 3.2f;     // ジャンプの高さを出す
@@ -62,6 +66,7 @@ private:
 
     float front_rot_  = 0.0f;    // 前方ベクトルの回転角度(0-360度)
     bool  is_holding_ = false;
+    bool  is_cpu_     = false;    // CPU用ジャンプか(セーブ対象ではない)
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

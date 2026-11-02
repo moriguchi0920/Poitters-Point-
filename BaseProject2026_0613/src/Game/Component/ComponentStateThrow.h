@@ -18,6 +18,8 @@ public:
 
     void SetThrowObject(ObjectWeakPtr object_ptr);
 
+    bool GetIsFinished();
+
     //! 空中投げパラメータの設定
     void SetInAir(bool in_air, float current_velocity, float ground_y, float gravity)
     {
