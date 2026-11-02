@@ -15,7 +15,7 @@ public:
 
     void Update() override;
 
-    ComponentStateControllerWalkPtr SetKeys(int up, int down, int left, int right);
+    ComponentStateControllerWalkPtr SetKeys(int up, int down, int left, int right, int jump = KEY_INPUT_SPACE);
 
     void GUI() override;
 
@@ -27,6 +27,7 @@ private:
     int key_down_  = KEY_INPUT_S;
     int key_left_  = KEY_INPUT_A;
     int key_right_ = KEY_INPUT_D;
+    int key_jump_  = KEY_INPUT_SPACE;
 
     float3 direction_;
 
@@ -47,6 +48,7 @@ private:
             CEREAL_NVP(key_down_),
             CEREAL_NVP(key_left_),
             CEREAL_NVP(key_right_),
+            CEREAL_NVP(key_jump_),
 
             CEREAL_NVP(front_rot_));
 

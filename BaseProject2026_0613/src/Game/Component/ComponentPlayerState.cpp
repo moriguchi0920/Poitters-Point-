@@ -7,6 +7,7 @@
 #include <Game/Component/ComponentStateControllerWalk.h>
 #include <Game/Component/ComponentStateGrab.h>
 #include <Game/Component/ComponentStateThrow.h>
+#include <Game/Component/ComponentStatePlayerJump.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Player.h>
 
@@ -32,8 +33,6 @@ void ComponentPlayerState::Init()
 //===========================================================================
 void ComponentPlayerState::Update()
 {
-
-
     __super::Update();
 
     auto owner                  = GetOwner();
@@ -47,36 +46,54 @@ void ComponentPlayerState::Update()
         }
     }
 
-    // スペースキーが押された時の処理
-    if(Input::IsKeyDown(KEY_INPUT_SPACE)) {
-        // 現在のステートがControllerWalkであり、持っているオブジェクトが存在していて投げられるとき
-        if(owner->GetComponent<ComponentStateControllerWalk>()) {
-            if(!grabbing_object_ptr_.expired()) {
-                //(投げ可能 = すでにアイテムを持っている)
-                if(can_throw_) {
-                    // 投げ判定変数をfalseに
+    // Eキーが押された時の処理
+    if(Input::IsKeyDown(KEY_INPUT_E)) {
+        // オブジェクトが近くにある、または持っている状態
+        if(!grabbing_object_ptr_.expired()) {
+            // 【投げ処理】すでにアイテムを持っている (can_throw_ が true)
+            if(can_throw_) {
+                bool is_walk = (owner->GetComponent<ComponentStateControllerWalk>() != nullptr);
+
+                // ジャンプステートの取得
+                auto jump_comp  = owner->GetComponent<ComponentStatePlayerJump>();
+                bool is_jumping = (jump_comp != nullptr);
+
+                // 地上(ControllerWalk) または 空中(PlayerJump) のどちらでも投げを許可
+                if(is_walk || is_jumping) {
                     can_throw_ = false;
-                    // 持ち上げ可能に
-                    can_grab_ = true;
+                    can_grab_  = true;
+
                     // Throwステートに変更
-                    ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
+                    auto state_throw = ChangeState<ComponentStateThrow>();
+                    state_throw->SetThrowObject(grabbing_object_ptr_);
+
+                    // ★空中投げ（ジャンプ中）の場合は is_in_air_ を true にして SetInAir を呼ぶ
+                    if(is_jumping) {
+                        float v_y      = jump_comp->GetVelocityY();
+                        float ground_y = jump_comp->GetGroundY();
+                        float gravity  = jump_comp->GetGravity();
+
+                        state_throw->SetInAir(true, v_y, ground_y, gravity);
+                    }
+
                     grabbing_object_ptr_.reset();
-                }
-                // (投げ不可能 = アイテムはまだ持っていない)
-                else {
-                    StartGrab();
                 }
             }
         }
+        // 【持ち上げ処理】まだアイテムを持っていない (地上 ControllerWalk のみ許可)
+        else if(owner->GetComponent<ComponentStateControllerWalk>()) {
+            StartGrab();
+        }
     }
 
-    // 現在のステートが掴みであるとき
+    // 掴みアニメーションが終了したら、掴み状態を完了させて歩きステートに戻る
     if(FinishGrab()) {
         if(character_casted_owner) {
             ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
         }
     }
 
+    // 投げアニメーションが終了したら歩きステートに戻る
     if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
         if(component_throw->GetIsFinished()) {
             if(character_casted_owner) {
@@ -106,14 +123,14 @@ void ComponentPlayerState::GUI()
         ImGui::Separator();    // 線が出てくる
         if(ImGui::TreeNode("Player State")) {
             //-------------------------------------------------------
-            // 共通部分(共通化したい)
+            // 共通部分
 
             // 有効/無効
             bool enable = GetStatus(StatusBit::Enable);
             if(ImGui::Checkbox(u8"有効", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            // GUI上でオーナーから自分(SampleObjectController)を削除します
+            // GUI上でオーナーから自分を削除します
             if(ImGui::Button(u8"削除"))
                 GetOwner()->RemoveComponent(shared_from_this());
             //-------------------------------------------------------
