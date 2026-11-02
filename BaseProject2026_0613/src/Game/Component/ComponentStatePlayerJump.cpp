@@ -20,14 +20,17 @@ void ComponentStatePlayerJump::Init()
     is_landing_            = false;
 
     float3 dir{0, 0, 0};
-    if(Input::IsKeyDown(key_up_))
-        dir += {0, 0, -1};
-    if(Input::IsKeyDown(key_down_))
-        dir += {0, 0, 1};
-    if(Input::IsKeyDown(key_right_))
-        dir += {-1, 0, 0};
-    if(Input::IsKeyDown(key_left_))
-        dir += {1, 0, 0};
+    // CPU用ジャンプは入力キーを読まず直上ジャンプする
+    if(!is_cpu_) {
+        if(Input::IsKeyDown(key_up_))
+            dir += {0, 0, -1};
+        if(Input::IsKeyDown(key_down_))
+            dir += {0, 0, 1};
+        if(Input::IsKeyDown(key_right_))
+            dir += {-1, 0, 0};
+        if(Input::IsKeyDown(key_left_))
+            dir += {1, 0, 0};
+    }
 
     // 移動キーが押されていれば方向を固定、押されていなければ(0,0,0)で直上ジャンプ
     if((float)length(dir) > 0.0f) {
@@ -103,6 +106,12 @@ void ComponentStatePlayerJump::Update()
         landing_Timer_ -= GetDeltaTime();    // フレーム時間分減らす
 
         if(landing_Timer_ <= 0.0f) {
+            if(is_cpu_) {
+                // CPUは歩きステートを自作しない(ComponentCPUState側でジャンプ消失を検知して再行動する)
+                owner->RemoveComponent(shared_from_this());
+                return;
+            }
+
             // タイマーが終わったら ControllerWalk へ戻ります
             auto walk = owner->AddComponent<ComponentStateControllerWalk>();
             walk->SetKeys(key_up_, key_down_, key_left_, key_right_, key_jump_);
@@ -202,6 +211,11 @@ void ComponentStatePlayerJump::GUI()
 void ComponentStatePlayerJump::SetIsHolding(bool hold)
 {
     is_holding_ = hold;
+}
+
+void ComponentStatePlayerJump::SetIsCPU(bool cpu)
+{
+    is_cpu_ = cpu;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStatePlayerJump)

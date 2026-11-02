@@ -3,6 +3,7 @@
 #include <Game/Component/ComponentStateTargetWalk.h>
 #include <Game/Component/ComponentStateGrab.h>
 #include <Game/Component/ComponentStateThrow.h>
+#include <Game/Component/ComponentStatePlayerJump.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Rock.h>
 #include <Game/Object/PoittersPoint_Player.h>
@@ -37,6 +38,11 @@ void ComponentCPUState::Update()
         {
             return;
         }
+    }
+
+    // 回避ジャンプのクールダウンを進める
+    if(evasion_jump_cooldown_timer_ > 0.0f) {
+        evasion_jump_cooldown_timer_ -= GetDeltaTime();
     }
 
     // 行動ごとの更新
@@ -83,10 +89,23 @@ void ComponentCPUState::Update()
             }
             break;
         }
+    case CPU_ACTION::ACTION_EVASION_JUMP:
+        {
+            // ジャンプステートは着地後に自分で消えるため、消えたら考え直す
+            if(!owner->GetComponent<ComponentStatePlayerJump>()) {
+                StartThink();
+            }
+            break;
+        }
     case CPU_ACTION::ACTION_ATTACK:
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
                 if((component_walk->GetNearby() || component_walk->GetStopped()) && can_throw_) {
+                    // 低確率で、投げの代わりにその場で真上へジャンプして回避する
+                    if(IsEvadeJumpTrigger()) {
+                        StartEvadeJump();
+                        break;
+                    }
                     ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
                     can_throw_ = false;
                 }
@@ -211,6 +230,52 @@ void ComponentCPUState::StartAttackAction()
     cur_action_ = CPU_ACTION::ACTION_ATTACK;
 }
 
+bool ComponentCPUState::IsEvadeJumpTrigger()
+{
+    auto owner = GetOwner();
+
+    // クールダウン中はジャンプしない
+    if(evasion_jump_cooldown_timer_ > 0.0f) {
+        return false;
+    }
+
+    // 最も近い攻撃者(ものを持っているキャラクター)が近い時に脅威とみなす
+    auto attacker = GetNearestAttacker().lock();
+    if(!attacker) {
+        return false;
+    }
+    float3 vec = attacker->GetTranslate() - owner->GetTranslate();
+    float  dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+    if(dis > evasion_jump_threat_distance_) {
+        return false;
+    }
+
+    // 頻発しないように低確率で抽選する
+    return (rand() % 100) < evasion_jump_chance_percent_;
+}
+
+void ComponentCPUState::StartEvadeJump()
+{
+    auto owner = GetOwner();
+    if(owner->GetComponent<ComponentStatePlayerJump>()) {
+        return;
+    }
+
+    // 歩きステートの向きをジャンプに引き継ぐ
+    float front_rot = 0.0f;
+    if(auto walk = owner->GetComponent<ComponentStateWalkBase>()) {
+        front_rot = walk->GetFrontRotate();
+    }
+
+    auto jump = ChangeState<ComponentStatePlayerJump>();
+    jump->SetIsCPU(true);
+    jump->SetIsHolding(!grabbing_object_ptr_.expired());
+    jump->SetFrontRotate(front_rot);
+
+    evasion_jump_cooldown_timer_ = evasion_jump_cooldown_;
+    cur_action_                  = CPU_ACTION::ACTION_EVASION_JUMP;
+}
+
 void ComponentCPUState::ChangeActionFlexible()
 {
     // 思考はprevに入れないため、このcaseに来ることはない(安全のため何もしない)
@@ -245,6 +310,29 @@ void ComponentCPUState::ChangeActionFlexible()
             }
             else {
                 RestartThink();
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_EVASION_JUMP:
+        {
+            if(GetGrabbing()) {
+                // ジャンプ後もアイテムを持っているなら投げ直しに行く
+                StartAttackAction();
+            }
+            else {
+                // 投げた後と同じ動作
+                // 近くにオブジェクトを持っている敵がいるなら逃げる
+                if(IsAttackerNearby()) {
+                    StartAvoidAttacker();
+                }
+                // 拾えるオブジェクトが近所にあるなら拾いに行く
+                else if(auto target = GetNearestGrabbableObj().lock()) {
+                    StartGrabAction(target);
+                }
+                else {
+                    // どちらもない場合は考え直す
+                    RestartThink();
+                }
             }
             break;
         }
