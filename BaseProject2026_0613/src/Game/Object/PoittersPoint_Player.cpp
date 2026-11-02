@@ -32,7 +32,7 @@ bool Player::Init()
                 { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
                 {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
                 { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
-            })
+        })
             ->SetScaleAxisXYZ({0.11f, 0.11f, 0.11f});
     }
 
@@ -159,22 +159,18 @@ void Player::OnEyeSight()
                     // 人間はスペースキーでStartGrab、CPUはACTION_GRABの到達時にStartGrabする
                     if(auto state_machine = GetComponent<ComponentStateMachine>()) {
                         // プレイヤーよりもオブジェクトの持ち上げを優先
-                        if (std::dynamic_pointer_cast<PoittersPoint::Player>(target))
-                        {
+                        if(std::dynamic_pointer_cast<PoittersPoint::Player>(target)) {
                             // 判定内にオブジェクトがいない場合のみ
-                            if (!state_machine->IsGrabTargetExist())
-                            {
+                            if(!state_machine->IsGrabTargetExist()) {
                                 // 対象を持ち上げられるとして登録
                                 state_machine->GrabbableHit(target);
                             }
                         }
                         // プレイヤー以外なら
-                        else
-                        {
+                        else {
                             // そのまま登録
                             state_machine->GrabbableHit(target);
                         }
-                        
                     }
                 }
             }
