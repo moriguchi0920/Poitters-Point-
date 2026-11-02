@@ -30,6 +30,8 @@ private:
         ACTION_AVOID_ATTACKER,
         // ものを持っている場合、相手に投げに行く動き
         ACTION_ATTACK,
+        // 低確率で回避のためにその場で真上にジャンプする動き
+        ACTION_EVASION_JUMP,
         ACTION_NUM
     };
 
@@ -45,6 +47,16 @@ private:
     void StartGrabAction(ObjectWeakPtr target);
     void StartAvoidAttacker();
     void StartAttackAction();
+    void StartEvadeJump();
+
+    //! 回避ジャンプを発動するか(低確率・クールダウンあり)
+    bool IsEvadeJumpTrigger();
+
+    // 回避ジャンプのパラメータ
+    const float evasion_jump_threat_distance_ = 10.0f;    // この距離以内に攻撃者がいると脅威とみなす
+    const int   evasion_jump_chance_percent_  = 30;       // 発動確率(%)
+    const float evasion_jump_cooldown_        = 4.0f;     // 発動後のクールダウン(秒)
+    float       evasion_jump_cooldown_timer_  = 0.0f;
 
     ObjectWeakPtr GetNearestCharacter();
     ObjectWeakPtr GetNearestAttacker();
