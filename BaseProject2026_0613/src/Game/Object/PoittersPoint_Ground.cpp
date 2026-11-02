@@ -23,7 +23,7 @@ bool Ground::Init()
     SetName("Ground");
     //元のグラウンド
     //AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
-    
+
     //ステージ01の試し描画
     //auto model = AddComponent<ComponentModel>("data/Sample/Stage01/FantasyTown.mv1");
     //if(model) {
@@ -35,7 +35,6 @@ bool Ground::Init()
     if(model) {
         model->SetScaleAxisXYZ({1.9f, 1.9f, 1.9f});
     }
-
 
     AddComponent<ComponentCollisionModel>();
     if(auto collision = GetComponent<ComponentCollisionModel>()) {

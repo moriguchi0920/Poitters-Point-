@@ -32,10 +32,8 @@ void ComponentCPUState::Update()
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
-    if (auto grabbable = owner->GetComponent<ComponentGrabbable>())
-    {
-        if (grabbable->GetIsGrabbed())
-        {
+    if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
+        if(grabbable->GetIsGrabbed()) {
             return;
         }
     }
@@ -53,6 +51,7 @@ void ComponentCPUState::Update()
                 if(component_think->GetFinished()) {
                     ChangeActionFlexible();
                 }
+                
             }
             break;
         }
@@ -77,6 +76,10 @@ void ComponentCPUState::Update()
             }
             if(FinishGrab()) {
                 StartThink();
+                if (auto component_think = owner->GetComponent<ComponentStateThink>())
+                {
+                    component_think->SetIsHolding(true);
+                }
             }
             break;
         }
@@ -112,6 +115,7 @@ void ComponentCPUState::Update()
             }
             if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
                 if(component_throw->GetIsFinished()) {
+                    grabbing_object_ptr_.reset();
                     can_grab_ = true;
                     StartThink();
                 }

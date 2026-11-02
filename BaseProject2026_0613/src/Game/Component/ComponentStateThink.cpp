@@ -17,6 +17,15 @@ void ComponentStateThink::Update()
 {
     __super::Update();
     thinking_time += GetDeltaTime();
+    if (auto mdl = GetOwner()->GetComponent<ComponentModel>())
+    {
+        if(is_holding_) {
+            mdl->PlayAnimationNoSame("grab idle", true);
+        }
+        else {
+            mdl->PlayAnimationNoSame("idle", true);
+        }
+    }
 }
 
 void ComponentStateThink::SetThinkingFinishTime(float time)
@@ -32,4 +41,9 @@ float ComponentStateThink::GetCurThinkingTime()
 bool ComponentStateThink::GetFinished()
 {
     return thinking_finish_time < thinking_time;
+}
+
+void ComponentStateThink::SetIsHolding(bool hold)
+{
+    is_holding_ = hold;
 }
