@@ -21,7 +21,22 @@ bool Ground::Init()
     //__super::Init();
 
     SetName("Ground");
-    AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
+    //元のグラウンド
+    //AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
+    
+    //ステージ01の試し描画
+    //auto model = AddComponent<ComponentModel>("data/Sample/Stage01/FantasyTown.mv1");
+    //if(model) {
+    //    model->SetScaleAxisXYZ({4.0f, 4.0f, 4.0f});
+    //}
+
+    //ステージ02の試し描画
+    auto model = AddComponent<ComponentModel>("data/Sample/Stage02/02_Ruin_Main.mv1");
+    if(model) {
+        model->SetScaleAxisXYZ({1.9f, 1.9f, 1.9f});
+    }
+
+
     AddComponent<ComponentCollisionModel>();
     if(auto collision = GetComponent<ComponentCollisionModel>()) {
         // 所属するグループを「GROUND」とします
