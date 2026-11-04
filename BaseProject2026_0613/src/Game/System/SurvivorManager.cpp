@@ -16,15 +16,25 @@ void SurvivorManager::Reset(int total)
 
 void SurvivorManager::OnDeath(const std::string& name)
 {
-    if(alive_ > 0) alive_--;
+    if(alive_ > 0)
+        alive_--;
     if(alive_ == 1 && winner_.empty()) {
         winner_ = name;
         Scene::Change(Scene::GetScene<PoittersPoint::PoittersPoint_Clear>());
     }
 }
 
-int SurvivorManager::GetAliveCount() const { return alive_; }
+int SurvivorManager::GetAliveCount() const
+{
+    return alive_;
+}
 
-bool SurvivorManager::HasWinner() const { return !winner_.empty() && alive_ <= 1; }
+bool SurvivorManager::HasWinner() const
+{
+    return !winner_.empty() && alive_ <= 1;
+}
 
-const std::string& SurvivorManager::GetWinner() const { return winner_; }
+const std::string& SurvivorManager::GetWinner() const
+{
+    return winner_;
+}

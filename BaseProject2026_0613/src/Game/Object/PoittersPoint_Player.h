@@ -31,7 +31,11 @@ public:
     //! 正面45度・距離50以内の掴み可能対象を検知する
     void OnEyeSight();
 
+    //! @brief 死亡状態取得
+    bool IsDead() const { return is_dead; }
+
 private:
+    bool is_dead = false;    //!< 死亡状態
 };
 
 }    // namespace PoittersPoint

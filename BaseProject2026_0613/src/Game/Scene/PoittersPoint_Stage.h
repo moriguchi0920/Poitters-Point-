@@ -50,6 +50,10 @@ private:
     // テスト用変数
     int counter2 = 1000;
     int counter3 = 2000;
+
+    // 敵勝利判定
+    bool        enemy_won_ = false;    //!< 敵が勝利したか
+    std::string winner_enemy_name_;    //!< 勝利した敵の名前
 };
 // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 // ここまでがシーンクラス

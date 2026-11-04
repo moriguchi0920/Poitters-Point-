@@ -41,6 +41,11 @@ bool Player::Init()
     // 他者に掴まれて投げられるようにする
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
+    // HP管理コンポーネント(ComponentPlayerState 内で追加済み)の HP を設定
+    if(auto hp = GetComponent<ComponentHitPoints>()) {
+        hp->SetMaxAndCurrentHP(3.0f);
+    }
+
     // カプセルコリジョンのコンポーネントを追加
     AddComponent<ComponentCollisionCapsule>();
     if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
@@ -97,6 +102,14 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
     // 投げ物ごとのダメージ値を適用
     if(auto hp = GetComponent<ComponentHitPoints>()) {
         hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
+
+        // HPが0以下なら死亡
+        if(hp->GetHitPoints() <= 0.0f) {
+            is_dead = true;
+            if(auto col = GetComponent<ComponentCollisionCapsule>()) {
+                RemoveComponent<ComponentCollisionCapsule>();
+            }
+        }
     }
     __super::OnHit(hit_info);
 }
