@@ -36,6 +36,7 @@ bool Log::Init()
         col1->UseGravity(false);
         col1->SetGravity(-0.2f);
         col1->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+        // col1->SetCollisionGroup(ComponentCollision::CollisionGroup::ITEM);
         col1->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
                                    (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
         col1->SetMass(200.0f);
@@ -51,6 +52,8 @@ bool Log::Init()
         col2->UseGravity(false);
         col2->SetGravity(-0.2f);
         col2->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+
+        // col2->SetCollisionGroup(ComponentCollision::CollisionGroup::ITEM);
         col2->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
                                    (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::ETC |
                                    (u32)ComponentCollision::CollisionGroup::PLAYER);
@@ -67,6 +70,7 @@ bool Log::Init()
         col3->UseGravity(false);
         col3->SetGravity(-0.2f);
         col3->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+        // col3->SetCollisionGroup(ComponentCollision::CollisionGroup::ITEM);
         col3->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
                                    (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
         col3->SetMass(200.0f);
@@ -82,6 +86,7 @@ bool Log::Init()
         col4->UseGravity(true);
         col4->SetGravity(-0.2f);
         col4->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+        // col4->SetCollisionGroup(ComponentCollision::CollisionGroup::ITEM);
         col4->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
                                    (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
         col4->SetMass(200.0f);
@@ -97,6 +102,7 @@ bool Log::Init()
         col5->UseGravity(true);
         col5->SetGravity(-0.2f);
         col5->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+        // col5->SetCollisionGroup(ComponentCollision::CollisionGroup::ITEM);
         col5->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
                                    (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
         col5->SetMass(200.0f);

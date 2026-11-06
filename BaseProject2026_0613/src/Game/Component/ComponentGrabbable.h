@@ -31,6 +31,7 @@ public:
     void AddTranslation(float3 add_translation);
     //! @brief 移動量を取得
     const float3& GetTranslation();
+    // <<<<<<< HEAD
     //! @brief 掴み状態を設定
     void SetIsGrabbed(bool grabbed);
     //! @brief 掴み状態を取得
@@ -61,6 +62,7 @@ public:
 
     //! @brief 投げ主を設定
     void SetThrower(ObjectPtr thrower);
+
     //! @brief 投げ主か判定
     bool IsThrower(ObjectPtr target) const;
 
@@ -78,6 +80,8 @@ private:
     std::set<ObjectPtr> hit_targets_;    //!< 既にダメージを与えたターゲットの記録
 
     ObjectWeakPtr thrower_;    //!< 投げた本人（ダメージスキップ用）
+
+    // ObjectWeakPtr thrower_;    //!< 投げた本人（ダメージスキップ用）
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

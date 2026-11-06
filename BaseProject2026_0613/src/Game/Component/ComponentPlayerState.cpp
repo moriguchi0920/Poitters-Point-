@@ -10,6 +10,9 @@
 #include <Game/Component/ComponentStatePlayerJump.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Object/PoittersPoint_Player.h>
+#include <Game/Component/ComponentGrabbable.h>
+#include "ComponentStateThrow.h"
+#include "ComponentStateGrab.h"
 
 //===========================================================================
 // 初期化処理
@@ -27,7 +30,6 @@ void ComponentPlayerState::Init()
 
     can_grab_ = true;
 }
-
 //===========================================================================
 // 更新処理
 //===========================================================================
@@ -108,9 +110,6 @@ void ComponentPlayerState::LateUpdate()
 {
 }
 
-//===========================================================================
-// GUI処理
-//===========================================================================
 void ComponentPlayerState::GUI()
 {
     __super::GUI();

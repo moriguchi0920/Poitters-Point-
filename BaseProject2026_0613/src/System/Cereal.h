@@ -128,7 +128,7 @@ void load(Archive& arc, matrix& m)
     struct LoadAndConstruct<cls>                       \
     {                                                  \
         template <class Archive>                       \
-        static void load_and_construct(Archive & arc, cereal::construct<cls> & construct, [[maybe_unused]] std::uint32_t const ver)
+        static void load_and_construct(Archive& arc, cereal::construct<cls>& construct, [[maybe_unused]] std::uint32_t const ver)
 
 //! ロード処理の時、デフォルトコンストラクタ以外を使用したいときに使用します(外部)
 //! @brief デフォルトコンストラクタ以外の初期化の場合に利用する(END)

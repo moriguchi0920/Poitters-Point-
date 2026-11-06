@@ -10,9 +10,9 @@
 #include "Game/Component/ComponentGrabbable.h"
 #include <System/Component/ComponentObjectController.h>
 #include "Game/Component/ComponentHitPoints.h"
+#include "Game/Object/PoittersPoint_Rock.h"
 
 namespace PoittersPoint {
-
 bool Player::Init()
 {
     Super::Init();
@@ -63,6 +63,17 @@ void Player::Update()
 
     // 視線・ターゲット検出処理
     OnEyeSight();
+
+    //----------------------------------------------------------------
+    // Rockは壊れないようにしている為、スポナーの挙動を確かめる為に
+    // Kキーを押したら岩が一つ消えるデバック処理
+    //----------------------------------------------------------------
+    if(Input::IsKeyDown(KEY_INPUT_K)) {
+        if(auto rock = Scene::Object::Get<PoittersPoint::Rock>()) {
+            Scene::Object::Release(rock);
+            printfDx("\n[Debug] Rock Destroyed!");
+        }
+    }
 }
 
 void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
