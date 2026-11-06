@@ -51,7 +51,6 @@ void ComponentCPUState::Update()
                 if(component_think->GetFinished()) {
                     ChangeActionFlexible();
                 }
-                
             }
             break;
         }
@@ -76,8 +75,7 @@ void ComponentCPUState::Update()
             }
             if(FinishGrab()) {
                 StartThink();
-                if (auto component_think = owner->GetComponent<ComponentStateThink>())
-                {
+                if(auto component_think = owner->GetComponent<ComponentStateThink>()) {
                     component_think->SetIsHolding(true);
                 }
             }

@@ -17,8 +17,7 @@ void ComponentStateThink::Update()
 {
     __super::Update();
     thinking_time += GetDeltaTime();
-    if (auto mdl = GetOwner()->GetComponent<ComponentModel>())
-    {
+    if(auto mdl = GetOwner()->GetComponent<ComponentModel>()) {
         if(is_holding_) {
             mdl->PlayAnimationNoSame("grab idle", true);
         }
