@@ -12,6 +12,7 @@
 #include "Game/system/PoittersPoint_Timer.h"
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
+#include "Game/Object/PoittersPoint_HPUI.h"
 
 #include <System/Scene.h>
 #include <System/Component/Component.h>
@@ -156,6 +157,8 @@ bool PoittersPoint_Stage::Init()
     Scene::Object::Create<Log>();
 
     Scene::Object::Create<Slime>();
+
+    Scene::Object::Create<HPUI>();
 
     return true;
 }
