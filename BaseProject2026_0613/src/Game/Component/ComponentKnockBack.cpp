@@ -40,14 +40,14 @@ void ComponentKnockBack::Update()
         }
 
         // XZ 減衰：damping は 0..1 に clamp する（負値だと速度が毎フレーム増幅し inf→NaN になる）
-        float decay = 1.0f - std::clamp(damping, 0.0f, 1.0f);
+        float decay           = 1.0f - std::clamp(damping, 0.0f, 1.0f);
         knockback_velocity.x *= decay;
         knockback_velocity.z *= decay;
 
         // 水平速度に上限をかけ、キャラコントローラ（Jolt）側のオーバーフローを防ぐ
         float hlen = sqrtf(knockback_velocity.x * knockback_velocity.x + knockback_velocity.z * knockback_velocity.z);
         if(hlen > max_knockback_speed) {
-            float scale      = max_knockback_speed / hlen;
+            float scale           = max_knockback_speed / hlen;
             knockback_velocity.x *= scale;
             knockback_velocity.z *= scale;
         }
@@ -64,7 +64,8 @@ void ComponentKnockBack::Update()
             if(std::isfinite(cur_y) && knockback_velocity.y < 0.0f && cur_y <= launch_y + 0.5f) {
                 knockback_velocity.y = 0.0f;
                 knockback_airborne   = false;
-            } else if(air_frames > 180) {
+            }
+            else if(air_frames > 180) {
                 knockback_velocity.y = 0.0f;
                 knockback_airborne   = false;
             }

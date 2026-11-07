@@ -25,14 +25,14 @@ public:
     void OnHitComponent(const HitInfo& hit_info) override;
 
     // チューニング用パラメータ（GUIで変更可能）
-    float damping          = 0.12f;    // XZ の地面減衰（0..1 有効範囲。外は clamp され、負値は速度を増幅させ NaN の原因になる）
-    float velocity_epsilon = 0.01f;    // これ以下ならゼロとみなす
-    float min_upward       = 5.0f;     // Apply 時に最低限保証する上向き成分
-    float arch_strength    = 0.25f;    // 水平速度に対する上向きの割合（アーチの大きさ）
-    float arch_gravity     = 0.25f;    // 滞空中に Y 速度へ毎フレーム加算する下向き加速度
-    float max_fall_speed   = 5.0f;    // 落下速度の上限
-    float max_knockback_speed = 15.0f; // 速度（水平）の上限。オーバーフローで Transform が NaN になるのを防ぐ
-    float away_weight      = 0.7f;     // 吹き飛ぶ方向の重み（1=当たり元から真後ろへ、0=投げ物の進行方向）
+    float damping             = -0.12f;    // XZ の地面減衰
+    float velocity_epsilon    = 0.01f;     // これ以下ならゼロとみなす
+    float min_upward          = 2.0f;      // Apply 時に最低限保証する上向き成分
+    float arch_strength       = 0.25f;     // 水平速度に対する上向きの割合（アーチの大きさ）
+    float arch_gravity        = 0.25f;     // 滞空中に Y 速度へ毎フレーム加算する下向き加速度
+    float max_fall_speed      = 5.0f;      // 落下速度の上限
+    float max_knockback_speed = 2.0f;      // 速度（水平）の上限。オーバーフローで Transform が NaN になるのを防ぐ
+    float away_weight         = 0.7f;      // 吹き飛ぶ方向の重み（1=当たり元から真後ろへ、0=投げ物の進行方向）
 
     // 滞空状態（アーチを描く間は true、打ち出し高さまで落ちたら着地）
     bool  knockback_airborne = false;
