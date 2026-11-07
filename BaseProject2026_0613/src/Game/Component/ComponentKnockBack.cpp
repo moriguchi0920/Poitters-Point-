@@ -24,8 +24,8 @@ void ComponentKnockBack::Update()
     // ノックバック速度が充分に大きいか滞空中なら適用する
     float len2 = knockback_velocity.x * knockback_velocity.x + knockback_velocity.y * knockback_velocity.y + knockback_velocity.z * knockback_velocity.z;
     if(len2 > (velocity_epsilon * velocity_epsilon) || knockback_airborne) {
-        // 速度が拡散し続ける場合も強制終了する（安全打ち切り）
-        if(++active_frames > 180) {
+        // 速度が拡散し続ける場合も強制終了する
+        if(++active_frames > 40) {
             knockback_velocity = float3(0.0f, 0.0f, 0.0f);
             knockback_airborne = false;
             air_frames         = 0;
