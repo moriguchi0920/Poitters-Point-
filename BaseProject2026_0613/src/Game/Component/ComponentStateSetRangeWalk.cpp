@@ -1,42 +1,27 @@
 ﻿#pragma once
-#include <Game/Component/ComponentStateIdleWalk.h>
+#include <Game/Component/ComponentStateSetRangeWalk.h>
 
-void ComponentStateIdleWalk::Init()
+void ComponentStateSetRangeWalk::Init()
 {
     __super::Init();
-    SetName<Component>("State IdleWalk");
+    SetName<Component>("State SetRangeWalk");
 }
 
-void ComponentStateIdleWalk::Update()
+void ComponentStateSetRangeWalk::Update()
 {
-    __super::Update();
-
-    // オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
-
+    __super::Update();
     // 移動方向
-    float3 dir{0, 0, 0};
-    if(IsKey(key_up_))
-        dir += {0, 0, -1};
+    float3 dir = walk_direction_;
 
-    if(IsKey(key_down_))
-        dir += {0, 0, 1};
-
-    if(IsKey(key_right_))
-        dir += {-1, 0, 0};
-
-    if(IsKey(key_left_))
-        dir += {1, 0, 0};
-
-    // 移動キーが押されているか?
-    if((float)length(dir) > 0.0f) {
-        // 斜めが押されていることを考慮し、
-        // その方向の移動スピードを1とし、スピードを掛け合わせる
+    if(walk_distance_ > 0.1f) {
         dir = normalize(dir);
 
         // キャラのローカル方向で移動をさせる
         owner->AddTranslate(dir * move_speed_, true);
+
+        float3 move     = dir * move_speed_;
+        walk_distance_ -= sqrtf(move.x * move.x + move.y * move.y + move.z + move.z);
 
         // モデルを移動の方向に向けます
         if(auto mdl = owner->GetComponent<ComponentModel>()) {
@@ -52,7 +37,7 @@ void ComponentStateIdleWalk::Update()
         }
     }
     else {
-        // モデルを移動の方向に向けます
+        stopping_time_ += GetDeltaTime();
         if(auto mdl = owner->GetComponent<ComponentModel>()) {
             if(is_holding_) {
                 mdl->PlayAnimationNoSame("grab idle", true);
@@ -64,38 +49,7 @@ void ComponentStateIdleWalk::Update()
     }
 }
 
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetMoveSpeed(const float speed)
-{
-    move_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
-}
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetRotateSpeed(const float speed)
-{
-    rot_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
-}
-
-const float ComponentStateIdleWalk::GetMoveSpeed() const
-{
-    return move_speed_;
-}
-
-const float ComponentStateIdleWalk::GetRotateSpeed() const
-{
-    return rot_speed_;
-}
-
-ComponentStateIdleWalkPtr ComponentStateIdleWalk::SetKeys(int up, int down, int left, int right)
-{
-    // 移動キーの設定
-    key_up_    = up;
-    key_down_  = down;
-    key_left_  = left;
-    key_right_ = right;
-    return std::dynamic_pointer_cast<ComponentStateIdleWalk>(shared_from_this());
-}
-
-void ComponentStateIdleWalk::GUI()
+void ComponentStateSetRangeWalk::GUI()
 {
     __super::GUI();
 
@@ -103,7 +57,7 @@ void ComponentStateIdleWalk::GUI()
     ImGui::Begin(GetOwner()->GetName().data());
     {
         ImGui::Separator();    // 線が出てくる
-        if(ImGui::TreeNode("State IdleWalk")) {
+        if(ImGui::TreeNode("State SetRangeWalk")) {
             //-------------------------------------------------------
             // 共通部分
 
@@ -131,10 +85,30 @@ void ComponentStateIdleWalk::GUI()
     ImGui::End();
 }
 
-void ComponentStateIdleWalk::SetIsHolding(bool hold)
+void ComponentStateSetRangeWalk::SetWalkDirection(const float3& direction)
 {
-    is_holding_ = hold;
+    walk_direction_ = direction;
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateIdleWalk)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateIdleWalk)
+void ComponentStateSetRangeWalk::SetWalkDistance(const float& distance)
+{
+    walk_distance_ = distance;
+}
+
+bool ComponentStateSetRangeWalk::GetArrival()
+{
+    return walk_distance_ < 0.1f;
+}
+
+bool ComponentStateSetRangeWalk::GetStopped()
+{
+    return stop_judge_time_ < stopping_time_;
+}
+
+bool ComponentStateSetRangeWalk::GetNearby()
+{
+    return walk_distance_ < 1.0f;
+}
+
+CEREAL_REGISTER_TYPE(ComponentStateWalkBase)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateWalkBase)

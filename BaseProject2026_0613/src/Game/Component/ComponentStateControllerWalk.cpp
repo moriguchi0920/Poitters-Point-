@@ -1,0 +1,139 @@
+﻿#pragma once
+#include <Game/Component/ComponentStateControllerWalk.h>
+#include <Game/Component/ComponentStatePlayerJump.h>
+
+void ComponentStateControllerWalk::Init()
+{
+    __super::Init();
+    SetName<Component>("State IdleWalk");
+}
+
+void ComponentStateControllerWalk::Update()
+{
+    __super::Update();
+
+    // オーナー(自分がAddComponentされたObject)を取得します
+    auto owner = GetOwner();
+
+    // --- ジャンプキー(Jキー)が押されたらジャンプ状態へ遷移 ---
+    if(Input::IsKeyDown(key_jump_)) {
+        auto jump = owner->AddComponent<ComponentStatePlayerJump>();
+        jump->SetKeys(key_up_, key_down_, key_left_, key_right_, key_jump_);
+        jump->SetIsHolding(is_holding_);
+        jump->SetFrontRotate(front_rot_);
+
+        // 自身の（歩き状態）コンポーネントを削除して切り替え
+        owner->RemoveComponent(shared_from_this());
+        return;
+    }
+
+    // 移動方向
+    float3 dir{0, 0, 0};
+    if(IsKey(key_up_))
+        dir += {0, 0, -1};
+
+    if(IsKey(key_down_))
+        dir += {0, 0, 1};
+
+    if(IsKey(key_right_))
+        dir += {-1, 0, 0};
+
+    if(IsKey(key_left_))
+        dir += {1, 0, 0};
+
+    direction_ = dir;
+
+    // 移動キーが押されているか?
+    if((float)length(dir) > 0.0f) {
+        // 斜めが押されていることを考慮し、
+        // その方向の移動スピードを1とし、スピードを掛け合わせる
+        dir = normalize(dir);
+
+        // キャラのローカル方向で移動をさせる
+        owner->AddTranslate(dir * move_speed_, true);
+
+        // モデルを移動の方向に向けます
+        if(auto mdl = owner->GetComponent<ComponentModel>()) {
+            auto rot = quaternion::rotation_axis({0, 1, 0}, front_rot_ * DegToRad);    //< Y軸1度回転
+
+            mdl->SetRotationToVectorWithLimit(mul(dir, rot), rot_speed_);
+            if(is_holding_) {
+                mdl->PlayAnimationNoSame("grab walk", true);
+            }
+            else {
+                mdl->PlayAnimationNoSame("walk", true);
+            }
+        }
+    }
+    else {
+        // モデルを移動の方向に向けます
+        if(auto mdl = owner->GetComponent<ComponentModel>()) {
+            if(is_holding_) {
+                mdl->PlayAnimationNoSame("grab idle", true);
+            }
+            else {
+                mdl->PlayAnimationNoSame("idle", true);
+            }
+        }
+    }
+}
+
+ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetKeys(int up, int down, int left, int right, int jump)
+{
+    // 移動キー・ジャンプキーの設定
+    key_up_    = up;
+    key_down_  = down;
+    key_left_  = left;
+    key_right_ = right;
+    key_jump_  = jump;
+    return std::dynamic_pointer_cast<ComponentStateControllerWalk>(shared_from_this());
+}
+
+void ComponentStateControllerWalk::GUI()
+{
+    __super::GUI();
+
+    // GUI内に出現させる
+    ImGui::Begin(GetOwner()->GetName().data());
+    {
+        ImGui::Separator();    // 線が出てくる
+        if(ImGui::TreeNode("State ControllerWalk")) {
+            //-------------------------------------------------------
+            // 共通部分
+
+            // 有効/無効
+            bool enable = GetStatus(StatusBit::Enable);
+            if(ImGui::Checkbox(u8"有効", &enable))
+                SetStatus(StatusBit::Enable, enable);
+
+            // GUI上でオーナーから自分(SampleObjectController)を削除します
+            if(ImGui::Button(u8"削除"))
+                GetOwner()->RemoveComponent(shared_from_this());
+            //-------------------------------------------------------
+
+            // 移動の基本情報
+            ImGui::DragFloat(u8"移動速度", &move_speed_, 0.1f);
+            ImGui::DragFloat(u8"移動回転角度", &rot_speed_, 1.0f);
+
+            // 移動の基本情報
+            ImGui::DragFloat(u8"オブジェクト オフセット回転", &front_rot_, 1.0f);
+
+            //if(ImGui::TreeNode("State IdleWalk")) とセット
+            ImGui::TreePop();
+        }
+    }
+    ImGui::End();
+}
+
+bool ComponentStateControllerWalk::GetArrival()
+{
+    return false;
+}
+
+bool ComponentStateControllerWalk::GetStopped()
+{
+    return 0 < (float)length(direction_);
+}
+
+CEREAL_REGISTER_TYPE(ComponentStateControllerWalk)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateControllerWalk)

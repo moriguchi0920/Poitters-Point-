@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <Game/Component/ComponentStateDodge.h>
-#include "ComponentStateIdleWalk.h"
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 void ComponentStateDodge::Init()

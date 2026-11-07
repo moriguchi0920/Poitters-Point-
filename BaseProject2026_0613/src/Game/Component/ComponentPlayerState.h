@@ -24,13 +24,7 @@ public:
 
     void GUI() override;
 
-    void GrabbableHit(ObjectPtr target);
-
 private:
-    ObjectWeakPtr grabbing_object_ptr_;
-
-    bool can_grab_;
-    bool can_throw_;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------

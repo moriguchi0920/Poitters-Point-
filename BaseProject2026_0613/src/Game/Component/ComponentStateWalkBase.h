@@ -3,22 +3,20 @@
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>
 
-USING_PTR(ComponentStateIdleWalk);
+USING_PTR(ComponentStateWalkBase);
 
-class ComponentStateIdleWalk : public ComponentState
+class ComponentStateWalkBase : public ComponentState
 {
 public:
-    BP_COMPONENT_DECL(ComponentStateIdleWalk, u8"停止・歩きコンポーネント");
+    BP_COMPONENT_DECL(ComponentStateWalkBase, u8"停止・歩きコンポーネント");
 
     void Init() override;
 
     void Update() override;
 
-    ComponentStateIdleWalkPtr SetMoveSpeed(const float speed);
+    ComponentStateWalkBasePtr SetMoveSpeed(const float speed);
 
-    ComponentStateIdleWalkPtr SetRotateSpeed(const float speed);
-
-    ComponentStateIdleWalkPtr SetKeys(int up, int down, int left, int right);
+    ComponentStateWalkBasePtr SetRotateSpeed(const float speed);
 
     const float GetMoveSpeed() const;
     const float GetRotateSpeed() const;
@@ -30,19 +28,19 @@ public:
 
     void SetIsHolding(bool hold);
 
-private:
+    virtual bool GetArrival() { return false; }
+    virtual bool GetStopped() { return false; }
+    virtual bool GetNearby() { return false; }
+
+protected:
     float move_speed_ = 0.3f;
     float rot_speed_  = 20.0f;
-
-    int key_up_    = KEY_INPUT_W;
-    int key_down_  = KEY_INPUT_S;
-    int key_left_  = KEY_INPUT_A;
-    int key_right_ = KEY_INPUT_D;
 
     float front_rot_ = 0.0f;    //!<前方ベクトルの回転角度(0-360度)
 
     bool is_holding_;
 
+private:
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -53,18 +51,10 @@ private:
     // @param ver バージョン
     CEREAL_SAVELOAD(arc, ver)
     {
-        arc(CEREAL_NVP(move_speed_),
-            CEREAL_NVP(rot_speed_),
-
-            CEREAL_NVP(key_up_),
-            CEREAL_NVP(key_down_),
-            CEREAL_NVP(key_left_),
-            CEREAL_NVP(key_right_),
-
-            CEREAL_NVP(front_rot_));
+        arc(CEREAL_NVP(move_speed_), CEREAL_NVP(rot_speed_), CEREAL_NVP(front_rot_));
 
         arc(cereal::make_nvp("Component", cereal::base_class<Component>(this)));
     }
 };
 
-CEREAL_CLASS_VERSION(ComponentStateIdleWalk, 1);
+CEREAL_CLASS_VERSION(ComponentStateWalkBase, 1);
