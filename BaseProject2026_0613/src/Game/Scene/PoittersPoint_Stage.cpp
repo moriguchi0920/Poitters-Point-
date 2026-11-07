@@ -23,6 +23,8 @@
 #include <Game/Component/ComponentPlayerState.h>
 #include <Game/Component/ComponentCPUState.h>
 
+#include <Game/Component/ComponentKnockBack.h>
+
 namespace PoittersPoint {
 
 // namespace PoittersPoint
