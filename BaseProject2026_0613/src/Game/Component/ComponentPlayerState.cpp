@@ -39,6 +39,9 @@ void ComponentPlayerState::Update()
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
+        if(GetGrabbing()) {
+            grabbable->SetCanGrab(false);
+        }
         if(grabbable->GetIsGrabbed()) {
             return;
         }
