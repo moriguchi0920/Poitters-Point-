@@ -1,8 +1,4 @@
 ﻿#pragma once
-//---------------------------------------------------------------------------
-//! @file   ComponentCPUState.cpp
-//! @brief  CPU状態制御コンポーネント
-//---------------------------------------------------------------------------
 #include <Game/Component/ComponentCPUState.h>
 #include <Game/Component/ComponentStateTargetWalk.h>
 #include <Game/Component/ComponentStateGrab.h>
@@ -37,10 +33,6 @@ void ComponentCPUState::Update()
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
-        if(GetGrabbing()) {
-            grabbable->SetCanGrab(false);
-        }
-
         if(grabbable->GetIsGrabbed()) {
             return;
         }
@@ -59,6 +51,7 @@ void ComponentCPUState::Update()
                 if(component_think->GetFinished()) {
                     ChangeActionFlexible();
                 }
+                
             }
             break;
         }
@@ -83,7 +76,8 @@ void ComponentCPUState::Update()
             }
             if(FinishGrab()) {
                 StartThink();
-                if(auto component_think = owner->GetComponent<ComponentStateThink>()) {
+                if (auto component_think = owner->GetComponent<ComponentStateThink>())
+                {
                     component_think->SetIsHolding(true);
                 }
             }

@@ -39,9 +39,6 @@ void ComponentPlayerState::Update()
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
     if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
-        if(GetGrabbing()) {
-            grabbable->SetCanGrab(false);
-        }
         if(grabbable->GetIsGrabbed()) {
             return;
         }
@@ -80,10 +77,10 @@ void ComponentPlayerState::Update()
                     grabbing_object_ptr_.reset();
                 }
             }
-            // 【持ち上げ処理】まだアイテムを持っていない (地上 ControllerWalk のみ許可)
-            else if(owner->GetComponent<ComponentStateControllerWalk>()) {
-                StartGrab();
-            }
+        }
+        // 【持ち上げ処理】まだアイテムを持っていない (地上 ControllerWalk のみ許可)
+        else if(owner->GetComponent<ComponentStateControllerWalk>()) {
+            StartGrab();
         }
     }
 
