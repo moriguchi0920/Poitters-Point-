@@ -51,7 +51,7 @@ void ComponentPlayerState::Update()
     if(Input::IsKeyDown(KEY_INPUT_E)) {
         // オブジェクトが近くにある、または持っている状態
         if(!grabbing_object_ptr_.expired()) {
-            // 【投げ処理】すでにアイテムを持っている (can_throw_ が true)
+            // 【投げ処理】すでにアイテムを持っているなら (can_throw_ が true)
             if(can_throw_) {
                 bool is_walk = (owner->GetComponent<ComponentStateControllerWalk>() != nullptr);
 
@@ -80,10 +80,10 @@ void ComponentPlayerState::Update()
                     grabbing_object_ptr_.reset();
                 }
             }
-        }
-        // 【持ち上げ処理】まだアイテムを持っていない (地上 ControllerWalk のみ許可)
-        else if(owner->GetComponent<ComponentStateControllerWalk>()) {
-            StartGrab();
+            // 【持ち上げ処理】まだアイテムを持っていない (地上 ControllerWalk のみ許可)
+            else if(owner->GetComponent<ComponentStateControllerWalk>()) {
+                StartGrab();
+            }
         }
     }
 
