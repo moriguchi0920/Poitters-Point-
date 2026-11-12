@@ -9,24 +9,6 @@
 #include <System/Component/ComponentModel.h>
 #include "Game/Component/ComponentGrabbable.h"
 #include <System/Component/ComponentCollisionCapsule.h>
-#include <cstdio>
-#include <fstream>
-
-namespace {
-// Log側の転がり診断用ログファイルを返す
-std::ofstream& OpenRollDebugLog()
-{
-    static std::ofstream fs(R"(D:\tabata\Poi\BaseProject2026_0613\.kilo\logs\2026-11-05_log_roll_object.log)", std::ios::app);
-    static bool          header_written = false;
-
-    if(!header_written && fs.is_open()) {
-        fs << "\n[OBJECT LOG] run\n" << std::flush;
-        header_written = true;
-    }
-
-    return fs;
-}
-}    // namespace
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -51,11 +33,11 @@ bool Log::Init()
     // カプセルは初期で縦向きだが、丸太は横向きなので回転させる
     auto col = AddComponent<ComponentCollisionCapsule>();
     if(col) {
-        col->SetRadius(3.0f);
+        col->SetRadius(6.0f);
         col->SetHeight(46.33f);
         // 軸をオブジェクト原点(Y=0)へ移す（モデルを -3.3 した分と相殺して見た目は不変）
         // これにより X 軸回転が丸太の物理軸まわりの pure な転がりになり首振りが消える
-        col->SetTranslate({23.36f, 0.0f, 0.0f});
+        col->SetTranslate({23.36f, 2.530f, 0.0f});
 
         // カプセルを横向き（丸太の長軸に沿わせる）に回転
         // 回転: {-90, 90, 0} (度)
@@ -140,6 +122,20 @@ void Log::Update()
     if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
         grabbable->SetBounceOffset(0.0f);
     }
+
+    // 転がっている間は回転を適用（deve版より追加）
+    if(is_rolling_) {
+        float3 rot  = GetRotationAxisXYZ();
+        rot.x      += roll_speed_;
+        SetRotationAxisXYZ(rot);
+
+        roll_speed_ *= 0.98f;
+
+        if(std::abs(roll_speed_) < 0.01f) {
+            roll_speed_ = 0.0f;
+            is_rolling_ = false;
+        }
+    }
 }
 
 //! @brief 物理シミュレーション前処理
@@ -198,35 +194,6 @@ void Log::PostPhysics()
     // 空中→接地の遷移を検出
     bool landed_this_frame = (!was_on_ground_ && is_on_ground_);
     was_on_ground_         = is_on_ground_;
-
-    // 【一時計測】接地中の移動量・速度・回転を観測する（解析完了後に削除する）
-    static unsigned int debug_count = 0;
-    if((landed_this_frame || is_on_ground_) && (debug_count++ % 15) == 0 && debug_count <= 3000) {
-        std::ofstream& fs = OpenRollDebugLog();
-        if(fs.is_open()) {
-            auto rot = GetRotationAxisXYZ();
-
-            char line[512];
-            std::snprintf(line,
-                          sizeof(line),
-                          "[LOG] pos=(%.2f,%.2f,%.2f) delta=(%.2f,%.2f,%.2f) vel=(%.2f,%.2f,%.2f) rotX=%.1f gravMag=%.3f "
-                          "ground=%d",
-                          (double)GetTranslate().x,
-                          (double)GetTranslate().y,
-                          (double)GetTranslate().z,
-                          (double)delta.x,
-                          (double)delta.y,
-                          (double)delta.z,
-                          (double)velocity_.x,
-                          (double)velocity_.y,
-                          (double)velocity_.z,
-                          (double)rot.x,
-                          (double)length(gravity_),
-                          is_on_ground_ ? 1 : 0);
-            fs << line << '\n';
-            fs.flush();
-        }
-    }
 
     // 未掴みの場合、空中・接地で異なる減衰を適用
     if(!grabbable->GetIsGrabbed()) {
@@ -320,6 +287,17 @@ void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
             // 着地後の跳ね抑制処理
             if(grabbable->IsGrounded()) {
                 grabbable->SetBounceOffset(0.0f);
+
+                // 地面に着いたら丸太を水平にし、転がり開始（deve版より追加）
+                if(!is_rolling_) {
+                    float3 rot = GetRotationAxisXYZ();
+                    rot.x      = 0.0f;
+                    rot.z      = 0.0f;
+                    SetRotationAxisXYZ(rot);
+
+                    is_rolling_ = true;
+                    roll_speed_ = 0.2f;
+                }
             }
         }
     }

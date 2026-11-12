@@ -286,6 +286,11 @@ namespace hlslpp
 			return f32[N];
 		}
 
+		float* RawArray()
+		{
+			return f32;
+		}
+
 		union
 		{
 			n128 vec;

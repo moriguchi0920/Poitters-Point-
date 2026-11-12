@@ -17,24 +17,8 @@
 #include <System/Object.h>
 
 #include <algorithm>
-#include <cstdio>
-#include <fstream>
 
 namespace {
-// 転がり診断用の一時ログファイルを返す
-std::ofstream& OpenRollDebugLog()
-{
-    static std::ofstream fs(R"(D:\tabata\Poi\BaseProject2026_0613\.kilo\logs\2026-11-05_log_roll_engine.log)", std::ios::app);
-    static bool          header_written = false;
-
-    if(!header_written && fs.is_open()) {
-        fs << "\n[ENGINE LOGCOL] run\n" << std::flush;
-        header_written = true;
-    }
-
-    return fs;
-}
-
 // 大きな値を取得する
 float3 merge(float3 v1, float3 v2)
 {
@@ -918,38 +902,6 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
         cpos1 = cpos + CapsuleWorldHeightOffset(trans, col1->GetHeight());
     }
 
-    // 【一時計測】地面探査に使っている軸が、カプセル自身の回転(collision_transform_)を追従しているかを確認する
-    if(col1->GetCollisionGroup() == ComponentCollision::CollisionGroup::LOG) {
-        static unsigned int probe_log_counter = 0;
-        std::ofstream&      fs                = OpenRollDebugLog();
-
-        if(fs.is_open() && (probe_log_counter++ % 10) == 0 && probe_log_counter <= 2000) {
-            auto probe_axis = normalize(cpos1 - cpos);
-            auto col_axis   = axis_now;
-
-            char line[512];
-            std::snprintf(line,
-                          sizeof(line),
-                          "[LOGCOL] probe_axis=(%.2f,%.2f,%.2f) capsule_axisY=(%.2f,%.2f,%.2f) dot=%.2f bottom=(%.2f,%.2f,%.2f) "
-                          "top=(%.2f,%.2f,%.2f)",
-                          (double)probe_axis.x,
-                          (double)probe_axis.y,
-                          (double)probe_axis.z,
-                          (double)col_axis.x,
-                          (double)col_axis.y,
-                          (double)col_axis.z,
-                          (double)dot(probe_axis, col_axis),
-                          (double)cpos.x,
-                          (double)cpos.y,
-                          (double)cpos.z,
-                          (double)cpos1.x,
-                          (double)cpos1.y,
-                          (double)cpos1.z);
-            fs << line << '\n';
-            fs.flush();
-        }
-    }
-
     float scale = 1.0f;
     if(col1->attach_node_ < 0) {
         auto  mat = col1->GetWorldMatrix();
@@ -1102,42 +1054,17 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
 
                 // カプセルへの戻し方向
                 //if( HelperLib::Math::NearlyEqual( length( line_pos - tri_pos ), 0 ) )
-                float3 v = n * len;
-                vh       = merge(vh, v);
+                float3 v        = n * len;
+                vh              = merge(vh, v);
                 float axial_len = IsWorldVerticalAxis(axis_now) ? vh.y : dot(vh, axis_now);
                 if(axial_len > difficult_to_climb_ || axial_len < 0) {
-                    // 【一時計測】軸方向成分を処理して軸に垂直な成分を増幅する分岐の発火を確認する
-                    if(col1->GetCollisionGroup() == ComponentCollision::CollisionGroup::LOG) {
-                        static unsigned int horizontal_log_counter = 0;
-                        std::ofstream&      fs                     = OpenRollDebugLog();
-
-                        if(fs.is_open() && (horizontal_log_counter++ % 5) == 0 && horizontal_log_counter <= 1000) {
-                            char line[512];
-                            std::snprintf(line,
-                                          sizeof(line),
-                                          "[LOGCOL] horizontal_branch vh=(%.2f,%.2f,%.2f) axis=(%.2f,%.2f,%.2f) axial=%.2f len=%.2f over=%d climb=%.2f",
-                                          (double)vh.x,
-                                          (double)vh.y,
-                                          (double)vh.z,
-                                          (double)axis_now.x,
-                                          (double)axis_now.y,
-                                          (double)axis_now.z,
-                                          (double)axial_len,
-                                          (double)len,
-                                          over ? 1 : 0,
-                                          (double)difficult_to_climb_);
-                            fs << line << '\n';
-                            fs.flush();
-                        }
-                    }
-
                     if(IsWorldVerticalAxis(axis_now)) {
                         vh.y  = 0;
                         vh.x *= 1.25f;
                         vh.z *= 1.25f;
                     }
                     else {
-                        vh = vh - axis_now * axial_len;
+                        vh  = vh - axis_now * axial_len;
                         vh *= 1.25f;
                     }
                 }

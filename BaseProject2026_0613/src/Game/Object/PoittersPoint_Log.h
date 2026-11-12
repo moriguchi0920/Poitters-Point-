@@ -51,13 +51,16 @@ private:
     bool   is_on_ground_     = false;    // 接地状態（持続）
     bool   was_on_ground_    = false;    // 前フレームの接地状態
 
+    bool  is_rolling_ = false;    //!< 着地して転がり中かどうか（deve版より追加）
+    float roll_speed_ = 0.0f;     //!< 転がるスピード（回転速度）（deve版より追加）
+
     //--- 挙動調整用パラメータ ---
     float k_air_drag_     = 0.999f;    //!< 空気抵抗（空中時の速度減衰率）
-    float k_friction_     = 0.96f;     //!< 転がり摩擦（接地時の速度減衰率）
+    float k_friction_     = 0.985f;    //!< 転がり摩擦（接地時の速度減衰率）
     float k_landing_loss_ = 0.7f;      //!< 着地時に失う水平速度の割合
     float k_throw_up_     = 3.0f;      //!< 投擲時の上方向衝動
-    float k_roll_radius_  = 3.0f;      //!< 転がり半径（コライダー半径と一致）
-    float k_throw_power_  = 0.2f;      //!< 投擲速度のスケーリング
+    float k_roll_radius_  = 6.0f;      //!< 転がり半径（コライダー半径と一致）
+    float k_throw_power_  = 0.8f;      //!< 投擲速度のスケーリング
     float k_hop_cancel_   = 1.53f;     //!< 投擲フレームの水平相殺率（develop側のAddTranslate分を含む）
 };
 

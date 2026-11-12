@@ -14,17 +14,58 @@ public:
 
     void Update() override;
 
-    void LateUpdate() override;
-
     void GUI() override;
 
-    void GrabbableHit(bool is_hit_grabbable, ObjectPtr target);
-
 private:
-    ObjectWeakPtr grabbing_object_ptr_;
+    const float escape_offset_ = 20.0f;
+    const float think_time_    = 1.5f;
 
-    bool can_grab_;
-    bool can_throw_;
+    // CPUの行動定数
+    enum class CPU_ACTION
+    {
+        ACTION_THINK = 0,
+        // ものを掴みに行く動き
+        ACTION_GRAB,
+        // ものを持っている相手を避ける動き
+        ACTION_AVOID_ATTACKER,
+        // ものを持っている場合、相手に投げに行く動き
+        ACTION_ATTACK,
+        // 低確率で回避のためにその場で真上にジャンプする動き
+        ACTION_EVASION_JUMP,
+        ACTION_NUM
+    };
+
+    CPU_ACTION cur_action_;
+    CPU_ACTION prev_action_;
+
+    void StartThink();
+    void RestartThink();
+    void ChangeActionFlexible();
+    void ChangeActionRandom();
+
+    //! ACTIONを開始する(ACTIONを追加する場合は開始関数とChangeActionFlexibleのcaseを追加する)
+    void StartGrabAction(ObjectWeakPtr target);
+    void StartAvoidAttacker();
+    void StartAttackAction();
+    void StartEvadeJump();
+
+    //! 回避ジャンプを発動するか(低確率・クールダウンあり)
+    bool IsEvadeJumpTrigger();
+
+    // 回避ジャンプのパラメータ
+    const float evasion_jump_threat_distance_ = 10.0f;    // この距離以内に攻撃者がいると脅威とみなす
+    const int   evasion_jump_chance_percent_  = 30;       // 発動確率(%)
+    const float evasion_jump_cooldown_        = 4.0f;     // 発動後のクールダウン(秒)
+    float       evasion_jump_cooldown_timer_  = 0.0f;
+
+    ObjectWeakPtr GetNearestCharacter();
+    ObjectWeakPtr GetNearestAttacker();
+    ObjectWeakPtr GetNearestGrabbableObj();
+
+    bool          IsAttackerNearby();
+    const float   attacker_near_distance_ = 1.0f;
+    ObjectWeakPtr target_want_grab_;
+
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------

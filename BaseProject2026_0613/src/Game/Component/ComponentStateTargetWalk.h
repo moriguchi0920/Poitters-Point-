@@ -2,10 +2,11 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>
+#include <Game/Component/ComponentStateWalkBase.h>
 
 USING_PTR(ComponentStateTargetWalk);
 
-class ComponentStateTargetWalk : public ComponentState
+class ComponentStateTargetWalk : public ComponentStateWalkBase
 {
 public:
     BP_COMPONENT_DECL(ComponentStateTargetWalk, u8"CPU用指定地点への歩きコンポーネント");
@@ -14,37 +15,22 @@ public:
 
     void Update() override;
 
-    ComponentStateTargetWalkPtr SetMoveSpeed(const float speed);
-
-    ComponentStateTargetWalkPtr SetRotateSpeed(const float speed);
-
-    ComponentStateTargetWalkPtr SetKeys(int up, int down, int left, int right);
-
-    const float GetMoveSpeed() const;
-    const float GetRotateSpeed() const;
-
-    inline const void  SetFrontRotate(float rotate) { front_rot_ = rotate; }
-    inline const float GetFrontRotate() const { return front_rot_; }
+    ComponentStateTargetWalkPtr SetTargetPos(const float3& position);
+    void                        SetTargetPtr(const ObjectWeakPtr ptr);
+    void                        ResetTargetPtr();
+    const float3&               GetTargetPos();
+    bool                        GetArrival() override;
 
     void GUI() override;
-
-    void SetIsHolding(bool hold);
+    bool GetStopped() override;
+    bool GetNearby() override;
 
 private:
-    float move_speed_ = 1.0f;
-    float rot_speed_  = 5.0f;
+    float3        target_pos_;
+    ObjectWeakPtr target_ptr_;
 
-    int key_up_    = KEY_INPUT_W;
-    int key_down_  = KEY_INPUT_S;
-    int key_left_  = KEY_INPUT_A;
-    int key_right_ = KEY_INPUT_D;
-
-    float front_rot_ = 0.0f;    //!<前方ベクトルの回転角度(0-360度)
-
-    float3 target_pos_;
-
-    bool is_holding_;
-
+    float       stopping_time_;
+    const float stop_judge_time_ = 1.0f;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
@@ -57,11 +43,6 @@ private:
     {
         arc(CEREAL_NVP(move_speed_),
             CEREAL_NVP(rot_speed_),
-
-            CEREAL_NVP(key_up_),
-            CEREAL_NVP(key_down_),
-            CEREAL_NVP(key_left_),
-            CEREAL_NVP(key_right_),
 
             CEREAL_NVP(front_rot_));
 
