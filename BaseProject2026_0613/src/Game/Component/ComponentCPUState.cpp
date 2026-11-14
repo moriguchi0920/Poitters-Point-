@@ -1,92 +1,163 @@
-ï»¿#pragma once
+#pragma once
 //---------------------------------------------------------------------------
 //! @file   ComponentCPUState.cpp
-//! @brief  CPUçŠ¶æ…‹åˆ¶å¾¡ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆ
+//! @brief  CPUó‘Ô§ŒäƒRƒ“ƒ|[ƒlƒ“ƒg
 //---------------------------------------------------------------------------
 #include <Game/Component/ComponentCPUState.h>
-#include "ComponentStateIdleWalk.h"
-#include "ComponentStateGrab.h"
-#include "ComponentStateThrow.h"
-#include "ComponentGrabbable.h"
+#include <Game/Component/ComponentStateTargetWalk.h>
+#include <Game/Component/ComponentStateGrab.h>
+#include <Game/Component/ComponentStateThrow.h>
+#include <Game/Component/ComponentStatePlayerJump.h>
+#include <Game/Component/ComponentGrabbable.h>
+#include <Game/Object/PoittersPoint_Rock.h>
+#include <Game/Object/PoittersPoint_Player.h>
+#include <Game/Component/ComponentStateSetRangeWalk.h>
+#include <Game/Component/ComponentStateThink.h>
 
 //===========================================================================
-// åˆæœŸåŒ–å‡¦ç†
+// ‰Šú‰»ˆ—
 //===========================================================================
 void ComponentCPUState::Init()
 {
     __super::Init();
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+
+    can_grab_  = true;
+    can_throw_ = false;
+    // vl‚Íprev‚É“ü‚ê‚È‚¢‚½‚ßAs“®ÀÑ‚ª‚È‚¢‰Šúó‘Ô‚Í
+    // è‚ª‹ó‚¢‚Ä‚¢‚éATTACKŒã‚Æ“¯‚¶Šî€‚ÅÅ‰‚Ìs“®‚ğŒˆ‚ß‚³‚¹‚é
+    prev_action_ = CPU_ACTION::ACTION_ATTACK;
+    cur_action_  = CPU_ACTION::ACTION_THINK;
+    owner->AddComponent<ComponentStateThink>()->SetThinkingFinishTime(think_time_);
 }
 
 //===========================================================================
-// æ›´æ–°å‡¦ç†
+// XVˆ—
 //===========================================================================
 void ComponentCPUState::Update()
 {
     __super::Update();
 
-    auto owner = GetOwner();
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
 
-    // ã“ã®å‡¦ç†ã«ã¯ComponentStateGrabãŒå¿…è¦ãªã®ã§ã€æ´ã¿çŠ¶æ…‹ã®æ™‚ã®ã¿å‡¦ç†ã™ã‚‹(ä»Šã¯ã“ã“ã«å…¥ã‚‰ãªã„)
-    if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
-        // æ´ã¿ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãŒçµ‚äº†ã—ãŸã‚‰ã€æ´ã¿çŠ¶æ…‹ã‚’å®Œäº†ã•ã›ã‚‹
-        if(component_grab->GetFinished()) {
-            if(!grabbing_object_ptr_.expired()) {
-                auto object = grabbing_object_ptr_.lock();
+    if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
+        if(GetGrabbing()) {
+            grabbable->SetCanGrab(false);
+        }
 
-                // æ´ã‚“ã§ã„ã‚‹é–“ã¯å½“ãŸã‚Šåˆ¤å®šã‚’ç„¡åŠ¹åŒ–
-                if(auto collider = object->GetComponent<ComponentCollision>()) {
-                    collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
+        if(grabbable->GetIsGrabbed()) {
+            return;
+        }
+    }
+
+    // ‰ñ”ğƒWƒƒƒ“ƒv‚ÌƒN[ƒ‹ƒ_ƒEƒ“‚ği‚ß‚é
+    if(evasion_jump_cooldown_timer_ > 0.0f) {
+        evasion_jump_cooldown_timer_ -= GetDeltaTime();
+    }
+
+    // s“®‚²‚Æ‚ÌXV
+    switch(cur_action_) {
+    case CPU_ACTION::ACTION_THINK:
+        {
+            if(auto component_think = owner->GetComponent<ComponentStateThink>()) {
+                if(component_think->GetFinished()) {
+                    ChangeActionFlexible();
                 }
-
-                // æ´ã‚“ã§ã„ã‚‹é–“ã¯æ´ã¿å¯èƒ½çŠ¶æ…‹ã‚’ç„¡åŠ¹åŒ–
-                auto grabbable = object->GetComponent<ComponentGrabbable>();
-                grabbable->SetIsGrabbed(true);
-
-                // Hitè¨˜éŒ²ã‚’ã‚¯ãƒªã‚¢(æŠ•ã’ç›´ã—ãŸã‚‰èª°ã«ã§ã‚‚Hitã§ãã‚‹ã‚ˆã†ã«)
-                grabbable->ClearHitTargets();
-
-                // æ‰‹ã«ãƒ¢ãƒ‡ãƒ«ã‚’ã‚¢ã‚¿ãƒƒãƒ
-                grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
             }
+            break;
+        }
 
-            // æ´ã¿çŠ¶æ…‹ã‚’å®Œäº†ã•ã›ã‚‹
-            can_throw_ = true;
-            ChangeState<ComponentStateIdleWalk>()->SetIsHolding(true);
+    case CPU_ACTION::ACTION_GRAB:
+        {
+            if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
+                if(auto target = target_want_grab_.lock()) {
+                    if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+                        if(!grabbable->GetCanGrab()) {
+                            StartThink();
+                            target_want_grab_.reset();
+                        }
+                    }
+                }
+                // ’Í‚İ‘ÎÛ‚É“–‚½‚Á‚Ä’Í‚ß‚éó‘Ô‚É‚È‚é‚Ü‚Å•à‚«‘±‚¯‚é
+                // ’Í‚ß‚¸‚É‚½‚Ç‚è’…‚¯‚È‚¢/~‚Ü‚Á‚Ä‚µ‚Ü‚Á‚½‚çl‚¦’¼‚·
+                if((component_walk->GetNearby() || component_walk->GetStopped())) {
+                    if(!StartGrab())
+                        StartThink();
+                }
+            }
+            if(FinishGrab()) {
+                StartThink();
+                if(auto component_think = owner->GetComponent<ComponentStateThink>()) {
+                    component_think->SetIsHolding(true);
+                }
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_AVOID_ATTACKER:
+        {
+            if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
+                if(component_walk->GetArrival() || component_walk->GetStopped()) {
+                    StartThink();
+                }
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_EVASION_JUMP:
+        {
+            // ƒWƒƒƒ“ƒvƒXƒe[ƒg‚Í’…’nŒã‚É©•ª‚ÅÁ‚¦‚é‚½‚ßAÁ‚¦‚½‚çl‚¦’¼‚·
+            if(!owner->GetComponent<ComponentStatePlayerJump>()) {
+                StartThink();
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_ATTACK:
+        {
+            if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
+                if((component_walk->GetNearby() || component_walk->GetStopped()) && can_throw_) {
+                    // ’áŠm—¦‚ÅA“Š‚°‚Ì‘ã‚í‚è‚É‚»‚Ìê‚Å^ã‚ÖƒWƒƒƒ“ƒv‚µ‚Ä‰ñ”ğ‚·‚é
+                    if(IsEvadeJumpTrigger()) {
+                        StartEvadeJump();
+                        break;
+                    }
+                    ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
+                    can_throw_ = false;
+                }
+            }
+            if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
+                if(component_throw->GetIsFinished()) {
+                    grabbing_object_ptr_.reset();
+                    can_grab_ = true;
+                    StartThink();
+                }
+            }
         }
     }
 }
 
 //===========================================================================
-// æ›´æ–°å¾Œå‡¦ç†
-//===========================================================================
-void ComponentCPUState::LateUpdate()
-{
-    // æ´ã¿å¯èƒ½ãƒ•ãƒ©ã‚°ã‚’ãƒªã‚»ãƒƒãƒˆ
-    can_grab_ = false;
-}
-
-//===========================================================================
-// GUIå‡¦ç†
+// GUIˆ—
 //===========================================================================
 void ComponentCPUState::GUI()
 {
     __super::GUI();
 
-    // GUIå†…ã«å‡ºç¾ã•ã›ã‚‹
+    // GUI“à‚ÉoŒ»‚³‚¹‚é
     ImGui::Begin(GetOwner()->GetName().data());
     {
-        ImGui::Separator();    // ç·šãŒå‡ºã¦ãã‚‹
+        ImGui::Separator();    // ü‚ªo‚Ä‚­‚é
         if(ImGui::TreeNode("CPU State")) {
             //-------------------------------------------------------
-            // å…±é€šéƒ¨åˆ†(å…±é€šåŒ–ã—ãŸã„)
+            // ‹¤’Ê•”•ª(‹¤’Ê‰»‚µ‚½‚¢)
 
-            // æœ‰åŠ¹/ç„¡åŠ¹
+            // —LŒø/–³Œø
             bool enable = GetStatus(StatusBit::Enable);
-            if(ImGui::Checkbox(u8"æœ‰åŠ¹", &enable))
+            if(ImGui::Checkbox(u8"—LŒø", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            // GUIä¸Šã§ã‚ªãƒ¼ãƒŠãƒ¼ã‹ã‚‰è‡ªåˆ†(SampleObjectController)ã‚’å‰Šé™¤ã—ã¾ã™
-            if(ImGui::Button(u8"å‰Šé™¤"))
+            // GUIã‚ÅƒI[ƒi[‚©‚ç©•ª(SampleObjectController)‚ğíœ‚µ‚Ü‚·
+            if(ImGui::Button(u8"íœ"))
                 GetOwner()->RemoveComponent(shared_from_this());
             //-------------------------------------------------------
 
@@ -96,16 +167,326 @@ void ComponentCPUState::GUI()
     ImGui::End();
 }
 
-//===========================================================================
-// æ´ã¿å¯èƒ½ç‰©ã‚’æ¤œçŸ¥ã™ã‚‹ã¨å‘¼ã°ã‚Œã‚‹åˆ¤å®š
-//===========================================================================
-void ComponentCPUState::GrabbableHit(bool is_hit_grabbable, ObjectPtr target)
+void ComponentCPUState::StartThink()
+{
+    // vl‚Íprev‚É“ü‚ê‚È‚¢
+    if(cur_action_ != CPU_ACTION::ACTION_THINK) {
+        prev_action_ = cur_action_;
+        cur_action_  = CPU_ACTION::ACTION_THINK;
+        auto think   = ChangeState<ComponentStateThink>();
+        think->SetThinkingFinishTime(think->GetCurThinkingTime() + think_time_);
+    }
+}
+
+void ComponentCPUState::RestartThink()
+{
+    // s“®’†‚Ìl‚¦’¼‚µ‚ÍStartThink‚¾‚Æprev‚É‹L˜^‚µ‚Ä‚µ‚Ü‚¤‚½‚ßAvlŠÔ‚¾‚¯‰„’·‚·‚é
+    if(auto think = GetOwner()->GetComponent<ComponentStateThink>()) {
+        think->SetThinkingFinishTime(think->GetCurThinkingTime() + think_time_);
+    }
+}
+
+void ComponentCPUState::StartGrabAction(ObjectWeakPtr target)
+{
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+    if(!character_casted_owner || target.expired()) {
+        return;
+    }
+    target_want_grab_ = target;
+    // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‚ ‚é‚Æ‚±‚ë‚Ü‚Å•à‚­
+    auto target_walk = ChangeState<ComponentStateTargetWalk>();
+    target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    target_walk->SetTargetPtr(target);
+
+    cur_action_ = CPU_ACTION::ACTION_GRAB;
+}
+
+void ComponentCPUState::StartAvoidAttacker()
+{
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+    // ‚à‚Ì‚ğ‚Á‚Ä‚¢‚éÅ‚à‹ß‚¢ƒLƒƒƒ‰ƒNƒ^[‚ğæ“¾
+    auto attacker = GetNearestAttacker();
+    if(!character_casted_owner || attacker.expired()) {
+        return;
+    }
+
+    // UŒ‚Ò‚©‚ç—£‚ê‚é•ûŒü‚É“¦‚°‚é
+    float3 dir    = owner->GetTranslate() - attacker.lock()->GetTranslate();
+    dir.y         = 0.0f;
+    float dir_len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+    if(dir_len < 0.001f) {
+        dir = {0.0f, 0.0f, 1.0f};
+    }
+    else {
+        dir = dir * (1.0f / dir_len);
+    }
+
+    // UŒ‚Ò‚©‚ç—£‚ê‚é‹——£‚¾‚¯•à‚­
+    auto range_walk = ChangeState<ComponentStateSetRangeWalk>();
+    range_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    range_walk->SetWalkDirection(dir);
+    range_walk->SetWalkDistance(escape_offset_);
+
+    cur_action_ = CPU_ACTION::ACTION_AVOID_ATTACKER;
+}
+
+void ComponentCPUState::StartAttackAction()
+{
+    auto owner                  = GetOwner();
+    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+    if(!character_casted_owner) {
+        return;
+    }
+
+    // Å‚à‹ß‚¢ƒLƒƒƒ‰ƒNƒ^[‚Ü‚Å•à‚¢‚Ä“Š‚°‚é
+    auto target_walk = ChangeState<ComponentStateTargetWalk>();
+    target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
+    target_walk->SetTargetPtr(GetNearestCharacter());
+    target_walk->SetIsHolding(true);
+
+    cur_action_ = CPU_ACTION::ACTION_ATTACK;
+}
+
+bool ComponentCPUState::IsEvadeJumpTrigger()
 {
     auto owner = GetOwner();
-    if(owner->GetComponent<ComponentStateIdleWalk>()) {
-        can_grab_            = is_hit_grabbable;
-        grabbing_object_ptr_ = target;
+
+    // ƒN[ƒ‹ƒ_ƒEƒ“’†‚ÍƒWƒƒƒ“ƒv‚µ‚È‚¢
+    if(evasion_jump_cooldown_timer_ > 0.0f) {
+        return false;
     }
+
+    // Å‚à‹ß‚¢UŒ‚Ò(‚à‚Ì‚ğ‚Á‚Ä‚¢‚éƒLƒƒƒ‰ƒNƒ^[)‚ª‹ß‚¢‚É‹ºˆĞ‚Æ‚İ‚È‚·
+    auto attacker = GetNearestAttacker().lock();
+    if(!attacker) {
+        return false;
+    }
+    float3 vec = attacker->GetTranslate() - owner->GetTranslate();
+    float  dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+    if(dis > evasion_jump_threat_distance_) {
+        return false;
+    }
+
+    // •p”­‚µ‚È‚¢‚æ‚¤‚É’áŠm—¦‚Å’Š‘I‚·‚é
+    return (rand() % 100) < evasion_jump_chance_percent_;
+}
+
+void ComponentCPUState::StartEvadeJump()
+{
+    auto owner = GetOwner();
+    if(owner->GetComponent<ComponentStatePlayerJump>()) {
+        return;
+    }
+
+    // •à‚«ƒXƒe[ƒg‚ÌŒü‚«‚ğƒWƒƒƒ“ƒv‚Éˆø‚«Œp‚®
+    float front_rot = 0.0f;
+    if(auto walk = owner->GetComponent<ComponentStateWalkBase>()) {
+        front_rot = walk->GetFrontRotate();
+    }
+
+    auto jump = ChangeState<ComponentStatePlayerJump>();
+    jump->SetIsCPU(true);
+    jump->SetIsHolding(!grabbing_object_ptr_.expired());
+    jump->SetFrontRotate(front_rot);
+
+    evasion_jump_cooldown_timer_ = evasion_jump_cooldown_;
+    cur_action_                  = CPU_ACTION::ACTION_EVASION_JUMP;
+}
+
+void ComponentCPUState::ChangeActionFlexible()
+{
+    // vl‚Íprev‚É“ü‚ê‚È‚¢‚½‚ßA‚±‚Ìcase‚É—ˆ‚é‚±‚Æ‚Í‚È‚¢(ˆÀ‘S‚Ì‚½‚ß‰½‚à‚µ‚È‚¢)
+    if(prev_action_ == CPU_ACTION::ACTION_THINK) {
+        return;
+    }
+
+    // ’¼‘O‚Ìs“®‚²‚Æ‚ÉŸ‚Ìs“®‚ğŒˆ‚ß‚é
+    // ACTION‚ğ’Ç‰Á‚·‚éê‡‚ÍAcase‚Æ‚»‚Ìs“®‚ğŠJn‚·‚éŠÖ”‚ğ‘‚â‚·‚¾‚¯‚Å‘Î‰‚Å‚«‚é
+    switch(prev_action_) {
+    case CPU_ACTION::ACTION_ATTACK:
+        {
+            // “Š‚°‚½Œã‚Íè‚ª‹ó‚¢‚Ä‚¢‚é‚½‚ßA‹ß‚­‚ÉƒIƒuƒWƒFƒNƒg‚ğ‚Á‚Ä‚¢‚é“G‚ª‚¢‚é‚È‚ç“¦‚°‚é
+            if(IsAttackerNearby()) {
+                StartAvoidAttacker();
+            }
+            // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‹ßŠ‚É‚ ‚é‚È‚çE‚¢‚És‚­
+            else if(auto target = GetNearestGrabbableObj().lock()) {
+                StartGrabAction(target);
+            }
+            else {
+                // ‚Ç‚¿‚ç‚à‚È‚¢ê‡‚Íl‚¦’¼‚·
+                RestartThink();
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_AVOID_ATTACKER:
+        {
+            // “¦‚°‚½Œã‚ÍŠî–{“I‚ÉƒIƒuƒWƒFƒNƒg‚ğE‚¢‚És‚­
+            if(auto target = GetNearestGrabbableObj().lock()) {
+                StartGrabAction(target);
+            }
+            else {
+                RestartThink();
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_EVASION_JUMP:
+        {
+            if(GetGrabbing()) {
+                // ƒWƒƒƒ“ƒvŒã‚àƒAƒCƒeƒ€‚ğ‚Á‚Ä‚¢‚é‚È‚ç“Š‚°’¼‚µ‚És‚­
+                StartAttackAction();
+            }
+            else {
+                // “Š‚°‚½Œã‚Æ“¯‚¶“®ì
+                // ‹ß‚­‚ÉƒIƒuƒWƒFƒNƒg‚ğ‚Á‚Ä‚¢‚é“G‚ª‚¢‚é‚È‚ç“¦‚°‚é
+                if(IsAttackerNearby()) {
+                    StartAvoidAttacker();
+                }
+                // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‹ßŠ‚É‚ ‚é‚È‚çE‚¢‚És‚­
+                else if(auto target = GetNearestGrabbableObj().lock()) {
+                    StartGrabAction(target);
+                }
+                else {
+                    // ‚Ç‚¿‚ç‚à‚È‚¢ê‡‚Íl‚¦’¼‚·
+                    RestartThink();
+                }
+            }
+            break;
+        }
+    case CPU_ACTION::ACTION_GRAB:
+        {
+            if(GetGrabbing()) {
+                // E‚Á‚½Œã‚Í“G‚É‚à‚Ì‚ğ“Š‚°‚És‚­
+                StartAttackAction();
+            }
+            else {
+                // E‚¦‚È‚©‚Á‚½‚Ì‚ÅUŒ‚Œã‚Æ“¯‚¶“®ì
+                // “Š‚°‚½Œã‚Íè‚ª‹ó‚¢‚Ä‚¢‚é‚½‚ßA‹ß‚­‚ÉƒIƒuƒWƒFƒNƒg‚ğ‚Á‚Ä‚¢‚é“G‚ª‚¢‚é‚È‚ç“¦‚°‚é
+                if(IsAttackerNearby()) {
+                    StartAvoidAttacker();
+                }
+                // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‹ßŠ‚É‚ ‚é‚È‚çE‚¢‚És‚­
+                else if(auto target = GetNearestGrabbableObj().lock()) {
+                    StartGrabAction(target);
+                }
+                else {
+                    // ‚Ç‚¿‚ç‚à‚È‚¢ê‡‚Íl‚¦’¼‚·
+                    RestartThink();
+                }
+            }
+            break;
+        }
+    }
+}
+
+void ComponentCPUState::ChangeActionRandom()
+{
+}
+
+ObjectWeakPtr ComponentCPUState::GetNearestCharacter()
+{
+    auto owner = GetOwner();
+    // ƒLƒƒƒ‰ƒNƒ^[‚ğ”z—ñ‚Åæ“¾
+    auto characters = Scene::Object::GetArray<PoittersPoint::Player>();
+    // ˆê”Ô‹ß‚¢ƒIƒuƒWƒFƒNƒg‚Ìƒ|ƒCƒ“ƒ^
+    ObjectPtr nearest_ptr = nullptr;
+    // ƒLƒƒƒ‰ƒNƒ^[‚Ö‚Ì‹——£‚ğ”ä‚×‚é—p‚ÌfloatÅ‘å’l(ƒLƒƒƒ‰ƒNƒ^[‚Ì’†‚©‚çˆê”Ô‹ß‚¢‚à‚Ì‚ğ‹‚ß‚é‚½‚ß)
+    float nearest_distance = FLT_MAX;
+    for(auto& character : characters) {
+        if(character == owner->SharedThis())
+            continue;
+        if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
+            float3 vec = character->GetTranslate() - owner->GetTranslate();
+            float  dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+            if(dis < nearest_distance) {
+                nearest_distance = dis;
+                nearest_ptr      = character;
+            }
+        }
+    }
+    return std::weak_ptr(nearest_ptr);
+}
+
+ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
+{
+    auto owner = GetOwner();
+    // ƒLƒƒƒ‰ƒNƒ^[‚ğ”z—ñ‚Åæ“¾
+    auto characters = Scene::Object::GetArray<PoittersPoint::Player>();
+    // ˆê”Ô‹ß‚¢‚à‚Ì‚ğ‚Á‚Ä‚¢‚éƒLƒƒƒ‰ƒNƒ^[‚Ìƒ|ƒCƒ“ƒ^
+    ObjectPtr attacker_ptr = nullptr;
+    // ƒLƒƒƒ‰ƒNƒ^[‚Ö‚Ì‹——£‚ğ”ä‚×‚é—p‚ÌfloatÅ‘å’l(ƒLƒƒƒ‰ƒNƒ^[‚Ì’†‚©‚çˆê”Ô‹ß‚¢‚à‚Ì‚ğ‹‚ß‚é‚½‚ß)
+    float nearest_distance = FLT_MAX;
+    // ƒLƒƒƒ‰ƒNƒ^[”z—ñ‚ğ‘–¸
+    for(auto& character : characters) {
+        // ©•ª‚Í‚Í‚¶‚­
+        if(std::static_pointer_cast<Object>(character) == owner->SharedThis())
+            continue;
+        // ‘ÎÛ‚ÌƒXƒe[ƒgƒ}ƒVƒ“æ“¾
+        if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
+            // À•W‚ğŒ¸Z‚µƒxƒNƒgƒ‹‚ğæ“¾
+            float3 vec = character->GetTranslate() - owner->GetTranslate();
+            // ƒxƒNƒgƒ‹‚©‚ç‹——£‚ğæ“¾
+            float dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+            // ‚à‚Ì‚ğ‚Á‚Ä‚¢‚éÅ‚à‹ß‚¢ƒLƒƒƒ‰ƒNƒ^[‚ğUŒ‚Ò‚Æ‚·‚é
+            if(state_machine->GetGrabbing() && dis < nearest_distance) {
+                // Å’Z‹——£‚ğXV
+                nearest_distance = dis;
+                // UŒ‚Ò‚Æ‚µ‚Ä“o˜^
+                attacker_ptr = character;
+            }
+        }
+    }
+
+    return std::weak_ptr(attacker_ptr);
+}
+
+ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
+{
+    auto owner = GetOwner();
+    // ƒ^[ƒQƒbƒg‚Æ‚È‚éƒIƒuƒWƒFƒNƒg‚ğæ“¾(ƒ^[ƒQƒbƒg‚Í‰¼‚ÅŠâ‚Ì‚İ‚Æ‚·‚é)
+    auto      targets   = Scene::Object::GetArray<PoittersPoint::Rock>();
+    ObjectPtr targetPtr = nullptr;
+    // Å’Z‹——£
+    float nearest_distance = FLT_MAX;
+    // ŠâƒIƒuƒWƒFƒNƒg‚ğ‘–¸
+    for(auto& target : targets) {
+        // ‹——£‚ğZo‚µ”äŠrAˆê”Ô‹ß‚¢Šâ‚ğ–Ú“I’n‚Ö
+        if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
+            if(grabbable->GetIsGrabbed()) {
+                continue;
+            }
+        }
+        // À•W‚ğŒ¸Z‚µƒxƒNƒgƒ‹‚ğæ“¾
+        float3 vec = target->GetTranslate() - owner->GetTranslate();
+        // ‹——£æ“¾
+        float dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+        // ”äŠr‚µ‚ÄÅ’Z‚Å‚ ‚ê‚Î
+        if(dis < nearest_distance) {
+            // Å’Z‹——£‚ğXV
+            nearest_distance = dis;
+            // ƒ^[ƒQƒbƒg‚Æ‚µ‚Ä“o˜^
+            targetPtr = target;
+        }
+    }
+    return std::weak_ptr(targetPtr);
+}
+
+bool ComponentCPUState::IsAttackerNearby()
+{
+    auto owner = GetOwner();
+    if(auto obj = GetNearestAttacker().lock()) {
+        float3 attacker_pos = obj->GetTranslate();
+        float3 owner_pos    = owner->GetTranslate();
+        float3 vec          = attacker_pos - owner_pos;
+        float  dis          = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+        if(dis < attacker_near_distance_) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 CEREAL_REGISTER_TYPE(ComponentCPUState)

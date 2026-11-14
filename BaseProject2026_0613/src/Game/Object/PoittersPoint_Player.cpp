@@ -1,9 +1,8 @@
-ï»¿#include "PoittersPoint_Player.h"
+#include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Component/ComponentCameraController.h"
-#include "Game/Component/ComponentStateIdleWalk.h"
+#include "Game/Component/ComponentStateControllerWalk.h"
 #include "Game/Component/ComponentStateThrow.h"
-#include "Game/Component/ComponentPlayerState.h"
 #include "Game/Component/ComponentStateMachine.h"
 
 #include <System/Scene.h>
@@ -24,29 +23,29 @@ bool Player::Init()
     if(auto model = GetComponent<ComponentModel>()) {
         model
             ->SetAnimation({
-                {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // Throw
-                {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // Throw
+                {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
+                {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+                {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
+                { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
         })
             ->SetScaleAxisXYZ({0.11f, 0.11f, 0.11f});
     }
 
     SetTranslate({0, 8, 0});
 
-    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼çŠ¶æ…‹åˆ¶å¾¡ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã®è¿½åŠ 
-    AddComponent<ComponentPlayerState>();
-    // ä»–è€…ã«æ´ã¾ã‚Œã¦æŠ•ã’ã‚‰ã‚Œã‚‹ã‚ˆã†ã«ã™ã‚‹
+    // ƒXƒe[ƒgƒ}ƒVƒ“(ƒvƒŒƒCƒ„[“ü—Í/CPU)‚Í¶¬‘¤‚ÌStage‚Å•t—^‚·‚é
+    // ‘¼Ò‚É’Í‚Ü‚ê‚Ä“Š‚°‚ç‚ê‚é‚æ‚¤‚É‚·‚é
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
-    // HPç®¡ç†ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆ(ComponentPlayerState å†…ã§è¿½åŠ æ¸ˆã¿)ã® HP ã‚’è¨­å®š
-    if(auto hp = GetComponent<ComponentHitPoints>()) {
-        hp->SetMaxAndCurrentHP(3.0f);
-    }
+    // ‘Ì—Í‚ğŠÇ—‚·‚éƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
-    // ã‚«ãƒ—ã‚»ãƒ«ã‚³ãƒªã‚¸ãƒ§ãƒ³ã®ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’è¿½åŠ 
+    // ƒJƒvƒZƒ‹ƒRƒŠƒWƒ‡ƒ“‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
     AddComponent<ComponentCollisionCapsule>();
     if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
         collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
@@ -62,7 +61,7 @@ void Player::Update()
 {
     Super::Update();
 
-    // è¦–ç·šãƒ»ã‚¿ãƒ¼ã‚²ãƒƒãƒˆæ¤œå‡ºå‡¦ç†
+    // ‹üEƒ^[ƒQƒbƒgŒŸoˆ—
     OnEyeSight();
 }
 
@@ -70,46 +69,38 @@ void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
     auto hitter = hit_info.hit_collision_->GetOwner();
 
-    // ãƒ’ãƒƒãƒˆã—ãŸç›¸æ‰‹ãŒæ´ã‚ã‚‹ã‚‚ã®(=æŠ•ã’ã‚‰ã‚Œã¦ç§»å‹•ä¸­)ã‹åˆ¤å®š
+    // ƒqƒbƒg‚µ‚½‘Šè‚ª’Í‚ß‚é‚à‚Ì(=“Š‚°‚ç‚ê‚ÄˆÚ“®’†)‚©”»’è
     if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
-        // æŠ•ã’ãŸæœ¬äººè‡ªèº«ã®å ´åˆã¯ãƒ€ãƒ¡ãƒ¼ã‚¸ãªã—
+        // “Š‚°‚½–{l©g‚Ìê‡‚Íƒ_ƒ[ƒW‚È‚µ
         if(grabbable->IsThrower(SharedThis())) {
             __super::OnHit(hit_info);
             return;
         }
 
-        // åœ°é¢ã§åœæ­¢ä¸­ã¯ãƒ€ãƒ¡ãƒ¼ã‚¸ãªã—
+        // ’n–Ê‚Å’â~’†‚Íƒ_ƒ[ƒW‚È‚µ
         if(!grabbable->IsMoving()) {
             __super::OnHit(hit_info);
             return;
         }
 
-        // æ—¢ã«ã“ã®ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã‚’Hitæ¸ˆã¿ãªã‚‰ã‚¹ãƒ«ãƒ¼(é€£ç¶šãƒ’ãƒƒãƒˆé˜²æ­¢)
+        // Šù‚É‚±‚Ìƒ^[ƒQƒbƒg‚ğHitÏ‚İ‚È‚çƒXƒ‹[(˜A‘±ƒqƒbƒg–h~)
         if(grabbable->IsAlreadyHit(SharedThis())) {
             __super::OnHit(hit_info);
             return;
         }
 
-        // åˆHitãªã‚‰è¨˜éŒ²ã—ã¦ãƒ€ãƒ¡ãƒ¼ã‚¸å‡¦ç†ã¸
+        // ‰Hit‚È‚ç‹L˜^‚µ‚Äƒ_ƒ[ƒWˆ—‚Ö
         grabbable->AddHitTarget(SharedThis());
     }
     else {
-        // å¼¾ãªã©grabbableä»¥å¤–ã¯ä»Šã¾ã§é€šã‚Š
+        // ’e‚È‚ÇgrabbableˆÈŠO‚Í¡‚Ü‚Å’Ê‚è
         __super::OnHit(hit_info);
         return;
     }
 
-    // æŠ•ã’ç‰©ã”ã¨ã®ãƒ€ãƒ¡ãƒ¼ã‚¸å€¤ã‚’é©ç”¨
+    // “Š‚°•¨‚²‚Æ‚Ìƒ_ƒ[ƒW’l‚ğ“K—p
     if(auto hp = GetComponent<ComponentHitPoints>()) {
         hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
-
-        // HPãŒ0ä»¥ä¸‹ãªã‚‰æ­»äº¡
-        if(hp->GetHitPoints() <= 0.0f) {
-            is_dead = true;
-            if(auto col = GetComponent<ComponentCollisionCapsule>()) {
-                RemoveComponent<ComponentCollisionCapsule>();
-            }
-        }
     }
     __super::OnHit(hit_info);
 }
@@ -123,52 +114,93 @@ void Player::OnEyeSight()
         normalize(vec);
     }
 
-    // è¦ªã‹ã‚‰æ•µã¸ã®ãƒ™ã‚¯ãƒˆãƒ«
+    // e‚©‚ç“G‚Ö‚ÌƒxƒNƒgƒ‹
     float3 targetVec = {0, 0, 0};
-    // ä¸€ç•ªè¿‘ã„æ•µã¸ã®è·é›¢ã‚’ä¿å­˜ã™ã‚‹å¤‰æ•°
+    // ˆê”Ô‹ß‚¢“G‚Ö‚Ì‹——£‚ğ•Û‘¶‚·‚é•Ï”
     float shortest = 1000.0f;
-    // ç¯„å›²for
+    // ”ÍˆÍfor
     for(auto& obj : ObjArray) {
         if(obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
         }
 
-        // è¦ªã®åº§æ¨™(æ–œã‚ã«å½“ã¦ãŸã„ã®ã§ä¸Šã«ä¸Šã’ã¦åˆ¤å®š)
+        // e‚ÌÀ•W(Î‚ß‚É“–‚Ä‚½‚¢‚Ì‚Åã‚Éã‚°‚Ä”»’è)
         float3 pos = GetTranslate() - vec * 0.5f + float3(0.0f, 1.0f, 0.0f);
-        // æ•µã®åº§æ¨™
+        // “G‚ÌÀ•W
         float3 targetPos = obj->GetTranslate();
 
-        // ãƒ™ã‚¯ãƒˆãƒ«ã‚’å–å¾—
+        // ƒxƒNƒgƒ‹‚ğæ“¾
         targetVec = targetPos - pos;
-        // è¦ªã®æ­£é¢ãƒ™ã‚¯ãƒˆãƒ«ã¨æ•µã¸ã®ãƒ™ã‚¯ãƒˆãƒ«ã®å†…ç©ã‚’ã¨ã‚‹
+        // e‚Ì³–ÊƒxƒNƒgƒ‹‚Æ“G‚Ö‚ÌƒxƒNƒgƒ‹‚Ì“àÏ‚ğ‚Æ‚é
         float targetDot = dot(normalize(vec), normalize(targetVec));
-        // æ­£è¦åŒ–ãƒ™ã‚¯ãƒˆãƒ«åŒå£«ã®å†…ç©ãªã®ã§arccosã§è§’åº¦ãŒã¨ã‚Œã‚‹
+        // ³‹K‰»ƒxƒNƒgƒ‹“¯m‚Ì“àÏ‚È‚Ì‚Åarccos‚ÅŠp“x‚ª‚Æ‚ê‚é
         float angle = acosf(targetDot);
-        // ã‚¹ã‚«ãƒ©ãƒ¼ä»˜ããƒ™ã‚¯ãƒˆãƒ«ã®é•·ã•ã¯å„è¦ç´ ã®äºŒä¹—ã‚’è¶³ã—ãŸã‚‚ã®ã®å¹³æ–¹æ ¹ã§ã¨ã‚Œã‚‹
+        // ƒXƒJƒ‰[•t‚«ƒxƒNƒgƒ‹‚Ì’·‚³‚ÍŠe—v‘f‚Ì“ñæ‚ğ‘«‚µ‚½‚à‚Ì‚Ì•½•ûª‚Å‚Æ‚ê‚é
         float distance = sqrtf(targetVec.x * targetVec.x + targetVec.y * targetVec.y + targetVec.z * targetVec.z);
-        // å†…ç©ã¨è·é›¢ã‚’ã‹ã‘ã¦å††éŒã®ç¯„å›²ã«ã„ã‚‹ã‹ã‚’ã¨ã‚‹
+        // “àÏ‚Æ‹——£‚ğ‚©‚¯‚Ä‰~‚Ì”ÍˆÍ‚É‚¢‚é‚©‚ğ‚Æ‚é
         float dotDis = distance * targetDot;
 
-        // æœ€çŸ­è·é›¢ãªã‚‰
+        // Å’Z‹——£‚È‚ç
         if(distance <= shortest) {
-            // æœ€çŸ­è·é›¢ã‚’æ›´æ–°
+            // Å’Z‹——£‚ğXV
             shortest = distance;
-            // å††éŒã®è§’åº¦å†…ã‹
+            // ‰~‚ÌŠp“x“à‚©
             bool isInAngle = angle <= 3.14f * 0.45 && -3.14f * 0.45 <= angle;
-            // è·é›¢ã¯å††éŒã®ç¯„å›²å†…ã‹
+            // ‹——£‚Í‰~‚Ì”ÍˆÍ“à‚©
             bool isInDistance = dotDis <= 50.0f;
 
-            // ä¸¡æ–¹æº€ãŸã—ã¦ã„ãŸã‚‰
+            // —¼•û–‚½‚µ‚Ä‚¢‚½‚ç
             if(isInAngle && isInDistance) {
                 auto target = obj;
                 if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-                    auto player_state = GetComponent<ComponentPlayerState>();
-                    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-                        player_state->GrabbableHit(target);
+                    // ‹ü‚Å•ß‚ç‚¦‚½‘ÎÛ‚ğ•Û‚·‚é(ƒvƒŒƒCƒ„[‚ÆCPU‹¤’Ê)
+                    eyesight_target_ = target;
+                    // ƒXƒe[ƒgƒ}ƒVƒ“‚ª‚ ‚ê‚Î’Í‚İ‘ÎÛ‚Æ‚µ‚Ä‹L˜^‚·‚é
+                    // lŠÔ‚ÍƒXƒy[ƒXƒL[‚ÅStartGrabACPU‚ÍACTION_GRAB‚Ì“’B‚ÉStartGrab‚·‚é
+                    if(auto state_machine = GetComponent<ComponentStateMachine>()) {
+                        // ƒvƒŒƒCƒ„[‚æ‚è‚àƒIƒuƒWƒFƒNƒg‚Ì‚¿ã‚°‚ğ—Dæ
+                        if(std::dynamic_pointer_cast<PoittersPoint::Player>(target)) {
+                            // ”»’è“à‚ÉƒIƒuƒWƒFƒNƒg‚ª‚¢‚È‚¢ê‡‚Ì‚İ
+                            if(!state_machine->IsGrabTargetExist()) {
+                                // ‘ÎÛ‚ğ‚¿ã‚°‚ç‚ê‚é‚Æ‚µ‚Ä“o˜^
+                                state_machine->GrabbableHit(target);
+                            }
+                        }
+                        // ƒvƒŒƒCƒ„[ˆÈŠO‚È‚ç
+                        else {
+                            // ‚»‚Ì‚Ü‚Ü“o˜^
+                            state_machine->GrabbableHit(target);
+                        }
                     }
                 }
             }
         }
     }
 }
+
+const ObjectWeakPtr& Player::GetEyeSightTarget() const
+{
+    return eyesight_target_;
+}
+
+void Player::SetCharacterStatus(const CharacterData& data)
+{
+    // ‘ã“ü
+    model_path_      = data.model_path_;
+    anims_           = data.anims_;
+    local_scale_     = data.local_scale_;
+    move_speed_      = data.move_speed_;
+    throw_power_     = data.throw_power_;
+    lift_time_ratio_ = data.lift_time_ratio_;
+    // “ü—Í‚³‚ê‚½ƒAƒjƒ[ƒVƒ‡ƒ“‚ÆƒXƒP[ƒ‹‚ğƒ‚ƒfƒ‹‚É”½‰f‚·‚é
+    if(auto model = GetComponent<ComponentModel>()) {
+        model->SetAnimation(anims_)->SetScaleAxisXYZ(local_scale_);
+    }
+}
+
+float Player::GetMoveSpeed()
+{
+    return move_speed_;
+}
+
 }    // namespace PoittersPoint

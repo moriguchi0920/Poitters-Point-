@@ -1,6 +1,6 @@
-ï»¿#pragma once
+#pragma once
 #include <Game/Component/ComponentStateThrow.h>
-#include "ComponentStateIdleWalk.h"
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
 
@@ -10,8 +10,19 @@ void ComponentStateThrow::Init()
 
     SetName<Component>("State Throw");
     auto owner = GetOwner();
+
+    is_released_ = false;
+
     if(auto model = owner->GetComponent<ComponentModel>()) {
-        model->PlayAnimationNoSame("throw");
+        if(is_in_air_) {
+            // š‹ó’†“Š‚°FThrowFast ‚ğã”¼g‚Ì‚İ 1.5”{‘¬‚ÅÄ¶
+            // PlayAnimationEx ‚Ìˆø”iname, node, loop, blend_time, start_timej
+            model->PlayAnimationEx("throw_fast", "mixamorig:Spine", false);
+        }
+        else {
+            // š’nã“Š‚°F’Êí”Åi1.0”{‘¬j‚ğ‘Sg‚ÅÄ¶
+            model->PlayAnimationNoSame("throw", false);
+        }
     }
 }
 
@@ -19,71 +30,72 @@ void ComponentStateThrow::Update()
 {
     __super::Update();
 
-    // ã‚ªãƒ¼ãƒŠãƒ¼(è‡ªåˆ†ãŒAddComponentã•ã‚ŒãŸObject)ã‚’å–å¾—ã—ã¾ã™
-    // å‡¦ç†ã•ã‚Œã‚‹ã¨ãã¯å¿…ãšOwnerã¯å­˜åœ¨ã—ã¾ã™ã®ã§åŸºæœ¬çš„ã«nullptrãƒã‚§ãƒƒã‚¯ã¯å¿…è¦ã‚ã‚Šã¾ã›ã‚“
-    if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
-        // ã‚ªãƒ¼ãƒŠãƒ¼ã®æŠ•ã’ã‚‹ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãŒ0.42ä»¥ä¸Šã§ã‚ã‚Œã°
-        if(0.65 <= model->GetAnimationTime()) {
-            // ã‚·ã‚§ã‚¢ãƒ¼ãƒ‰ãƒã‚¤ãƒ³ã‚¿ã«å¤‰æ›
-            // ãƒãƒ¬ãƒƒãƒˆãŒã‚ã‚Œã°(nullptrã‹ãƒã‚§ãƒƒã‚¯)
+    auto owner            = GetOwner();
+    bool was_in_air_start = is_in_air_;
+
+    // š1. ‹ó’†“Š‚°‚ÌˆÚ“®ˆ—iƒJƒvƒZƒ‹–{‘Ì‚Ì•¨—ˆÚ“®j
+    if(is_in_air_) {
+        float effective_gravity = is_released_ ? gravity_ : (gravity_ * 0.1f);
+
+        owner->AddTranslate({0.0f, current_velocity_, 0.0f}, true);
+        current_velocity_ -= effective_gravity;
+
+        // š“Š‚°Ø‚é‚Ü‚Å‚Í’…’n‚µ‚È‚¢iƒWƒƒƒ“ƒv{“Š‚°‚ğ•Û‚Âj
+        if(is_released_) {
+            auto pos = owner->GetTranslate();
+            if(pos.y <= ground_y_) {
+                pos.y = ground_y_;
+                owner->SetTranslate(pos);
+                is_in_air_ = false;    // ’…’n
+            }
+        }
+    }
+
+    if(auto model = owner->GetComponent<ComponentModel>()) {
+        // š2. ‹ó’†“Š‚°Fƒ‚ƒfƒ‹‚ÌYÀ•W‚ğŒÅ’èiƒ‹[ƒgƒ‚[ƒVƒ‡ƒ“‚Ì‘Å‚¿Á‚µj
+        if(was_in_air_start) {
+            matrix mat        = model->GetMatrix();
+            mat.translate().y = 0.0f;
+            model->SetMatrix(mat);
+        }
+
+        // è—£‚µ”»’èè‡’li1.5”{‘¬‚Ì ThrowFast ‚É‡‚í‚¹‚Äè—£‚µƒ^ƒCƒ~ƒ“ƒO‚à 0.20f •t‹ß‚É’²®j
+        float release_threshold = was_in_air_start ? 0.20f : 0.65f;
+
+        // è‚ğ—£‚·ˆ—
+        if(!is_released_ && release_threshold <= model->GetAnimationTime()) {
             if(auto throw_object = throw_weak_ptr_.lock()) {
-                // ã‚¢ã‚¿ãƒƒãƒãƒ¢ãƒ‡ãƒ«ã‚’å–ã‚Šå¤–ã™
                 throw_object->RemoveComponent<ComponentAttachModel>();
 
                 auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
                 grabbable->SetIsGrabbed(false);
 
-                const float3 up_len = {0.0f, 5.0f, 0.0f};
-                float3       vec    = {0.0f, 1.0f, 0.0f};
-
-                // GetOnwerï¼šã‚ªãƒ¼ãƒŠãƒ¼(è‡ªåˆ†ãŒAddComponentã•ã‚ŒãŸObject)ã‚’å–å¾—ã—ã¾ã™
-                // å‡¦ç†ã•ã‚Œã‚‹ã¨ãã¯å¿…ãšOwnerã¯å­˜åœ¨ã—ã¾ã™ã®ã§åŸºæœ¬çš„ã«nullptrãƒã‚§ãƒƒã‚¯ã¯å¿…è¦ã‚ã‚Šã¾ã›ã‚“
-                auto   owner = GetOwner();
-                matrix mat   = matrix::identity();
+                float3 vec = {0.0f, 1.0f, 0.0f};
                 if(auto model = owner->GetComponent<ComponentModel>()) {
-                    // ãƒ¢ãƒ‡ãƒ«ã®å®Œå…¨ãªå‘ãã¯ã€GetWorldMatrix()ã§ã¨ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚
-                    mat = model->GetWorldMatrix();
-
                     constexpr float front_len = 5.0f;
+                    vec                       = -(model->GetWorldVectorAxisZ() * front_len);
+                }
 
-                    vec = -(model->GetWorldVectorAxisZ() * front_len);
-                }
-                if(auto throw_object = throw_weak_ptr_.lock()) {
-                    auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
-                    throw_object->AddTranslate(vec * 5.0f);
-                    grabbable->SetTranslation(vec * 5.0f);
-                }
-                // æŠ•ã’ã‚‹ãƒ¢ãƒ¼ã‚·ãƒ§ãƒ³ãŒçµ‚ã‚ã£ãŸã®ã§å½“ãŸã‚Šåˆ¤å®šã‚’
+                throw_object->AddTranslate(vec * 5.0f);
+                grabbable->SetTranslation(vec * 5.0f);
+
                 if(auto collider = throw_object->GetComponent<ComponentCollision>()) {
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
                 }
 
-                // æŠ•ã’ä¸»ã‚’è¨˜éŒ²ï¼ˆè‡ªåˆ†è‡ªèº«ã¸ã®åˆæœŸãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ã‚¹ã‚­ãƒƒãƒ—ã™ã‚‹ãŸã‚ï¼‰
-                if(auto grabbable = throw_object->GetComponent<ComponentGrabbable>()) {
-                    grabbable->SetThrower(GetOwnerPtr());
-                }
+                grabbable->SetThrower(GetOwnerPtr());
 
                 throw_weak_ptr_.reset();
-                //ChangeState<ComponentStateIdleWalk>();
+                is_released_ = true;
             }
-
-            /*
-            * // ã“ã“ã«å®Ÿè£…ã™ã‚‹ã¨æŠ•æ“²ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆãŒãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã«ä¾å­˜ã™ã‚‹ã®ã§ã ã‚ã ãŒã€
-            * ã“ã†ã„ã£ãŸå®Ÿè£…ã‚’ã™ã‚‹ã¨ã‚³ãƒ³ãƒœã‚‚å¯èƒ½
-            if(Input::IsKeyDown(KEY_INPUT_SPACE))
-            {
-                RemoveThisComponent();
-                model->AddComponent<ComponentStateThrow2>;
-            }
-            */
         }
 
-        // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãŒæ­¢ã¾ã£ã¦ã„ã‚‹ã‹
-        if(!model->IsPlaying()) {
-            // è‡ªåˆ†è‡ªèº«ã‚’å–ã‚Šé™¤ã
-            RemoveThisComponent();
-            // æ­©ãã®ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’å†ä»˜ä¸ã™ã‚‹
-            GetOwner()->AddComponent<ComponentStateIdleWalk>()->SetMoveSpeed(0.3f)->SetRotateSpeed(20.0f);
+        // ‹ó’†“Š‚°‚ÌƒAƒjƒ[ƒVƒ‡ƒ“I—¹‚Íƒ‹[ƒgƒ‚[ƒVƒ‡ƒ“‚ÌY•â³‚ğ‰ğœ‚·‚é
+        // (ƒXƒe[ƒg‘JˆÚ‚ÍƒXƒe[ƒgƒ}ƒVƒ“‘¤‚Ì GetIsFinished ƒ|[ƒŠƒ“ƒO‚Ås‚¤)
+        if(was_in_air_start && !model->IsExPlaying("mixamorig:Spine")) {
+            matrix mat        = model->GetMatrix();
+            mat.translate().y = 0.0f;
+            model->SetMatrix(mat);
         }
     }
 }
@@ -92,25 +104,17 @@ void ComponentStateThrow::GUI()
 {
     __super::GUI();
 
-    // GUIå†…ã«å‡ºç¾ã•ã›ã‚‹
     ImGui::Begin(GetOwner()->GetName().data());
     {
-        ImGui::Separator();    // ç·šãŒå‡ºã¦ãã‚‹
+        ImGui::Separator();
         if(ImGui::TreeNode("State Throw")) {
-            //-------------------------------------------------------
-            // å…±é€šéƒ¨åˆ†(å…±é€šåŒ–ã—ãŸã„)
-
-            // æœ‰åŠ¹/ç„¡åŠ¹
             bool enable = GetStatus(StatusBit::Enable);
-            if(ImGui::Checkbox(u8"æœ‰åŠ¹", &enable))
+            if(ImGui::Checkbox(u8"—LŒø", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            // GUIä¸Šã§ã‚ªãƒ¼ãƒŠãƒ¼ã‹ã‚‰è‡ªåˆ†(SampleObjectController)ã‚’å‰Šé™¤ã—ã¾ã™
-            if(ImGui::Button(u8"å‰Šé™¤"))
+            if(ImGui::Button(u8"íœ"))
                 GetOwner()->RemoveComponent(shared_from_this());
-            //-------------------------------------------------------
 
-            //if(ImGui::TreeNode("State IdleWalk")) ã¨ã‚»ãƒƒãƒˆ
             ImGui::TreePop();
         }
     }
@@ -120,6 +124,15 @@ void ComponentStateThrow::GUI()
 void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
 {
     throw_weak_ptr_ = object_ptr;
+}
+
+bool ComponentStateThrow::GetIsFinished()
+{
+    // ƒAƒjƒ[ƒVƒ‡ƒ“‚ª~‚Ü‚Á‚Ä‚¢‚é‚©(‹ó’†“Š‚°‚Íã”¼gƒŒƒCƒ„[‚ÌÄ¶I—¹‚à‘Ò‚Â)
+    if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
+        return !model->IsPlaying() && !model->IsExPlaying("mixamorig:Spine");
+    }
+    return false;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateThrow)

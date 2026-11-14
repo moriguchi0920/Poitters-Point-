@@ -1,8 +1,8 @@
 ﻿#pragma once
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //! @file   PoittersPoint_Log.h
 //! @brief  PoittersPoint_Log
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 #include <System/Scene.h>
 
 namespace PoittersPoint {
@@ -30,9 +30,38 @@ public:
     //! 当たり判定が行われたときに自動で呼び出される関数
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
+    //! @brief 物理シミュレーション前処理
+    //! 投擲後の移動速度を適用する
+    void PrePhysics() override;
+
+    //! @brief 物理シミュレーション後処理
+    //! 移動量に基づいて視覚的な転がり回転を適用する
+    void PostPhysics() override;
+
 private:
-    bool  is_rolling_ = false;    //!< 着地して転がり中かどうか
-    float roll_speed_ = 0.0f;     //!< 転がるスピード（回転速度）
+    bool  is_bounced_this_frame_ = false;    //同一フレーム内でのバウンド重複防止フラグ
+    int   se_handle_             = -1;       //SEのメモリハンドル
+    float throw_cool_down_       = 0.0f;     //SE連続再生防止クールダウンタイマー
+
+    float3 prev_pos_{0, 0, 0};           // 物理演算前の位置（転がり回転計算用）
+    float3 velocity_{0, 0, 0};           // 転がり用の水平速度
+    float3 throw_velocity_{0, 0, 0};     // 投擲速度（空中飛行用）
+    bool   was_grabbed_prev_ = false;    // 投擲検出用：前フレームの掴まれ状態
+    bool   just_thrown_      = false;    // 投擲直後のフレーム：速度適用をスキップ
+    bool   is_on_ground_     = false;    // 接地状態（持続）
+    bool   was_on_ground_    = false;    // 前フレームの接地状態
+
+    bool  is_rolling_ = false;    //!< 着地して転がり中かどうか（deve版より追加）
+    float roll_speed_ = 0.0f;     //!< 転がるスピード（回転速度）（deve版より追加）
+
+    //--- 挙動調整用パラメータ ---
+    float k_air_drag_     = 0.999f;    //!< 空気抵抗（空中時の速度減衰率）
+    float k_friction_     = 0.985f;    //!< 転がり摩擦（接地時の速度減衰率）
+    float k_landing_loss_ = 0.7f;      //!< 着地時に失う水平速度の割合
+    float k_throw_up_     = 3.0f;      //!< 投擲時の上方向衝動
+    float k_roll_radius_  = 6.0f;      //!< 転がり半径（コライダー半径と一致）
+    float k_throw_power_  = 0.8f;      //!< 投擲速度のスケーリング
+    float k_hop_cancel_   = 1.53f;     //!< 投擲フレームの水平相殺率（develop側のAddTranslate分を含む）
 };
 
 }    // namespace PoittersPoint

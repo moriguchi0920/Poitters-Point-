@@ -1,7 +1,7 @@
-ï»¿//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //! @file   PoittersPoint_Log.cpp
 //! @brief  PoittersPoint_Log
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 #include "PoittersPoint_Log.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
@@ -9,114 +9,50 @@
 #include <System/Component/ComponentModel.h>
 #include "Game/Component/ComponentGrabbable.h"
 
-#include <System/Component/ComponentCollisionCapsule.h>    // â˜…ã“ã‚Œã‚’è¿½åŠ 
-
 namespace PoittersPoint {
-// namespace PoittersPoint
-
 bool Log::Init()
 {
-    // è¦ª(ç¶™æ‰¿å…ƒã®åŸºåº•ã‚¯ãƒ©ã‚¹)ã®Inité–¢æ•°ã‚’å‘¼ã¶
-    // ã“ã‚ŒãŒãªã‘ã‚Œã°abort()ãŒå‘¼ã°ã‚Œã‚‹
-    Super::Init();
-    //__super::Init();
-
     SetTranslate({10.0f, 10.0f, -20.0f});
 
     SetName("Log");
     auto model = AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
-
-    // å·¦
-    auto col1 = AddComponent<ComponentCollisionCapsule>();
-    if(col1) {
-        col1->SetRadius(3.0f);
-        col1->SetHeight(5.0f);
-        col1->SetTranslate({-8.5f, 2.0f, 0.0f});
-
-        col1->UseGravity(false);
-        col1->SetGravity(-0.2f);
-        col1->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col1->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col1->SetMass(200.0f);
+    if(model) {
+        // ŠÛ‘¾‚Ì•¨—²iY=+3.3 ˆÊ’uj‚ğƒIƒuƒWƒFƒNƒgŒ´“_‚Öˆê’v‚³‚¹‚é‚½‚ßƒ‚ƒfƒ‹‚ğƒ[ƒJƒ‹‚Å -3.3 ‰º‚°‚é
+        // ƒJƒvƒZƒ‹‘¤‚à“¯—ÊˆÚ“®‚³‚¹‚é‚½‚ßAŒ©‚½–Ú‚Æ“–‚½‚è”»’è‚Ì‘Š‘Î”z’u‚Í•Ï‚í‚ç‚È‚¢
+        model->SetTranslate({0.0f, -3.3f, 0.0f});
     }
 
-    // çœŸã‚“ä¸­
-    auto col2 = AddComponent<ComponentCollisionCapsule>();
-    if(col2) {
-        col2->SetRadius(3.0f);
-        col2->SetHeight(5.0f);
-        col2->SetTranslate({0.0f, 3.0f, 0.0f});
+    // ŠÛ‘¾‚ÌŒ`ó‚É‡’v‚·‚é’PˆêƒJƒvƒZƒ‹(ComponentCollisionModel‚ÍƒŠƒO‚È‚Ç‚ª‚È‚¢‚Ì‚©ƒAƒ^ƒbƒ`o—ˆ‚È‚¢)
+    // ƒJƒvƒZƒ‹‚Í‰Šú‚ÅcŒü‚«‚¾‚ªAŠÛ‘¾‚Í‰¡Œü‚«‚È‚Ì‚Å‰ñ“]‚³‚¹‚é
+    auto col = AddComponent<ComponentCollisionCapsule>();
+    if(col) {
+        col->SetRadius(6.0f);
+        col->SetHeight(46.33f);
+        // ²‚ğƒIƒuƒWƒFƒNƒgŒ´“_(Y=0)‚ÖˆÚ‚·iƒ‚ƒfƒ‹‚ğ -3.3 ‚µ‚½•ª‚Æ‘ŠE‚µ‚ÄŒ©‚½–Ú‚Í•s•Ïj
+        // ‚±‚ê‚É‚æ‚è X ²‰ñ“]‚ªŠÛ‘¾‚Ì•¨—²‚Ü‚í‚è‚Ì pure ‚È“]‚ª‚è‚É‚È‚èñU‚è‚ªÁ‚¦‚é
+        col->SetTranslate({23.36f, 2.530f, 0.0f});
 
-        col2->UseGravity(false);
-        col2->SetGravity(-0.2f);
-        col2->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col2->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::ETC |
-                                   (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col2->SetMass(200.0f);
-    }
+        // ƒJƒvƒZƒ‹‚ğ‰¡Œü‚«iŠÛ‘¾‚Ì’·²‚É‰ˆ‚í‚¹‚éj‚É‰ñ“]
+        // ‰ñ“]: {-90, 90, 0} (“x)
+        float matrixT[3], matrixR[3], matrixS[3];
+        DecomposeMatrixToComponents(col->GetMatrixFloat(), matrixT, matrixR, matrixS);
+        matrixR[0] = -90.0f;
+        matrixR[1] = 90.0f;
+        matrixR[2] = 0.0f;
+        RecomposeMatrixFromComponents(matrixT, matrixR, matrixS, col->GetMatrixFloat());
 
-    // å³
-    auto col3 = AddComponent<ComponentCollisionCapsule>();
-    if(col3) {
-        col3->SetRadius(3.0f);
-        col3->SetHeight(5.0f);
-        col3->SetTranslate({8.5f, 3.0f, 0.0f});
-
-        col3->UseGravity(false);
-        col3->SetGravity(-0.2f);
-        col3->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col3->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col3->SetMass(200.0f);
-    }
-
-    // å³2
-    auto col4 = AddComponent<ComponentCollisionCapsule>();
-    if(col4) {
-        col4->SetRadius(3.0f);
-        col4->SetHeight(5.0f);
-        col4->SetTranslate({-16.0f, 3.0f, 0.0f});
-
-        col4->UseGravity(true);
-        col4->SetGravity(-0.2f);
-        col4->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col4->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col4->SetMass(200.0f);
-    }
-
-    // å·¦ï¼’
-    auto col5 = AddComponent<ComponentCollisionCapsule>();
-    if(col5) {
-        col5->SetRadius(3.0f);
-        col5->SetHeight(5.0f);
-        col5->SetTranslate({16.0f, 3.0f, 0.0f});
-
-        col5->UseGravity(true);
-        col5->SetGravity(-0.2f);
-        col5->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col5->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                   (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col5->SetMass(200.0f);
+        // d—Í‚ğ“K—p
+        col->UseGravity(true);
+        col->SetGravity(-0.2f);
+        col->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
+        col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
+                                  (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
+        col->SetMass(200.0f);
     }
 
     auto grabbable = AddComponent<ComponentGrabbable>();
-    if(grabbable) {
-        grabbable->SetBounceOffset(0.0f);    // åˆæœŸã¯è·³ã­ã‚’æŠ‘ãˆã‚‹
-        grabbable->SetLiftTime(1.0f);
-    }
-
-    //AddComponent<ComponentCollisionModel>();
-    //if(auto collision = GetComponent<ComponentCollisionModel>()) {
-    //    collision->AttachToModel();    // ã‚³ãƒªã‚¸ãƒ§ãƒ³ã‚’ãƒ¢ãƒ‡ãƒ«ã«åˆã‚ã›ã‚‹
-    //}
-
-    //SetScaleAxisXYZ({0.75f});
-
-    //is_rolling_ = false;
-    //roll_speed_ = 0.0f;
+    grabbable->SetLiftTime(1.5f);
+    grabbable->SetDamage(1.0f);
 
     return true;
 }
@@ -125,127 +61,38 @@ void Log::Update()
 {
     __super::Update();
 
-    //if(is_rolling_) {
-    //    float3 rot  = GetRotationAxisXYZ();
-    //    rot.x      += roll_speed_;
-    //    SetRotationAxisXYZ(rot);
-
-    //    roll_speed_ *= 0.90f;    // å°‘ã—æ¸›è¡°ã‚’æ—©ã‚ã‚‹
-
-    //    // â˜… 0.5f ä»¥ä¸‹ã«ãªã£ãŸã‚‰å®Œå…¨ã«ãƒ”ã‚¿ãƒƒã¨æ­¢ã‚ã‚‹
-    //    if(roll_speed_ < 0.5f) {
-    //        roll_speed_ = 0.0f;
-    //        is_rolling_ = false;
-    //    }
-    //}
-
-    // è»¢ãŒã£ã¦ã„ã‚‹é–“
-    if(is_rolling_) {
-        // ä¸¸å¤ªã‚’å›è»¢ã•ã›ã‚‹
-        float3 rot  = GetRotationAxisXYZ();
-        rot.x      += roll_speed_;
-        SetRotationAxisXYZ(rot);
-
-        // å¾ã€…ã«æ¸›é€Ÿ
-        roll_speed_ *= 0.98f;
-
-        // ååˆ†é…ããªã£ãŸã‚‰åœæ­¢
-        if(std::abs(roll_speed_) < 0.01f) {
-            roll_speed_ = 0.0f;
-            is_rolling_ = false;
-        }
-    }
-
-    // åœ°é¢ã«å›ºå®šã•ã‚Œã¦ã„ã‚‹æ™‚ã¯è·³ã­ã‚’æŠ‘ãˆã‚‹
-    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
-            grabbable->SetBounceOffset(0.0f);
-        }
-    }
-
-    // åœ°é¢ã«å›ºå®šã•ã‚Œã¦ã„ã‚‹æ™‚ã¯ç„¡é§„ãªåŠ›ã‚’æŠ‘ãˆè¾¼ã‚“ã§æ»‘ã‚Šã‚’æ­¢ã‚ã‚‹
-    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
-            grabbable->SetBounceOffset(0.0f);
-        }
+    // “Š±ˆ—
+    if(just_thrown_) {
+        just_thrown_ = false;
     }
 }
 
 void Log::GUI()
 {
-    __super::GUI();
 }
 
 void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    /*
-    // å½“ãŸã£ãŸç›¸æ‰‹ã®åå‰ãŒEnemyã ã£ãŸã‚‰æ¶ˆå»ã™ã‚‹
-    auto name = hit_info.hit_collision_->GetOwner()->GetNameDefault();
-    if(name == "Enemy") {
-        hit_info.collision_->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
-        // è‡ªåˆ†ã‚’å‰Šé™¤ã™ã‚‹
-        Scene::Object::Release(SharedThis());
-    }
-    */
-
-    //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-    //    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-    //        grabbable->SetCanGrab(true);
-
-    //        // åº§æ¨™åˆ¤å®šã‚’è¡Œã‚ãšã€ç€åœ°çŠ¶æ…‹ã ã‘ãƒã‚§ãƒƒã‚¯
-    //        if(grabbable->IsGrounded()) {
-    //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    //        else if(grabbable->IsMoving()) {
-    //            grabbable->Bounce();
-    //        }
-    //    }
-    //}
-
-    if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-        if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-            grabbable->SetCanGrab(true);
-
-            if(grabbable->IsMoving()) {
-                // åœ°é¢ã«ç€ã„ãŸã‚‰ä¸¸å¤ªã‚’æ°´å¹³ã«ã™ã‚‹
-                float3 rot = GetRotationAxisXYZ();
-                rot.x      = 0.0f;
-                rot.z      = 0.0f;
-                SetRotationAxisXYZ(rot);
-
-                // è»¢ãŒã‚Šé–‹å§‹
-                is_rolling_ = true;
-                roll_speed_ = 0.2f;
-
-                // è·³ã­ã•ã›ãªã„
-                grabbable->SetBounceOffset(0.0f);
-            }
-        }
-    }
-
-    //// åœ°é¢ã«å½“ãŸã£ãŸæ™‚ã®å‡¦ç†
-    //if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-    //    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-    //        grabbable->SetCanGrab(true);
-
-    //        // â˜…ä¸€åº¦ç€åœ°ã—ãŸã‚‰ï¼ˆã¾ãŸã¯è»¢ãŒã‚Šä¸­ãªã‚‰ï¼‰ã€å®Œå…¨ã« Bounce() ã‚’å‘¼ã¶ã®ã‚’ã‚„ã‚ã‚‹ï¼
-    //        // è½ã¡ã¦ãã‚‹ã€Œç§»å‹•ä¸­ã€ã‹ã¤ã€Œè»¢ãŒã‚ŠãŒå§‹ã¾ã£ã¦ã„ãªã„ã€æœ€åˆã®ç¬é–“ã ã‘ä¸€åº¦ã ã‘ãƒã‚¦ãƒ³ãƒ‰ã‚’è€ƒæ…®
-    //        if(!is_rolling_ && !grabbable->IsGrounded()) {
-    //            // åˆå›ç€åœ°æ™‚ã«è»¢ãŒã‚Šé–‹å§‹
-    //            is_rolling_ = true;
-    //            roll_speed_ = 8.0f;    // è»¢ãŒã‚‹å‹¢ã„
-
-    //            // ãƒã‚¦ãƒ³ãƒ‰ã¯ã•ã›ãšã«ã‚ªãƒ•ã‚»ãƒƒãƒˆå›ºå®šï¼ˆã“ã‚Œã§æŒ¯å‹•ã‚’ã‚·ãƒ£ãƒƒãƒˆã‚¢ã‚¦ãƒˆã—ã¾ã™ï¼‰
-    //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    //        else {
-    //            // ç€åœ°å¾Œã¯çµ¶å¯¾ã«è·³ã­è¿”ã‚Šå‡¦ç†ï¼ˆBounceï¼‰ã‚’èµ·ã“ã•ã›ãªã„
-    //            grabbable->SetBounceOffset(0.0f);
-    //        }
-    // }
-
-    // æœ€å¾Œã«ã“ã‚Œã‚’å…¥ã‚Œã¦ãã ã•ã„ã€‚ã“ã“ã§ã‚ã‚Šã“ã¿ã®è§£æ¶ˆãªã©ã®å‡¦ç†ã‚’è¡Œã£ã¦ã„ã¾ã™ã€‚
+    // ÅŒã‚É“ü‚ê‚éB‚±‚±‚Å‚ß‚è‚±‚İ‚Ì‰ğÁ‚È‚Ç‚Ìˆ—‚ğs‚Á‚Ä‚¢‚Ü‚·B
     Super::OnHit(hit_info);
+}
+
+void Log::PrePhysics()
+{
+    // •¨—‰‰Z‘O‚ÌˆÊ’u‚ğ‹L˜^i“]‚ª‚è‰ñ“]ŒvZ—pj
+    prev_pos_ = GetTranslate();
+}
+
+void Log::PostPhysics()
+{
+    // •¨—‰‰ZŒã‚ÌˆÊ’u‚©‚ç‘¬“x‚ğZo‚µA“]‚ª‚è‰ñ“]‚ğ“K—p
+    float3 now_pos = GetTranslate();
+    velocity_      = now_pos - prev_pos_;
+
+    if(is_on_ground_ && (velocity_.x != 0.0f || velocity_.z != 0.0f)) {
+        is_rolling_ = true;
+        roll_speed_ = 0.2f;
+    }
 }
 
 }    // namespace PoittersPoint
