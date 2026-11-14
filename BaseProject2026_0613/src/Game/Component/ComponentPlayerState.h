@@ -14,8 +14,6 @@ class ComponentPlayerState : public ComponentStateMachine
 public:
     friend class PoittersPoint::Player;
 
-    BP_COMPONENT_DECL(ComponentPlayerState, u8"プレイヤー状態制御コンポーネント");
-
     void Init() override;
 
     void Update() override;
@@ -27,10 +25,6 @@ public:
     void GrabbableHit(ObjectPtr target);
 
 private:
-    ObjectWeakPtr grabbing_object_ptr_;
-
-    bool can_grab_;
-    bool can_throw_;
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------

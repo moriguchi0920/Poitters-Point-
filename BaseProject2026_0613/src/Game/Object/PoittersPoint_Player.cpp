@@ -1,69 +1,58 @@
-﻿//---------------------------------------------------------------------------
-//! @file   PoittersPoint_Player.cpp
-//! @brief  PoittersPoint_Player
-//---------------------------------------------------------------------------
-#include "PoittersPoint_Player.h"
+﻿#include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include "Game/Component/ComponentCameraController.h"
-#include "Game/Component/ComponentStateIdleWalk.h"
+#include "Game/Component/ComponentStateControllerWalk.h"
 #include "Game/Component/ComponentStateThrow.h"
-#include "Game/Component/ComponentPlayerState.h"
 #include "Game/Component/ComponentStateMachine.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include "Game/Component/ComponentGrabbable.h"
+#include <System/Component/ComponentObjectController.h>
+#include "Game/Component/ComponentHitPoints.h"
 #include "Game/Object/PoittersPoint_Rock.h"
 
 namespace PoittersPoint {
-// namespace PoittersPoint
 
-//! @brief 初期化
-//! @return 初期化終了
 bool Player::Init()
 {
-    // 親(継承元の基底クラス)のInit関数を呼ぶ
-    // これがなければabort()が呼ばれる
     Super::Init();
-    //__super::Init();
 
     SetName("Player");
-    //auto player = Scene::Object::Create<Object>("Player");
 
     AddComponent<ComponentModel>("data/Game/Models/Player/Player.mv1");
     if(auto model = GetComponent<ComponentModel>()) {
         model
             ->SetAnimation({
-                //                                  モデルビユーで何番目にいたか
-                //                                                 ↓
-                {     "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                {     "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                {    "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                {  "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                {"grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // Throw
-                {"grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // Throw
+                {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
+                {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+                {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
+                { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
         })
-            //->SetScaleAxisXYZ({0.12f, 0.12f, 0.12f});
             ->SetScaleAxisXYZ({0.11f, 0.11f, 0.11f});
     }
 
     SetTranslate({0, 8, 0});
 
-    AddComponent<ComponentPlayerState>();
+    // ステートマシン(プレイヤー入力/CPU)は生成側のStageで付与する
+    // 他者に掴まれて投げられるようにする
+    AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
-    // カメラの制御を行うコンポーネントを追加
-    //AddComponent<ComponentCameraController>();
+    // 体力を管理するコンポーネントを追加
+    AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
     // カプセルコリジョンのコンポーネントを追加
     AddComponent<ComponentCollisionCapsule>();
     if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
-        // 所属するグループを「PLAYER」とします
         collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
-
-        // Collisionの重力を有効にします
         collision->UseGravity();
-        collision->SetRadius(3.8f);     // コリジョンの半径を3.0 にする
-        collision->SetHeight(22.0f);    // コリジョンの高さを13.0 にする
+        collision->SetRadius(3.8f);
+        collision->SetHeight(22.0f);
     }
 
     return true;
@@ -87,14 +76,41 @@ void Player::Update()
 
 void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
-    //auto target = hit_info.hit_collision_->GetOwnerPtr();
-    //if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-    //    auto player_state = GetComponent<ComponentPlayerState>();
-    //    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-    //        player_state->GrabbableHit(target);
-    //    }
-    //}
+    auto hitter = hit_info.hit_collision_->GetOwner();
 
+    // ヒットした相手が掴めるもの(=投げられて移動中)か判定
+    if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
+        // 投げた本人自身の場合はダメージなし
+        if(grabbable->IsThrower(SharedThis())) {
+            __super::OnHit(hit_info);
+            return;
+        }
+
+        // 地面で停止中はダメージなし
+        if(!grabbable->IsMoving()) {
+            __super::OnHit(hit_info);
+            return;
+        }
+
+        // 既にこのターゲットをHit済みならスルー(連続ヒット防止)
+        if(grabbable->IsAlreadyHit(SharedThis())) {
+            __super::OnHit(hit_info);
+            return;
+        }
+
+        // 初Hitなら記録してダメージ処理へ
+        grabbable->AddHitTarget(SharedThis());
+    }
+    else {
+        // 弾などgrabbable以外は今まで通り
+        __super::OnHit(hit_info);
+        return;
+    }
+
+    // 投げ物ごとのダメージ値を適用
+    if(auto hp = GetComponent<ComponentHitPoints>()) {
+        hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
+    }
     __super::OnHit(hit_info);
 }
 
@@ -146,14 +162,54 @@ void Player::OnEyeSight()
             if(isInAngle && isInDistance) {
                 auto target = obj;
                 if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-                    auto player_state = GetComponent<ComponentPlayerState>();
-                    if(player_state->can_grab_ && grabbable->GetCanGrab()) {
-                        player_state->GrabbableHit(target);
+                    // 視線で捕らえた対象を保持する(プレイヤーとCPU共通)
+                    eyesight_target_ = target;
+                    // ステートマシンがあれば掴み対象として記録する
+                    // 人間はスペースキーでStartGrab、CPUはACTION_GRABの到達時にStartGrabする
+                    if(auto state_machine = GetComponent<ComponentStateMachine>()) {
+                        // プレイヤーよりもオブジェクトの持ち上げを優先
+                        if(std::dynamic_pointer_cast<PoittersPoint::Player>(target)) {
+                            // 判定内にオブジェクトがいない場合のみ
+                            if(!state_machine->IsGrabTargetExist()) {
+                                // 対象を持ち上げられるとして登録
+                                state_machine->GrabbableHit(target);
+                            }
+                        }
+                        // プレイヤー以外なら
+                        else {
+                            // そのまま登録
+                            state_machine->GrabbableHit(target);
+                        }
                     }
                 }
             }
         }
     }
+}
+
+const ObjectWeakPtr& Player::GetEyeSightTarget() const
+{
+    return eyesight_target_;
+}
+
+void Player::SetCharacterStatus(const CharacterData& data)
+{
+    // 代入
+    model_path_      = data.model_path_;
+    anims_           = data.anims_;
+    local_scale_     = data.local_scale_;
+    move_speed_      = data.move_speed_;
+    throw_power_     = data.throw_power_;
+    lift_time_ratio_ = data.lift_time_ratio_;
+    // 入力されたアニメーションとスケールをモデルに反映する
+    if(auto model = GetComponent<ComponentModel>()) {
+        model->SetAnimation(anims_)->SetScaleAxisXYZ(local_scale_);
+    }
+}
+
+float Player::GetMoveSpeed()
+{
+    return move_speed_;
 }
 
 }    // namespace PoittersPoint
