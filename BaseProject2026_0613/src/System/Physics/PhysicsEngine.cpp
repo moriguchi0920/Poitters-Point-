@@ -398,6 +398,11 @@ private:
     MyContactListener        contact_listener_;            //!< ユーザーコールバック ContactListener
 
     bool is_valid_ = false;    //!< 正常に初期化されているか
+
+    //! 固定タイムステップ用アキュムレータ
+    //! @details フレームごとの実時間ばらつきを物理solverへ直接渡すと転がる物体が上下に震えるため、
+    //!          常に一定間隔（1/60秒）でステップするための滞留時間を保持する。
+    f32 update_accumulator_ = 0.0f;
 };
 
 namespace {
@@ -535,15 +540,35 @@ EngineImpl::~EngineImpl()
 //---------------------------------------------------------------------------
 void EngineImpl::update(f32 dt)
 {
-    // 1/60秒より大きなステップを取る場合、シミュレーションを安定させるために
-    // 複数回の衝突ステップを行う必要があります。1/60秒ごとに1回の衝突ステップを実行します（切り上げ）
-    const u32 collision_steps = 1;
+    //----------------------------------------------------------
+    // 固定タイムステップ化
+    //----------------------------------------------------------
+    // Joltの接触ソルバーは可変dtに弱く、フレーム時間のばらつきが転がる物体の
+    // 上下カクツキ（接触めり込み量の変動）に直結する。
+    // 実時間ではなく必ず一定間隔(1/60秒)でステップを刻み、残りは次回へ繰り越す。
+    constexpr f32 fixed_delta_time = 1.0f / 60.0f;
 
-    // より正確なステップ結果を得たい場合は、コリジョンステップの中で複数のサブステップを行うことができます。
-    const u32 integration_sub_steps = 1;    // 通常は1に設定します。
+    // ロード等のヒッチで物理が暴走しないよう巻き戻しステップ数を制限する
+    constexpr s32 max_steps = 4;
 
-    // ワールドを時間経過させて更新
-    jph_physics_system_->Update(dt, collision_steps, integration_sub_steps, temp_allocator_, job_system_.get());
+    // 1/60秒ごとに1回の衝突ステップ（サブステップは1。Tutorial_13 準拠の設定を維持）
+    const u32 collision_steps        = 1;
+    const u32 integration_sub_steps  = 1;
+
+    update_accumulator_ += dt;
+
+    s32 steps = 0;
+    while(update_accumulator_ >= fixed_delta_time && steps < max_steps) {
+        // ワールドを時間経過させて更新
+        jph_physics_system_->Update(fixed_delta_time, collision_steps, integration_sub_steps, temp_allocator_, job_system_.get());
+
+        update_accumulator_ -= fixed_delta_time;
+        ++steps;
+    }
+
+    // 巻き戻し上限まで進めても取り込めなかった分（大幅なヒッチ）は捨てて追従する
+    if(update_accumulator_ >= fixed_delta_time * max_steps)
+        update_accumulator_ = 0.0f;
 }
 
 //---------------------------------------------------------------------------

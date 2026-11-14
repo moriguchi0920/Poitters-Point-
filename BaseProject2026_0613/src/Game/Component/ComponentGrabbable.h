@@ -5,6 +5,7 @@
 //---------------------------------------------------------------------------
 #include <System/Scene.h>
 #include <System/Component/Component.h>
+#include <System/Component/ComponentPhysics.h>    // 物理（Jolt）への載せ替え対応用
 // std::setを使用するために必要
 #include <set>
 
@@ -18,6 +19,8 @@ public:
     void Init() override;
 
     void Update() override;
+
+    void PrePhysics() override;
 
     void GUI() override;
 
@@ -71,7 +74,11 @@ private:
     bool  can_grab_this_;    //!< 掴み可能か
     float damage_;           //!< このオブジェクトのダメージ値
 
-    float3 translation_;    //!< 現在の移動量
+    float3 translation_;    //!< 現在の移動量（Jolt 非対応の旧来パス専用）
+
+    //--- Jolt 載せ替え対応 ---
+    std::shared_ptr<physics::RigidBody> body_;                            //!< オーナーの Jolt 剛体（未移行なら nullptr）
+    float                               move_speed_threshold_ = 20.0f;    //!< 移動中/静止のしきい値（Jolt 速度の大きさ / 秒）
 
     // std::setはSTLに含まれる「集合」を扱うためのデータ構造
     // 特徴は、要素が自動的にソートされ、要素の重複を許さない。(検索も早い)

@@ -7,6 +7,7 @@
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
+#include <System/Component/ComponentPhysics.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -41,6 +42,13 @@ bool Ground::Init()
         // 所属するグループを「GROUND」とします
         collision->SetCollisionGroup(ComponentCollision::CollisionGroup::GROUND);
         collision->AttachToModel();    // コリジョンをモデルに合わせる
+    }
+
+    // Jolt 物理の静的メッシュ（投げ物が重力・慣性に従って着地・転がるための土台）
+    // ComponentCollision とは別系統の衝突系。CreateMesh は常に静的ボディになる（Tutorial_13 と同じ）。
+    if(auto physics = AddComponent<ComponentPhysics>()) {
+        physics->CreateMesh(model);    // モデルのスケールは CreateMesh 内部で GetScaleAxisXYZ() から織り込む
+        physics->SetCollisionType(ComponentPhysics::CollisionType::GROUND);
     }
 
     return true;

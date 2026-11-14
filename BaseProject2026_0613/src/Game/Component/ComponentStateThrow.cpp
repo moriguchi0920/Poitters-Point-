@@ -3,6 +3,7 @@
 #include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 #include <Game/Component/ComponentGrabbable.h>
+#include <System/Component/ComponentPhysics.h>    // Jolt 剛体への発射（addLinearVelocity）用
 
 void ComponentStateThrow::Init()
 {
@@ -72,12 +73,33 @@ void ComponentStateThrow::Update()
 
                 float3 vec = {0.0f, 1.0f, 0.0f};
                 if(auto model = owner->GetComponent<ComponentModel>()) {
-                    constexpr float front_len = 5.0f;
-                    vec                       = -(model->GetWorldVectorAxisZ() * front_len);
+                    // 正面ベクトル。モデルのワールド行列はスケール(0.11)や投げアニメーションの
+                    // 揺れを内包するため、そのまま使すと「向いた方角によって初速の長さ・上向き成分が
+                    // 変わる」原因になる。スケールを外して正規化し、水平成分のみで投げる。
+                    vec = -model->GetWorldVectorAxisZ();
+                    vec.y = 0.0f;    // 純水平発射。投球アニメーションの俯仰揺れに距離を左右させない
+                    if((float)length(vec) < 0.0001f)
+                        vec = -normalize(model->GetWorldVectorAxisZ());    // 真上/真下を向いていたらフルベクトルで代替
+                    else
+                        vec = normalize(vec);
                 }
 
-                throw_object->AddTranslate(vec * 5.0f);
-                grabbable->SetTranslation(vec * 5.0f);
+                if(auto physics = throw_object->GetComponent<ComponentPhysics>()) {
+                    // Jolt 対応：Kinematic 追従から Dynamic に戻し、正面方向へ初速を付与して発射。
+                    // 発射後の重力・慣性・着地・転がりは Jolt 側が担う。
+                    if(auto rb = physics->GetRigidBody()) {
+                        rb->setMotionType(physics::MotionType::Dynamic, true);
+                        // addではなくset：掴み中の手の追従速度(Kinematic追従の残速)を消して
+                        // 初速を throw_speed_ に一致させる。追従残速が距離・勢いのバラつきを生んでいた
+                        rb->setLinearVelocity(vec * throw_speed_);
+                    }
+                }
+                else {
+                    // 旧来パス（未移行）：translation_ を速度として渡す
+                    // （vec は従来 front_len=5 倍の長さだったが正規化されたので、同一の効果量 25 を掛ける）
+                    throw_object->AddTranslate(vec * 25.0f);
+                    grabbable->SetTranslation(vec * 25.0f);
+                }
 
                 if(auto collider = throw_object->GetComponent<ComponentCollision>()) {
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
@@ -114,6 +136,8 @@ void ComponentStateThrow::GUI()
 
             if(ImGui::Button(u8"削除"))
                 GetOwner()->RemoveComponent(shared_from_this());
+
+            ImGui::DragFloat(u8"Jolt投擲初速", &throw_speed_, 1.0f, 0.0f, 500.0f, "%.1f");
 
             ImGui::TreePop();
         }

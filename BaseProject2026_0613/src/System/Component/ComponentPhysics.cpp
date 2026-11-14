@@ -609,6 +609,33 @@ void ComponentPhysics::PrePhysics()
     // 一フレーム前の情報を確保しておく
     physics_transform_old_ = physics_transform_;
     world_old_             = GetWorldMatrix();    //body_->worldMatrix();
+
+    //----------------------------------------------------------
+    // 速度の指数的減衰（任意設定時のみ）
+    //  ・直線減衰：GROUND 接地中のみ掛かる。空中では飛ばさずに減速だけを担う
+    //  ・角減衰：常時。転がり抵抗
+    //----------------------------------------------------------
+    // Jolt本体の mLinearDamping/mAngularDamping はこのバージョンでは
+    // 剛体統合で適用されない（車両側のみ使用）ため、コンポーネント側で掛ける。
+    if(body_ && (linear_damping_ > 0.0f || angular_damping_ > 0.0f) && !Scene::IsPause()) {
+        const float dt          = GetDeltaTime();
+        // Joltの睡眠しきい値(0.03)と近似。停止中のボディを減衰処理で無理に起こさないためのガード
+        const float sleep_speed = 0.03f;
+
+        if(linear_damping_ > 0.0f && contact_ground_) {
+            float3 linear = body_->linearVelocity();
+            float  speed2 = (float)(linear.x * linear.x + linear.y * linear.y + linear.z * linear.z);
+            if(speed2 > sleep_speed * sleep_speed)
+                body_->setLinearVelocity(linear * expf(-linear_damping_ * dt));
+        }
+
+        if(angular_damping_ > 0.0f) {
+            float3 angular = body_->angularVelocity();
+            float  speed2  = (float)(angular.x * angular.x + angular.y * angular.y + angular.z * angular.z);
+            if(speed2 > sleep_speed * sleep_speed)
+                body_->setAngularVelocity(angular * expf(-angular_damping_ * dt));
+        }
+    }
 }
 
 void ComponentPhysics::PostPhysics()
@@ -670,6 +697,19 @@ void ComponentPhysics::PostPhysics()
                 cmp->OnHitComponentPhysicsFunc(hit_info);
         }
     }
+    // 接地判定：今回の物理ステップで GROUND タイプと接触していたら
+    // 次の PrePhysics での「接地時のみ掛かる減衰」に使う
+    bool grounded = false;
+    for(auto& info : infos_) {
+        if(info.collision_ != this)
+            continue;
+        if(info.hit_collision_ != nullptr && info.hit_collision_->GetCollisionType() == CollisionType::GROUND) {
+            grounded = true;
+            break;
+        }
+    }
+    contact_ground_ = grounded;
+
     infos_.clear();
     infos_count_ = 0;
 }
@@ -1047,7 +1087,7 @@ void ComponentPhysics::GUI()
                 if(body_type == JPH::EShapeSubType::Mesh)
                     ImGui::BeginDisabled();
 
-                if(ImGui::DragFloat(u8"重力係数(gravityFactor)", &gravity_factor_, 0.05f, 0.0f, 5.0f))
+                if(ImGui::DragFloat(u8"重力係数(gravityFactor)", &gravity_factor_, 0.05f, 0.0f, 30.0f))
                     body_->setGravityFactor(gravity_factor_);
 
                 bool active = GetPhysicsStatus(PhysicsBit::Actived);
@@ -1073,6 +1113,11 @@ void ComponentPhysics::GUI()
                 float restitution = body_->restitution();
                 if(ImGui::DragFloat(u8"跳返り係数(Restitution)", &restitution, 0.05f, 0.0f, 1.0f))
                     body_->setRestitution(restitution);
+
+                // 速度減衰（PrePhysics側で指数的減衰として適用。Jolt本体のダンピング非対応のため当機能で代替）
+                // 直線減衰は GROUND 接地中のみに適用（空中では掛からない＝勢いを殺さない）
+                ImGui::DragFloat(u8"直線減衰(接地時のみ)", &linear_damping_, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat(u8"転がり抵抗(AngularDamping)", &angular_damping_, 0.01f, 0.0f, 5.0f);
 
                 u32* bit = &physics_status_.get();
 

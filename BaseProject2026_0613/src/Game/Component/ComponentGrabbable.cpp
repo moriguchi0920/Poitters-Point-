@@ -5,6 +5,7 @@
 //---------------------------------------------------------------------------
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Component/ComponentStateControllerWalk.h>
+#include <System/Component/ComponentAttachModel.h>    // 掴み中の追従（手の位置）取得用
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 //============================================================================
@@ -19,6 +20,14 @@ void ComponentGrabbable::Init()
     auto owner     = GetOwner();
     is_grabbed_    = false;
     can_grab_this_ = true;
+
+    // Jolt 剛体を持つか（Rock/Log/Slime 等の物理を Jolt に載せ替えたオブジェクトか）
+    if(auto physics = owner->GetComponent<ComponentPhysics>()) {
+        body_ = physics->GetRigidBody();
+    }
+    else {
+        body_ = nullptr;
+    }
 }
 
 //============================================================================
@@ -28,6 +37,20 @@ void ComponentGrabbable::Update()
 {
     __super::Update();
     auto owner = GetOwner();
+
+    if(body_) {
+        // Jolt 対応：位置・速度は剛体が担うので translation_ を適用しない。
+        // 掴み可否だけ更新する（移動中は掴めない）。
+        if(IsMoving()) {
+            can_grab_this_ = false;
+        }
+        else if(!is_grabbed_) {
+            can_grab_this_ = true;
+        }
+        return;
+    }
+
+    //--- 旧来パス（未移行：ComponentCollision 自作重力＋translation_ 慣性）---
     if(!is_grabbed_) {
         // 移動量をオーナーに適用
         owner->AddTranslate(translation_);
@@ -41,6 +64,26 @@ void ComponentGrabbable::Update()
     else if(!is_grabbed_) {
         // 停止中は掴み可能
         can_grab_this_ = true;
+    }
+}
+
+//============================================================================
+// 物理シミュレーション前処理
+//============================================================================
+void ComponentGrabbable::PrePhysics()
+{
+    __super::PrePhysics();
+
+    // Jolt 対応：掴み中は Kinematic（静的追従）にして手の位置へ持っていく。
+    // 揺れ・物理的な吊り下げは一旦行わず、 AttachModel の手の位置へ等速で寄せる（要求どおり揺れなし）。
+    if(!body_ || !is_grabbed_)
+        return;
+
+    body_->setMotionType(physics::MotionType::Kinematic, true);
+
+    if(auto attach = GetOwner()->GetComponent<ComponentAttachModel>()) {
+        matrix hand_mat = attach->GetPutOnMatrix();
+        body_->moveKinematic(hand_mat.translate(), body_->rotation(), GetDeltaTime());
     }
 }
 
@@ -70,6 +113,11 @@ void ComponentGrabbable::GUI()
             //-------------------------------------------------------
 
             //if(ImGui::TreeNode("State IdleWalk")) とセット
+
+            // Jolt 対応の閾値（掴み中の追従では使わない。移動中/静止の判定だけ）
+            if(body_)
+                ImGui::DragFloat(u8"移動中しきい値", &move_speed_threshold_, 1.0f, 1.0f, 200.0f, "%.1f");
+
             ImGui::TreePop();
         }
     }
@@ -170,14 +218,26 @@ void ComponentGrabbable::Bounce()
 //============================================================================
 bool ComponentGrabbable::IsGrounded()
 {
+    if(body_) {
+        // Jolt 対応：速度がほぼゼロなら「静止＝接地扱い」とみなす。
+        // （本物の接地判定は物理内部状態だが、掴み可否・SE 用途には静止近似で足る）
+        float3 v  = body_->linearVelocity();
+        float  vx = (float)v.x, vy = (float)v.y, vz = (float)v.z;
+        return (vx * vx + vy * vy + vz * vz) < (move_speed_threshold_ * move_speed_threshold_);
+    }
     return bounce_offset_ < 0.0f;
 }
 
 //============================================================================
-// 移動中かどうかを取得(XZ成分の絶対値が閾値を超えているか)
+// 移動中かどうかを取得
 //============================================================================
 bool ComponentGrabbable::IsMoving()
 {
+    if(body_) {
+        float3 v  = body_->linearVelocity();
+        float  vx = (float)v.x, vz = (float)v.z;
+        return (vx * vx + vz * vz) > (move_speed_threshold_ * move_speed_threshold_);
+    }
     return ((translation_.x < -0.01f || 0.01f < translation_.x) || (translation_.z < -0.01f || 0.01f < translation_.z));
 }
 
