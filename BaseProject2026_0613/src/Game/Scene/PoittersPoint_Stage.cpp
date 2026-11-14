@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Stage.h"
 #include "PoittersPoint_GameOver.h"
+#include "PoittersPoint_Clear.h"
 #include "Game/Object/PoittersPoint_Player.h"
 #include "Game/Object/PoittersPoint_Ground.h"
 #include "Game/Object/PoittersPoint_Camera.h"
@@ -171,42 +172,43 @@ void PoittersPoint_Stage::Update()
     //    obj->AddTranslate({0.001, 0, 0});
     //}
 
-    //printfDx("\nDEAD ENEMY: %d", enemy_dead_count);
+    // プレイヤーを取得
+    auto player = Scene::Object::Get<Player>();
 
-    //{
-    //    // Enemyという名前がついたObjectをVectorで複数取得
-    //    auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
+    // プレイヤー死亡時は GameOver へ移行せず、敵同士の戦いを継続する
+    // プレイヤーは無効化のみ行う（戦闘から除外）
+    bool player_dead = false;
+    if(player) {
+        if(player->IsDead()) {
+            player_dead = true;
+            player->SetStatus(Object::StatusBit::NoUpdate, true);
+            player->SetStatus(Object::StatusBit::NoDraw, true);
+        }
+    }
+    else {
+        player_dead = true;
+    }
 
-    //    // Vectorのメソッドでサイズを取得
-    //    auto enemy_num = enemies.size();
+    // 敵の生存状態をチェック
+    auto enemies           = Scene::Object::GetArray<Enemy>();
+    int  alive_enemy_count = 0;
+    for(auto& e : enemies) {
+        if(!e->is_dead) {
+            alive_enemy_count++;
+        }
+    }
 
-    //    // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
-    //    auto released_enemy_num = MAX_ENEMIES - enemy_num;
-    //    // 死亡カウントの中身に代入する
-    //    enemy_dead_count = released_enemy_num;
+    // プレイヤー死亡 かつ 敵が1体 → クリア（敵の勝ち）
+    if(player_dead && alive_enemy_count == 1) {
+        Scene::Change(Scene::GetScene<PoittersPoint_Clear>());
+        return;
+    }
 
-    //    // もし死亡カウントがエネミーの上限数以上なら
-    //    if(MAX_ENEMIES <= released_enemy_num) {
-    //        //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
-
-    //        bool canCreateEnemy = true;
-    //        auto objs           = Scene::Object::GetArray<Enemy>();
-    //        for(int i = 0; i < objs.size(); i++) {
-    //            if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
-    //                canCreateEnemy = false;
-    //            }
-    //        }
-
-    //        if(canCreateEnemy) {
-    //            // エネミーを生成する
-    //            createEnemy();
-
-    //            for(int i = 0; i < objs.size(); i++) {
-    //                Scene::Object::Release(objs[i]);
-    //            }
-    //        }
-    //    }
-    //}
+    // プレイヤー生存 かつ 敵全滅 → クリア（プレイヤーの勝ち）
+    if(!player_dead && alive_enemy_count == 0) {
+        Scene::Change(Scene::GetScene<PoittersPoint_Clear>());
+        return;
+    }
 }
 
 //! @brief GUI表示
@@ -217,6 +219,13 @@ void PoittersPoint_Stage::GUI()
 
     ImGui::InputInt("(Test)Counter2", &counter2);
     ImGui::InputInt("(Test)Counter3", &counter3);
+
+    // 敵勝利表示
+    if(enemy_won_) {
+        ImGui::Begin("敵の勝利");
+        ImGui::Text("%sの勝利!", winner_enemy_name_.c_str());
+        ImGui::End();
+    }
 }
 
 void PoittersPoint_Stage::AddDeadEnemy()

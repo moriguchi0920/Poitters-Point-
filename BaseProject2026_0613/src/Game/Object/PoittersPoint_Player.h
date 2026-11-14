@@ -1,8 +1,8 @@
 ﻿#pragma once
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //! @file   PoittersPoint_Player.h
 //! @brief  PoittersPoint_Player
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 #include <System/Scene.h>
 
 class ComponentGrabbable;
@@ -39,7 +39,7 @@ public:
     bool Init() override;
 
     //! @brief 更新
-    //! 視界内の掴み可能対象を検知する
+    //! 視界内の grasp 可能対象を検知する
     void Update() override;
 
     //! @brief 当たり判定のコールバック
@@ -47,10 +47,10 @@ public:
     void OnHit(const ComponentCollision::HitInfo& hit_info) override;
 
     //! @brief 視界判定
-    //! 正面45度・距離50以内の掴み可能対象を検知する(プレイヤーとCPU共通)
+    //! 正面45度・距離50以内の grasp 可能対象を検知する(プレイヤーとCPU共通)
     void OnEyeSight();
 
-    //! @brief 視線判定で捕らえた一番近い掴み可能対象を取得する
+    //! @brief 視線判定で捕らえた一番近い grasp 可能対象を取得する
     const ObjectWeakPtr& GetEyeSightTarget() const;
 
     //! @brief ステータスデータを入力する(プレイヤーとCPUの両方で使用する)
@@ -59,8 +59,11 @@ public:
     //! @brief 移動スピードを取得する
     float GetMoveSpeed();
 
+    //! @brief 死亡状態取得
+    bool IsDead() const { return is_dead; }
+
 private:
-    // 視線判定で捕らえた一番近い掴み可能対象
+    // 視線判定で捕らえた一番近い grasp 可能対象
     ObjectWeakPtr eyesight_target_;
 
     // モデルのファイルパス
@@ -78,8 +81,10 @@ private:
     // 投げたオブジェクトがどのくらいの倍率で飛距離が増すか(1.0を基準？必要なければ削除予定)
     float throw_power_ = 1.0f;
     // オブジェクトを持ち上げる時にかかる時間に対してかける倍率(1.0でそのオブジェクトのデフォルトの時間がかかるとする)
-    // 力が強い設定のキャラクターの場合値が小さくなる
+    // 力が強い設定のキャラクターの場合値が大きくなる
     float lift_time_ratio_ = 1.0f;
+
+    bool is_dead = false;    //!< 死亡状態
 };
 
 }    // namespace PoittersPoint

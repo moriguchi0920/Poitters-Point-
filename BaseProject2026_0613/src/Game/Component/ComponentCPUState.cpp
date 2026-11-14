@@ -1,4 +1,8 @@
-ï»¿#pragma once
+#pragma once
+//---------------------------------------------------------------------------
+//! @file   ComponentCPUState.cpp
+//! @brief  CPUó‘Ô§ŒäƒRƒ“ƒ|[ƒlƒ“ƒg
+//---------------------------------------------------------------------------
 #include <Game/Component/ComponentCPUState.h>
 #include <Game/Component/ComponentStateTargetWalk.h>
 #include <Game/Component/ComponentStateGrab.h>
@@ -10,6 +14,9 @@
 #include <Game/Component/ComponentStateSetRangeWalk.h>
 #include <Game/Component/ComponentStateThink.h>
 
+//===========================================================================
+// ‰Šú‰»ˆ—
+//===========================================================================
 void ComponentCPUState::Init()
 {
     __super::Init();
@@ -18,13 +25,16 @@ void ComponentCPUState::Init()
 
     can_grab_  = true;
     can_throw_ = false;
-    // æ€è€ƒã¯prevã«å…¥ã‚Œãªã„ãŸã‚ã€è¡Œå‹•å®Ÿç¸¾ãŒãªã„åˆæœŸçŠ¶æ…‹ã¯
-    // æ‰‹ãŒç©ºã„ã¦ã„ã‚‹ATTACKå¾Œã¨åŒã˜åŸºæº–ã§æœ€åˆã®è¡Œå‹•ã‚’æ±ºã‚ã•ã›ã‚‹
+    // vl‚Íprev‚É“ü‚ê‚È‚¢‚½‚ßAs“®ÀÑ‚ª‚È‚¢‰Šúó‘Ô‚Í
+    // è‚ª‹ó‚¢‚Ä‚¢‚éATTACKŒã‚Æ“¯‚¶Šî€‚ÅÅ‰‚Ìs“®‚ğŒˆ‚ß‚³‚¹‚é
     prev_action_ = CPU_ACTION::ACTION_ATTACK;
     cur_action_  = CPU_ACTION::ACTION_THINK;
     owner->AddComponent<ComponentStateThink>()->SetThinkingFinishTime(think_time_);
 }
 
+//===========================================================================
+// XVˆ—
+//===========================================================================
 void ComponentCPUState::Update()
 {
     __super::Update();
@@ -42,12 +52,12 @@ void ComponentCPUState::Update()
         }
     }
 
-    // å›é¿ã‚¸ãƒ£ãƒ³ãƒ—ã®ã‚¯ãƒ¼ãƒ«ãƒ€ã‚¦ãƒ³ã‚’é€²ã‚ã‚‹
+    // ‰ñ”ğƒWƒƒƒ“ƒv‚ÌƒN[ƒ‹ƒ_ƒEƒ“‚ği‚ß‚é
     if(evasion_jump_cooldown_timer_ > 0.0f) {
         evasion_jump_cooldown_timer_ -= GetDeltaTime();
     }
 
-    // è¡Œå‹•ã”ã¨ã®æ›´æ–°
+    // s“®‚²‚Æ‚ÌXV
     switch(cur_action_) {
     case CPU_ACTION::ACTION_THINK:
         {
@@ -70,8 +80,8 @@ void ComponentCPUState::Update()
                         }
                     }
                 }
-                // æ´ã¿å¯¾è±¡ã«å½“ãŸã£ã¦æ´ã‚ã‚‹çŠ¶æ…‹ã«ãªã‚‹ã¾ã§æ­©ãç¶šã‘ã‚‹
-                // æ´ã‚ãšã«ãŸã©ã‚Šç€ã‘ãªã„/æ­¢ã¾ã£ã¦ã—ã¾ã£ãŸã‚‰è€ƒãˆç›´ã™
+                // ’Í‚İ‘ÎÛ‚É“–‚½‚Á‚Ä’Í‚ß‚éó‘Ô‚É‚È‚é‚Ü‚Å•à‚«‘±‚¯‚é
+                // ’Í‚ß‚¸‚É‚½‚Ç‚è’…‚¯‚È‚¢/~‚Ü‚Á‚Ä‚µ‚Ü‚Á‚½‚çl‚¦’¼‚·
                 if((component_walk->GetNearby() || component_walk->GetStopped())) {
                     if(!StartGrab())
                         StartThink();
@@ -96,7 +106,7 @@ void ComponentCPUState::Update()
         }
     case CPU_ACTION::ACTION_EVASION_JUMP:
         {
-            // ã‚¸ãƒ£ãƒ³ãƒ—ã‚¹ãƒ†ãƒ¼ãƒˆã¯ç€åœ°å¾Œã«è‡ªåˆ†ã§æ¶ˆãˆã‚‹ãŸã‚ã€æ¶ˆãˆãŸã‚‰è€ƒãˆç›´ã™
+            // ƒWƒƒƒ“ƒvƒXƒe[ƒg‚Í’…’nŒã‚É©•ª‚ÅÁ‚¦‚é‚½‚ßAÁ‚¦‚½‚çl‚¦’¼‚·
             if(!owner->GetComponent<ComponentStatePlayerJump>()) {
                 StartThink();
             }
@@ -106,7 +116,7 @@ void ComponentCPUState::Update()
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
                 if((component_walk->GetNearby() || component_walk->GetStopped()) && can_throw_) {
-                    // ä½ç¢ºç‡ã§ã€æŠ•ã’ã®ä»£ã‚ã‚Šã«ãã®å ´ã§çœŸä¸Šã¸ã‚¸ãƒ£ãƒ³ãƒ—ã—ã¦å›é¿ã™ã‚‹
+                    // ’áŠm—¦‚ÅA“Š‚°‚Ì‘ã‚í‚è‚É‚»‚Ìê‚Å^ã‚ÖƒWƒƒƒ“ƒv‚µ‚Ä‰ñ”ğ‚·‚é
                     if(IsEvadeJumpTrigger()) {
                         StartEvadeJump();
                         break;
@@ -126,25 +136,28 @@ void ComponentCPUState::Update()
     }
 }
 
+//===========================================================================
+// GUIˆ—
+//===========================================================================
 void ComponentCPUState::GUI()
 {
     __super::GUI();
 
-    // GUIå†…ã«å‡ºç¾ã•ã›ã‚‹
+    // GUI“à‚ÉoŒ»‚³‚¹‚é
     ImGui::Begin(GetOwner()->GetName().data());
     {
-        ImGui::Separator();    // ç·šãŒå‡ºã¦ãã‚‹
+        ImGui::Separator();    // ü‚ªo‚Ä‚­‚é
         if(ImGui::TreeNode("CPU State")) {
             //-------------------------------------------------------
-            // å…±é€šéƒ¨åˆ†(å…±é€šåŒ–ã—ãŸã„)
+            // ‹¤’Ê•”•ª(‹¤’Ê‰»‚µ‚½‚¢)
 
-            // æœ‰åŠ¹/ç„¡åŠ¹
+            // —LŒø/–³Œø
             bool enable = GetStatus(StatusBit::Enable);
-            if(ImGui::Checkbox(u8"æœ‰åŠ¹", &enable))
+            if(ImGui::Checkbox(u8"—LŒø", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            // GUIä¸Šã§ã‚ªãƒ¼ãƒŠãƒ¼ã‹ã‚‰è‡ªåˆ†(SampleObjectController)ã‚’å‰Šé™¤ã—ã¾ã™
-            if(ImGui::Button(u8"å‰Šé™¤"))
+            // GUIã‚ÅƒI[ƒi[‚©‚ç©•ª(SampleObjectController)‚ğíœ‚µ‚Ü‚·
+            if(ImGui::Button(u8"íœ"))
                 GetOwner()->RemoveComponent(shared_from_this());
             //-------------------------------------------------------
 
@@ -156,7 +169,7 @@ void ComponentCPUState::GUI()
 
 void ComponentCPUState::StartThink()
 {
-    // æ€è€ƒã¯prevã«å…¥ã‚Œãªã„
+    // vl‚Íprev‚É“ü‚ê‚È‚¢
     if(cur_action_ != CPU_ACTION::ACTION_THINK) {
         prev_action_ = cur_action_;
         cur_action_  = CPU_ACTION::ACTION_THINK;
@@ -167,7 +180,7 @@ void ComponentCPUState::StartThink()
 
 void ComponentCPUState::RestartThink()
 {
-    // è¡Œå‹•ä¸­ã®è€ƒãˆç›´ã—ã¯StartThinkã ã¨prevã«è¨˜éŒ²ã—ã¦ã—ã¾ã†ãŸã‚ã€æ€è€ƒæ™‚é–“ã ã‘å»¶é•·ã™ã‚‹
+    // s“®’†‚Ìl‚¦’¼‚µ‚ÍStartThink‚¾‚Æprev‚É‹L˜^‚µ‚Ä‚µ‚Ü‚¤‚½‚ßAvlŠÔ‚¾‚¯‰„’·‚·‚é
     if(auto think = GetOwner()->GetComponent<ComponentStateThink>()) {
         think->SetThinkingFinishTime(think->GetCurThinkingTime() + think_time_);
     }
@@ -181,7 +194,7 @@ void ComponentCPUState::StartGrabAction(ObjectWeakPtr target)
         return;
     }
     target_want_grab_ = target;
-    // æ‹¾ãˆã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒã‚ã‚‹ã¨ã“ã‚ã¾ã§æ­©ã
+    // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‚ ‚é‚Æ‚±‚ë‚Ü‚Å•à‚­
     auto target_walk = ChangeState<ComponentStateTargetWalk>();
     target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     target_walk->SetTargetPtr(target);
@@ -193,13 +206,13 @@ void ComponentCPUState::StartAvoidAttacker()
 {
     auto owner                  = GetOwner();
     auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
-    // ã‚‚ã®ã‚’æŒã£ã¦ã„ã‚‹æœ€ã‚‚è¿‘ã„ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚’å–å¾—
+    // ‚à‚Ì‚ğ‚Á‚Ä‚¢‚éÅ‚à‹ß‚¢ƒLƒƒƒ‰ƒNƒ^[‚ğæ“¾
     auto attacker = GetNearestAttacker();
     if(!character_casted_owner || attacker.expired()) {
         return;
     }
 
-    // æ”»æ’ƒè€…ã‹ã‚‰é›¢ã‚Œã‚‹æ–¹å‘ã«é€ƒã’ã‚‹
+    // UŒ‚Ò‚©‚ç—£‚ê‚é•ûŒü‚É“¦‚°‚é
     float3 dir    = owner->GetTranslate() - attacker.lock()->GetTranslate();
     dir.y         = 0.0f;
     float dir_len = sqrtf(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
@@ -210,7 +223,7 @@ void ComponentCPUState::StartAvoidAttacker()
         dir = dir * (1.0f / dir_len);
     }
 
-    // æ”»æ’ƒè€…ã‹ã‚‰é›¢ã‚Œã‚‹è·é›¢ã ã‘æ­©ã
+    // UŒ‚Ò‚©‚ç—£‚ê‚é‹——£‚¾‚¯•à‚­
     auto range_walk = ChangeState<ComponentStateSetRangeWalk>();
     range_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     range_walk->SetWalkDirection(dir);
@@ -227,7 +240,7 @@ void ComponentCPUState::StartAttackAction()
         return;
     }
 
-    // æœ€ã‚‚è¿‘ã„ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã¾ã§æ­©ã„ã¦æŠ•ã’ã‚‹
+    // Å‚à‹ß‚¢ƒLƒƒƒ‰ƒNƒ^[‚Ü‚Å•à‚¢‚Ä“Š‚°‚é
     auto target_walk = ChangeState<ComponentStateTargetWalk>();
     target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     target_walk->SetTargetPtr(GetNearestCharacter());
@@ -240,12 +253,12 @@ bool ComponentCPUState::IsEvadeJumpTrigger()
 {
     auto owner = GetOwner();
 
-    // ã‚¯ãƒ¼ãƒ«ãƒ€ã‚¦ãƒ³ä¸­ã¯ã‚¸ãƒ£ãƒ³ãƒ—ã—ãªã„
+    // ƒN[ƒ‹ƒ_ƒEƒ“’†‚ÍƒWƒƒƒ“ƒv‚µ‚È‚¢
     if(evasion_jump_cooldown_timer_ > 0.0f) {
         return false;
     }
 
-    // æœ€ã‚‚è¿‘ã„æ”»æ’ƒè€…(ã‚‚ã®ã‚’æŒã£ã¦ã„ã‚‹ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼)ãŒè¿‘ã„æ™‚ã«è„…å¨ã¨ã¿ãªã™
+    // Å‚à‹ß‚¢UŒ‚Ò(‚à‚Ì‚ğ‚Á‚Ä‚¢‚éƒLƒƒƒ‰ƒNƒ^[)‚ª‹ß‚¢‚É‹ºˆĞ‚Æ‚İ‚È‚·
     auto attacker = GetNearestAttacker().lock();
     if(!attacker) {
         return false;
@@ -256,7 +269,7 @@ bool ComponentCPUState::IsEvadeJumpTrigger()
         return false;
     }
 
-    // é »ç™ºã—ãªã„ã‚ˆã†ã«ä½ç¢ºç‡ã§æŠ½é¸ã™ã‚‹
+    // •p”­‚µ‚È‚¢‚æ‚¤‚É’áŠm—¦‚Å’Š‘I‚·‚é
     return (rand() % 100) < evasion_jump_chance_percent_;
 }
 
@@ -267,7 +280,7 @@ void ComponentCPUState::StartEvadeJump()
         return;
     }
 
-    // æ­©ãã‚¹ãƒ†ãƒ¼ãƒˆã®å‘ãã‚’ã‚¸ãƒ£ãƒ³ãƒ—ã«å¼•ãç¶™ã
+    // •à‚«ƒXƒe[ƒg‚ÌŒü‚«‚ğƒWƒƒƒ“ƒv‚Éˆø‚«Œp‚®
     float front_rot = 0.0f;
     if(auto walk = owner->GetComponent<ComponentStateWalkBase>()) {
         front_rot = walk->GetFrontRotate();
@@ -284,33 +297,33 @@ void ComponentCPUState::StartEvadeJump()
 
 void ComponentCPUState::ChangeActionFlexible()
 {
-    // æ€è€ƒã¯prevã«å…¥ã‚Œãªã„ãŸã‚ã€ã“ã®caseã«æ¥ã‚‹ã“ã¨ã¯ãªã„(å®‰å…¨ã®ãŸã‚ä½•ã‚‚ã—ãªã„)
+    // vl‚Íprev‚É“ü‚ê‚È‚¢‚½‚ßA‚±‚Ìcase‚É—ˆ‚é‚±‚Æ‚Í‚È‚¢(ˆÀ‘S‚Ì‚½‚ß‰½‚à‚µ‚È‚¢)
     if(prev_action_ == CPU_ACTION::ACTION_THINK) {
         return;
     }
 
-    // ç›´å‰ã®è¡Œå‹•ã”ã¨ã«æ¬¡ã®è¡Œå‹•ã‚’æ±ºã‚ã‚‹
-    // ACTIONã‚’è¿½åŠ ã™ã‚‹å ´åˆã¯ã€caseã¨ãã®è¡Œå‹•ã‚’é–‹å§‹ã™ã‚‹é–¢æ•°ã‚’å¢—ã‚„ã™ã ã‘ã§å¯¾å¿œã§ãã‚‹
+    // ’¼‘O‚Ìs“®‚²‚Æ‚ÉŸ‚Ìs“®‚ğŒˆ‚ß‚é
+    // ACTION‚ğ’Ç‰Á‚·‚éê‡‚ÍAcase‚Æ‚»‚Ìs“®‚ğŠJn‚·‚éŠÖ”‚ğ‘‚â‚·‚¾‚¯‚Å‘Î‰‚Å‚«‚é
     switch(prev_action_) {
     case CPU_ACTION::ACTION_ATTACK:
         {
-            // æŠ•ã’ãŸå¾Œã¯æ‰‹ãŒç©ºã„ã¦ã„ã‚‹ãŸã‚ã€è¿‘ãã«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’æŒã£ã¦ã„ã‚‹æ•µãŒã„ã‚‹ãªã‚‰é€ƒã’ã‚‹
+            // “Š‚°‚½Œã‚Íè‚ª‹ó‚¢‚Ä‚¢‚é‚½‚ßA‹ß‚­‚ÉƒIƒuƒWƒFƒNƒg‚ğ‚Á‚Ä‚¢‚é“G‚ª‚¢‚é‚È‚ç“¦‚°‚é
             if(IsAttackerNearby()) {
                 StartAvoidAttacker();
             }
-            // æ‹¾ãˆã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒè¿‘æ‰€ã«ã‚ã‚‹ãªã‚‰æ‹¾ã„ã«è¡Œã
+            // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‹ßŠ‚É‚ ‚é‚È‚çE‚¢‚És‚­
             else if(auto target = GetNearestGrabbableObj().lock()) {
                 StartGrabAction(target);
             }
             else {
-                // ã©ã¡ã‚‰ã‚‚ãªã„å ´åˆã¯è€ƒãˆç›´ã™
+                // ‚Ç‚¿‚ç‚à‚È‚¢ê‡‚Íl‚¦’¼‚·
                 RestartThink();
             }
             break;
         }
     case CPU_ACTION::ACTION_AVOID_ATTACKER:
         {
-            // é€ƒã’ãŸå¾Œã¯åŸºæœ¬çš„ã«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’æ‹¾ã„ã«è¡Œã
+            // “¦‚°‚½Œã‚ÍŠî–{“I‚ÉƒIƒuƒWƒFƒNƒg‚ğE‚¢‚És‚­
             if(auto target = GetNearestGrabbableObj().lock()) {
                 StartGrabAction(target);
             }
@@ -322,21 +335,21 @@ void ComponentCPUState::ChangeActionFlexible()
     case CPU_ACTION::ACTION_EVASION_JUMP:
         {
             if(GetGrabbing()) {
-                // ã‚¸ãƒ£ãƒ³ãƒ—å¾Œã‚‚ã‚¢ã‚¤ãƒ†ãƒ ã‚’æŒã£ã¦ã„ã‚‹ãªã‚‰æŠ•ã’ç›´ã—ã«è¡Œã
+                // ƒWƒƒƒ“ƒvŒã‚àƒAƒCƒeƒ€‚ğ‚Á‚Ä‚¢‚é‚È‚ç“Š‚°’¼‚µ‚És‚­
                 StartAttackAction();
             }
             else {
-                // æŠ•ã’ãŸå¾Œã¨åŒã˜å‹•ä½œ
-                // è¿‘ãã«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’æŒã£ã¦ã„ã‚‹æ•µãŒã„ã‚‹ãªã‚‰é€ƒã’ã‚‹
+                // “Š‚°‚½Œã‚Æ“¯‚¶“®ì
+                // ‹ß‚­‚ÉƒIƒuƒWƒFƒNƒg‚ğ‚Á‚Ä‚¢‚é“G‚ª‚¢‚é‚È‚ç“¦‚°‚é
                 if(IsAttackerNearby()) {
                     StartAvoidAttacker();
                 }
-                // æ‹¾ãˆã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒè¿‘æ‰€ã«ã‚ã‚‹ãªã‚‰æ‹¾ã„ã«è¡Œã
+                // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‹ßŠ‚É‚ ‚é‚È‚çE‚¢‚És‚­
                 else if(auto target = GetNearestGrabbableObj().lock()) {
                     StartGrabAction(target);
                 }
                 else {
-                    // ã©ã¡ã‚‰ã‚‚ãªã„å ´åˆã¯è€ƒãˆç›´ã™
+                    // ‚Ç‚¿‚ç‚à‚È‚¢ê‡‚Íl‚¦’¼‚·
                     RestartThink();
                 }
             }
@@ -345,21 +358,21 @@ void ComponentCPUState::ChangeActionFlexible()
     case CPU_ACTION::ACTION_GRAB:
         {
             if(GetGrabbing()) {
-                // æ‹¾ã£ãŸå¾Œã¯æ•µã«ã‚‚ã®ã‚’æŠ•ã’ã«è¡Œã
+                // E‚Á‚½Œã‚Í“G‚É‚à‚Ì‚ğ“Š‚°‚És‚­
                 StartAttackAction();
             }
             else {
-                // æ‹¾ãˆãªã‹ã£ãŸã®ã§æ”»æ’ƒå¾Œã¨åŒã˜å‹•ä½œ
-                // æŠ•ã’ãŸå¾Œã¯æ‰‹ãŒç©ºã„ã¦ã„ã‚‹ãŸã‚ã€è¿‘ãã«ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’æŒã£ã¦ã„ã‚‹æ•µãŒã„ã‚‹ãªã‚‰é€ƒã’ã‚‹
+                // E‚¦‚È‚©‚Á‚½‚Ì‚ÅUŒ‚Œã‚Æ“¯‚¶“®ì
+                // “Š‚°‚½Œã‚Íè‚ª‹ó‚¢‚Ä‚¢‚é‚½‚ßA‹ß‚­‚ÉƒIƒuƒWƒFƒNƒg‚ğ‚Á‚Ä‚¢‚é“G‚ª‚¢‚é‚È‚ç“¦‚°‚é
                 if(IsAttackerNearby()) {
                     StartAvoidAttacker();
                 }
-                // æ‹¾ãˆã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãŒè¿‘æ‰€ã«ã‚ã‚‹ãªã‚‰æ‹¾ã„ã«è¡Œã
+                // E‚¦‚éƒIƒuƒWƒFƒNƒg‚ª‹ßŠ‚É‚ ‚é‚È‚çE‚¢‚És‚­
                 else if(auto target = GetNearestGrabbableObj().lock()) {
                     StartGrabAction(target);
                 }
                 else {
-                    // ã©ã¡ã‚‰ã‚‚ãªã„å ´åˆã¯è€ƒãˆç›´ã™
+                    // ‚Ç‚¿‚ç‚à‚È‚¢ê‡‚Íl‚¦’¼‚·
                     RestartThink();
                 }
             }
@@ -375,11 +388,11 @@ void ComponentCPUState::ChangeActionRandom()
 ObjectWeakPtr ComponentCPUState::GetNearestCharacter()
 {
     auto owner = GetOwner();
-    // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚’é…åˆ—ã§å–å¾—
+    // ƒLƒƒƒ‰ƒNƒ^[‚ğ”z—ñ‚Åæ“¾
     auto characters = Scene::Object::GetArray<PoittersPoint::Player>();
-    // ä¸€ç•ªè¿‘ã„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ãƒã‚¤ãƒ³ã‚¿
+    // ˆê”Ô‹ß‚¢ƒIƒuƒWƒFƒNƒg‚Ìƒ|ƒCƒ“ƒ^
     ObjectPtr nearest_ptr = nullptr;
-    // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã¸ã®è·é›¢ã‚’æ¯”ã¹ã‚‹ç”¨ã®floatæœ€å¤§å€¤(ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã®ä¸­ã‹ã‚‰ä¸€ç•ªè¿‘ã„ã‚‚ã®ã‚’æ±‚ã‚ã‚‹ãŸã‚)
+    // ƒLƒƒƒ‰ƒNƒ^[‚Ö‚Ì‹——£‚ğ”ä‚×‚é—p‚ÌfloatÅ‘å’l(ƒLƒƒƒ‰ƒNƒ^[‚Ì’†‚©‚çˆê”Ô‹ß‚¢‚à‚Ì‚ğ‹‚ß‚é‚½‚ß)
     float nearest_distance = FLT_MAX;
     for(auto& character : characters) {
         if(character == owner->SharedThis())
@@ -399,28 +412,28 @@ ObjectWeakPtr ComponentCPUState::GetNearestCharacter()
 ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 {
     auto owner = GetOwner();
-    // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚’é…åˆ—ã§å–å¾—
+    // ƒLƒƒƒ‰ƒNƒ^[‚ğ”z—ñ‚Åæ“¾
     auto characters = Scene::Object::GetArray<PoittersPoint::Player>();
-    // ä¸€ç•ªè¿‘ã„ã‚‚ã®ã‚’æŒã£ã¦ã„ã‚‹ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã®ãƒã‚¤ãƒ³ã‚¿
+    // ˆê”Ô‹ß‚¢‚à‚Ì‚ğ‚Á‚Ä‚¢‚éƒLƒƒƒ‰ƒNƒ^[‚Ìƒ|ƒCƒ“ƒ^
     ObjectPtr attacker_ptr = nullptr;
-    // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã¸ã®è·é›¢ã‚’æ¯”ã¹ã‚‹ç”¨ã®floatæœ€å¤§å€¤(ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã®ä¸­ã‹ã‚‰ä¸€ç•ªè¿‘ã„ã‚‚ã®ã‚’æ±‚ã‚ã‚‹ãŸã‚)
+    // ƒLƒƒƒ‰ƒNƒ^[‚Ö‚Ì‹——£‚ğ”ä‚×‚é—p‚ÌfloatÅ‘å’l(ƒLƒƒƒ‰ƒNƒ^[‚Ì’†‚©‚çˆê”Ô‹ß‚¢‚à‚Ì‚ğ‹‚ß‚é‚½‚ß)
     float nearest_distance = FLT_MAX;
-    // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼é…åˆ—ã‚’èµ°æŸ»
+    // ƒLƒƒƒ‰ƒNƒ^[”z—ñ‚ğ‘–¸
     for(auto& character : characters) {
-        // è‡ªåˆ†ã¯ã¯ã˜ã
+        // ©•ª‚Í‚Í‚¶‚­
         if(std::static_pointer_cast<Object>(character) == owner->SharedThis())
             continue;
-        // å¯¾è±¡ã®ã‚¹ãƒ†ãƒ¼ãƒˆãƒã‚·ãƒ³å–å¾—
+        // ‘ÎÛ‚ÌƒXƒe[ƒgƒ}ƒVƒ“æ“¾
         if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
-            // åº§æ¨™ã‚’æ¸›ç®—ã—ãƒ™ã‚¯ãƒˆãƒ«ã‚’å–å¾—
+            // À•W‚ğŒ¸Z‚µƒxƒNƒgƒ‹‚ğæ“¾
             float3 vec = character->GetTranslate() - owner->GetTranslate();
-            // ãƒ™ã‚¯ãƒˆãƒ«ã‹ã‚‰è·é›¢ã‚’å–å¾—
+            // ƒxƒNƒgƒ‹‚©‚ç‹——£‚ğæ“¾
             float dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-            // ã‚‚ã®ã‚’æŒã£ã¦ã„ã‚‹æœ€ã‚‚è¿‘ã„ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚’æ”»æ’ƒè€…ã¨ã™ã‚‹
+            // ‚à‚Ì‚ğ‚Á‚Ä‚¢‚éÅ‚à‹ß‚¢ƒLƒƒƒ‰ƒNƒ^[‚ğUŒ‚Ò‚Æ‚·‚é
             if(state_machine->GetGrabbing() && dis < nearest_distance) {
-                // æœ€çŸ­è·é›¢ã‚’æ›´æ–°
+                // Å’Z‹——£‚ğXV
                 nearest_distance = dis;
-                // æ”»æ’ƒè€…ã¨ã—ã¦ç™»éŒ²
+                // UŒ‚Ò‚Æ‚µ‚Ä“o˜^
                 attacker_ptr = character;
             }
         }
@@ -432,28 +445,28 @@ ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
 {
     auto owner = GetOwner();
-    // ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã¨ãªã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’å–å¾—(ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã¯ä»®ã§å²©ã®ã¿ã¨ã™ã‚‹)
+    // ƒ^[ƒQƒbƒg‚Æ‚È‚éƒIƒuƒWƒFƒNƒg‚ğæ“¾(ƒ^[ƒQƒbƒg‚Í‰¼‚ÅŠâ‚Ì‚İ‚Æ‚·‚é)
     auto      targets   = Scene::Object::GetArray<PoittersPoint::Rock>();
     ObjectPtr targetPtr = nullptr;
-    // æœ€çŸ­è·é›¢
+    // Å’Z‹——£
     float nearest_distance = FLT_MAX;
-    // å²©ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’èµ°æŸ»
+    // ŠâƒIƒuƒWƒFƒNƒg‚ğ‘–¸
     for(auto& target : targets) {
-        // è·é›¢ã‚’ç®—å‡ºã—æ¯”è¼ƒã€ä¸€ç•ªè¿‘ã„å²©ã‚’ç›®çš„åœ°ã¸
+        // ‹——£‚ğZo‚µ”äŠrAˆê”Ô‹ß‚¢Šâ‚ğ–Ú“I’n‚Ö
         if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
             if(grabbable->GetIsGrabbed()) {
                 continue;
             }
         }
-        // åº§æ¨™ã‚’æ¸›ç®—ã—ãƒ™ã‚¯ãƒˆãƒ«ã‚’å–å¾—
+        // À•W‚ğŒ¸Z‚µƒxƒNƒgƒ‹‚ğæ“¾
         float3 vec = target->GetTranslate() - owner->GetTranslate();
-        // è·é›¢å–å¾—
+        // ‹——£æ“¾
         float dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-        // æ¯”è¼ƒã—ã¦æœ€çŸ­ã§ã‚ã‚Œã°
+        // ”äŠr‚µ‚ÄÅ’Z‚Å‚ ‚ê‚Î
         if(dis < nearest_distance) {
-            // æœ€çŸ­è·é›¢ã‚’æ›´æ–°
+            // Å’Z‹——£‚ğXV
             nearest_distance = dis;
-            // ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã¨ã—ã¦ç™»éŒ²
+            // ƒ^[ƒQƒbƒg‚Æ‚µ‚Ä“o˜^
             targetPtr = target;
         }
     }

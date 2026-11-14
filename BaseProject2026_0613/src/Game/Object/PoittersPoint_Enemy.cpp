@@ -1,4 +1,4 @@
-ï»¿//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Enemy.cpp
 //! @brief  PoittersPoint_Enemy
 //---------------------------------------------------------------------------
@@ -11,19 +11,18 @@
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Component/ComponentHitPoints.h>
 #include <Game/Component/ComponentStateDead.h>
-
 #include <Game/Component/ComponentKnockBack.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
 
 //============================================================================
-// åˆæœŸåŒ–å‡¦ç†
+// ‰Šú‰»ˆ—
 //============================================================================
 bool Enemy::Init()
 {
-    // è¦ª(ç¶™æ‰¿å…ƒã®åŸºåº•ã‚¯ãƒ©ã‚¹)ã®Inité–¢æ•°ã‚’å‘¼ã¶
-    // ã“ã‚ŒãŒãªã‘ã‚Œã°abort()ãŒå‘¼ã°ã‚Œã‚‹
+    // e(Œp³Œ³‚ÌŠî’êƒNƒ‰ƒX)‚ÌInitŠÖ”‚ğŒÄ‚Ô
+    // ‚±‚ê‚ª‚È‚¯‚ê‚Îabort()‚ªŒÄ‚Î‚ê‚é
     Super::Init();
     //__super::Init();
 
@@ -43,21 +42,21 @@ bool Enemy::Init()
         model->SetScaleAxisXYZ({0.12f, 0.12f, 0.12f});
     }
 
-    // ãƒ©ãƒ ãƒ€å¼
+    // ƒ‰ƒ€ƒ_®
     auto randomRange = [](int start, int end) { return start + rand() % ((end - start) + 1); };
 
     //SetTranslate({30, 5, -30});
     SetTranslate({randomRange(-150, 150), 50, randomRange(-150, 150)});
 
     AddComponent<ComponentCollisionCapsule>()
-        // æ‰€å±ã™ã‚‹ã‚°ãƒ«ãƒ¼ãƒ—ã‚’ã€ŒENEMYã€ã¨ã—ã¾ã™
+        // Š‘®‚·‚éƒOƒ‹[ƒv‚ğuENEMYv‚Æ‚µ‚Ü‚·
         ->SetCollisionGroup(ComponentCollision::CollisionGroup::ENEMY)
-        ->SetRadius(4.0f)     // ã‚³ãƒªã‚¸ãƒ§ãƒ³ã®åŠå¾„ã‚’4.0 ã«ã™ã‚‹
-        ->SetHeight(23.0f)    // ã‚³ãƒªã‚¸ãƒ§ãƒ³ã®é«˜ã•ã‚’23.0 ã«ã™ã‚‹
-        ->UseGravity();       // Collisionã®é‡åŠ›ã‚’æœ‰åŠ¹ã«ã—ã¾ã™
+        ->SetRadius(4.0f)     // ƒRƒŠƒWƒ‡ƒ“‚Ì”¼Œa‚ğ4.0 ‚É‚·‚é
+        ->SetHeight(23.0f)    // ƒRƒŠƒWƒ‡ƒ“‚Ì‚‚³‚ğ23.0 ‚É‚·‚é
+        ->UseGravity();       // Collision‚Ìd—Í‚ğ—LŒø‚É‚µ‚Ü‚·
 
-    //â†‘ if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
-    //   ã¯å‡¦ç†ãŒå¢—ãˆã‚‹ã®ã§å‰Šé™¤
+    //ª if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
+    //   ‚Íˆ—‚ª‘‚¦‚é‚Ì‚Åíœ
 
     //AddComponent<ComponentObjectController>();
     //if(auto ctl = GetComponent<ComponentObjectController>()) {
@@ -65,89 +64,83 @@ bool Enemy::Init()
     //    ctl->SetRotateSpeed(20.0f);
     //}
 
-    // æ´ã¾ã‚Œã¦æŠ•ã’ã‚‰ã‚Œã‚‹ã‚ˆã†ã«ã™ã‚‹
+    // ’Í‚Ü‚ê‚Ä“Š‚°‚ç‚ê‚é‚æ‚¤‚É‚·‚é
     auto grabbable = AddComponent<ComponentGrabbable>();
     grabbable->SetLiftTime(0.5f);
     grabbable->SetDamage(1.0f);
 
     AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(2.0f);
 
-    AddComponent<ComponentKnockBack>();
-
-    // ã‚³ãƒªã‚¸ãƒ§ãƒ³ä»¥å¤–ã®ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã«ã‚‚å½“ãŸã‚Šã‚’è¿”ã™ã‚ˆã†ã«ã™ã‚‹
-    // ã“ã‚ŒãŒæœ‰åŠ¹ã§ãªã„ã¨ KnockBack ã® OnHitComponent ãŒå‘¼ã°ã‚Œãªã„
-    SetStatus(Object::StatusBit::OnHitAllComponent, true);
-
     return true;
 }
 
 //============================================================================
-// æ›´æ–°å‡¦ç†
+// XVˆ—
 //============================================================================
 void Enemy::Update()
 {
     __super::Update();
 
     //-------------------------------------------------------------------------------
-    // æ•µã®æ–¹å‘ã‚’ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®ã»ã†ã«å‘ã‘ã‚‹ã€€
+    // “G‚Ì•ûŒü‚ğƒvƒŒƒCƒ„[‚Ì‚Ù‚¤‚ÉŒü‚¯‚é@
     //-------------------------------------------------------------------------------
     auto player = Scene::Object::Get<Object>("Player");
 
-    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã¨ã‚¨ãƒãƒŸãƒ¼ãŒå­˜åœ¨ã—ã¦ã„ã‚‹æ™‚ã®ã¿
+    // ƒvƒŒƒCƒ„[‚ÆƒGƒlƒ~[‚ª‘¶İ‚µ‚Ä‚¢‚é‚Ì‚İ
     if(player && is_down == false && is_dead == false) {
         float3 vec    = player->GetTranslate() - GetTranslate();
         auto   length = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
         auto   model  = GetComponent<ComponentModel>();
-        // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®æ–¹å‘ã«ã€æ•µã®å‘ãã‚’æœ€å¤§3åº¦å›è»¢ã•ã›ã¾ã™
+        // ƒvƒŒƒCƒ„[‚Ì•ûŒü‚ÉA“G‚ÌŒü‚«‚ğÅ‘å3“x‰ñ“]‚³‚¹‚Ü‚·
         SetRotationToPositionWithLimit(player->GetTranslate(), 3.0f);
 
         //==========================================
-        // çŠ¶æ…‹ã®æ›´æ–°
+        // ó‘Ô‚ÌXV
         //==========================================
         if(is_running) {
-            // ç¾åœ¨èµ°ã£ã¦ã„ã‚‹ãªã‚‰ã€ååˆ†ã«è¿‘ã¥ã(35.0æœªæº€)ã¾ã§ã¯ã€Œèµ°ã‚Šã€ã‚’ç¶­æŒã™ã‚‹
+            // Œ»İ‘–‚Á‚Ä‚¢‚é‚È‚çA\•ª‚É‹ß‚Ã‚­(35.0–¢–)‚Ü‚Å‚Íu‘–‚èv‚ğˆÛ‚·‚é
             if(length < 35.0f) {
-                is_running = false;    // æ­©ãçŠ¶æ…‹ã¸ç§»è¡Œ
+                is_running = false;    // •à‚«ó‘Ô‚ÖˆÚs
             }
         }
         else {
-            // ç¾åœ¨æ­©ã„ã¦ã„ã‚‹ãªã‚‰ã€ååˆ†ã«é›¢ã‚Œã‚‹(45.0ä»¥ä¸Š)ã¾ã§ã¯ã€Œæ­©ãã€ã‚’ç¶­æŒã™ã‚‹
+            // Œ»İ•à‚¢‚Ä‚¢‚é‚È‚çA\•ª‚É—£‚ê‚é(45.0ˆÈã)‚Ü‚Å‚Íu•à‚«v‚ğˆÛ‚·‚é
             if(45.0f <= length) {
-                is_running = true;    // èµ°ã‚ŠçŠ¶æ…‹ã¸ç§»è¡Œ
+                is_running = true;    // ‘–‚èó‘Ô‚ÖˆÚs
             }
         }
 
         //==========================================
-        // çŠ¶æ…‹ã«å¿œã˜ãŸã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã¨ç§»å‹•ã®å®Ÿè¡Œ
+        // ó‘Ô‚É‰‚¶‚½ƒAƒjƒ[ƒVƒ‡ƒ“‚ÆˆÚ“®‚ÌÀs
         //==========================================
         if(is_running) {
             model->PlayAnimationNoSame("run", true, 0.7f);
-            // å‘ãã«ç§»å‹•ã•ã›ã‚‹
+            // Œü‚«‚ÉˆÚ“®‚³‚¹‚é
             AddTranslate({0, 0, -0.3f}, true);
         }
         else {
             model->PlayAnimationNoSame("walk", true, 0.5f);
-            // å‘ãã«ç§»å‹•ã•ã›ã‚‹
+            // Œü‚«‚ÉˆÚ“®‚³‚¹‚é
             AddTranslate({0, 0, -0.1f}, true);
         }
 
         /*
-        // ã“ã‚Œã ã¨è·é›¢ã®ä¸­é–“ç‚¹ã§ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã®é€£ç¶šé·ç§»ã§ã‚¬ã‚¿ã¤ã
+        // ‚±‚ê‚¾‚Æ‹——£‚Ì’†ŠÔ“_‚ÅƒAƒjƒ[ƒVƒ‡ƒ“‚Ì˜A‘±‘JˆÚ‚ÅƒKƒ^‚Â‚­
         if(40.0f <= length) {
             model->PlayAnimationNoSame("run", true, 1.5f);
-            // å‘ãã«ç§»å‹•ã•ã›ã‚‹
+            // Œü‚«‚ÉˆÚ“®‚³‚¹‚é
             AddTranslate({0, 0, -0.3}, true);
         }
         else if(length < 40.0f) {
             model->PlayAnimationNoSame("walk", true, 1.5f);
-            // å‘ãã«ç§»å‹•ã•ã›ã‚‹
+            // Œü‚«‚ÉˆÚ“®‚³‚¹‚é
             AddTranslate({0, 0, -0.1}, true);
         }
         */
     }
 
-    // æ­»äº¡ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³çµ‚äº†æ™‚ã«is_deadã‚’trueã«ã™ã‚‹
-    // æ­»äº¡å‡¦ç†è‡ªä½“ã¯ComponentStateDeadã§è¡Œã†
+    // €–SƒAƒjƒ[ƒVƒ‡ƒ“I—¹‚Éis_dead‚ğtrue‚É‚·‚é
+    // €–Sˆ—©‘Ì‚ÍComponentStateDead‚Ås‚¤
     if(!is_dead) {
         if(auto model = GetComponent<ComponentModel>()) {
             if(!model->IsPlaying()) {
@@ -158,56 +151,51 @@ void Enemy::Update()
 }
 
 //============================================================================
-// å½“ãŸã‚Šåˆ¤å®šã®ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯
+// “–‚½‚è”»’è‚ÌƒR[ƒ‹ƒoƒbƒN
 //============================================================================
 void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
     auto hitter = hit_info.hit_collision_->GetOwner();
 
-    // ãƒ’ãƒƒãƒˆã—ãŸç›¸æ‰‹ãŒæ´ã‚ã‚‹ã‚‚ã®ãªã‚‰
+    // ƒqƒbƒg‚µ‚½‘Šè‚ª’Í‚ß‚é‚à‚Ì‚È‚ç
     if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
-        // æŠ•ã’ãŸæœ¬äººè‡ªèº«ã®å ´åˆã¯ãƒ€ãƒ¡ãƒ¼ã‚¸ãªã—
+        // “Š‚°‚½–{l©g‚Ìê‡‚Íƒ_ƒ[ƒW‚È‚µ
         if(grabbable->IsThrower(SharedThis())) {
             Super::OnHit(hit_info);
             return;
         }
 
-        // åœ°é¢ã§åœæ­¢ä¸­ã¯ãƒ€ãƒ¡ãƒ¼ã‚¸ãªã—
+        // ’n–Ê‚Å’â~’†‚Íƒ_ƒ[ƒW‚È‚µ
         if(!grabbable->IsMoving()) {
             Super::OnHit(hit_info);
             return;
         }
 
-        // é€£ç¶šãƒ’ãƒƒãƒˆé˜²æ­¢ã®ãŸã‚ã«æ—¢ã«ã“ã®æ•µã‚’Hitæ¸ˆã¿ãªã‚‰ã‚¹ãƒ«ãƒ¼
+        // ˜A‘±ƒqƒbƒg–h~‚Ì‚½‚ß‚ÉŠù‚É‚±‚Ì“G‚ğHitÏ‚İ‚È‚çƒXƒ‹[
         if(grabbable->IsAlreadyHit(SharedThis())) {
             Super::OnHit(hit_info);
             return;
         }
-
-        // åˆHitãªã‚‰ãƒ€ãƒ¡ãƒ¼ã‚¸å‡¦ç†ã¸
-        //grabbable->AddHitTarget(SharedThis());
-        // Hitã®è¨˜éŒ²(grabbable->AddHitTarget)ã¯ KnockBack ã® OnHitComponent å´ã§è¡Œã†ã€‚
-        // ã“ã“ã§è¨˜éŒ²ã™ã‚‹ã¨ã€ãƒãƒƒã‚¯ãƒãƒƒã‚¯å‰ã« IsAlreadyHit ã§å¼¾ã‹ã‚Œã¦é£›ã°ãªããªã‚‹
     }
     else {
-        // å¼¾ãªã©grabbableä»¥å¤–ã¯ä»Šã¾ã§é€šã‚Šã®Hitå‡¦ç†ã‚’è¡Œã†
+        // ’e‚È‚ÇgrabbableˆÈŠO‚Í¡‚Ü‚Å’Ê‚è‚ÌHitˆ—‚ğs‚¤
         Super::OnHit(hit_info);
         return;
     }
 
-    // ä»Šã®ã‚·ãƒ¼ãƒ³ã‚’å–å¾—
+    // ¡‚ÌƒV[ƒ“‚ğæ“¾
     auto now_scene = Scene::GetCurrentScene();
-    // sharedãƒã‚¤ãƒ³ã‚¿ã®dynamic_cast
-    // é–“é•ã£ã¦ã„ã‚‹å ´åˆnullptrãŒè¿”ã£ã¦ãã‚‹ãŸã‚å‡¦ç†ãŒè¡Œã‚ã‚Œãªã„
+    // sharedƒ|ƒCƒ“ƒ^‚Ìdynamic_cast
+    // ŠÔˆá‚Á‚Ä‚¢‚éê‡nullptr‚ª•Ô‚Á‚Ä‚­‚é‚½‚ßˆ—‚ªs‚í‚ê‚È‚¢
     if(auto scene = dynamic_cast<PoittersPoint_Stage*>(now_scene)) {
         if(auto hp = GetComponent<ComponentHitPoints>()) {
-            // æŠ•ã’ã‚Œã‚‹ç‰©ã”ã¨ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ä¸ãˆã‚‹
+            // “Š‚°‚ê‚é•¨‚²‚Æƒ_ƒ[ƒW‚ğ—^‚¦‚é
             hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
 
             if(hp->GetHitPoints() <= 0.0f) {
                 is_down = true;
 
-                // æ­»äº¡çŠ¶æ…‹ã¸
+                // €–Só‘Ô‚Ö
                 if(auto model = GetComponent<ComponentModel>()) {
                     AddComponent<ComponentStateDead>();
                 }
@@ -219,7 +207,7 @@ void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
         }
     }
 
-    // æœ€å¾Œã«ã“ã‚Œã‚’å…¥ã‚Œã¦ãã ã•ã„ã€‚ã“ã“ã§ã‚ã‚Šã“ã¿ã®è§£æ¶ˆãªã©ã®å‡¦ç†ã‚’è¡Œã£ã¦ã„ã¾ã™ã€‚
+    // ÅŒã‚É‚±‚ê‚ğ“ü‚ê‚Ä‚­‚¾‚³‚¢B‚±‚±‚Å‚ß‚è‚±‚İ‚Ì‰ğÁ‚È‚Ç‚Ìˆ—‚ğs‚Á‚Ä‚¢‚Ü‚·B
     Super::OnHit(hit_info);
 }
 

@@ -1,4 +1,8 @@
 ﻿#pragma once
+//------------------------------------------------------------------------------
+//! @file   ComponentStateWalkBase.h
+//! @brief  ComponentStateWalkBase
+//------------------------------------------------------------------------------
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>

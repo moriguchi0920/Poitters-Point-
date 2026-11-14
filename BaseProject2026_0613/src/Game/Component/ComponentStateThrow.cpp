@@ -1,4 +1,4 @@
-ï»¿#pragma once
+#pragma once
 #include <Game/Component/ComponentStateThrow.h>
 #include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
@@ -15,12 +15,12 @@ void ComponentStateThrow::Init()
 
     if(auto model = owner->GetComponent<ComponentModel>()) {
         if(is_in_air_) {
-            // â˜…ç©ºä¸­æŠ•ã’ï¼šThrowFast ã‚’ä¸ŠåŠèº«ã®ã¿ 1.5å€é€Ÿã§å†ç”Ÿ
-            // PlayAnimationEx ã®å¼•æ•°ï¼ˆname, node, loop, blend_time, start_timeï¼‰
+            // š‹ó’†“Š‚°FThrowFast ‚ğã”¼g‚Ì‚İ 1.5”{‘¬‚ÅÄ¶
+            // PlayAnimationEx ‚Ìˆø”iname, node, loop, blend_time, start_timej
             model->PlayAnimationEx("throw_fast", "mixamorig:Spine", false);
         }
         else {
-            // â˜…åœ°ä¸ŠæŠ•ã’ï¼šé€šå¸¸ç‰ˆï¼ˆ1.0å€é€Ÿï¼‰ã‚’å…¨èº«ã§å†ç”Ÿ
+            // š’nã“Š‚°F’Êí”Åi1.0”{‘¬j‚ğ‘Sg‚ÅÄ¶
             model->PlayAnimationNoSame("throw", false);
         }
     }
@@ -33,36 +33,36 @@ void ComponentStateThrow::Update()
     auto owner            = GetOwner();
     bool was_in_air_start = is_in_air_;
 
-    // â˜…1. ç©ºä¸­æŠ•ã’ã®ç§»å‹•å‡¦ç†ï¼ˆã‚«ãƒ—ã‚»ãƒ«æœ¬ä½“ã®ç‰©ç†ç§»å‹•ï¼‰
+    // š1. ‹ó’†“Š‚°‚ÌˆÚ“®ˆ—iƒJƒvƒZƒ‹–{‘Ì‚Ì•¨—ˆÚ“®j
     if(is_in_air_) {
         float effective_gravity = is_released_ ? gravity_ : (gravity_ * 0.1f);
 
         owner->AddTranslate({0.0f, current_velocity_, 0.0f}, true);
         current_velocity_ -= effective_gravity;
 
-        // â˜…æŠ•ã’åˆ‡ã‚‹ã¾ã§ã¯ç€åœ°ã—ãªã„ï¼ˆã‚¸ãƒ£ãƒ³ãƒ—ï¼‹æŠ•ã’ã‚’ä¿ã¤ï¼‰
+        // š“Š‚°Ø‚é‚Ü‚Å‚Í’…’n‚µ‚È‚¢iƒWƒƒƒ“ƒv{“Š‚°‚ğ•Û‚Âj
         if(is_released_) {
             auto pos = owner->GetTranslate();
             if(pos.y <= ground_y_) {
                 pos.y = ground_y_;
                 owner->SetTranslate(pos);
-                is_in_air_ = false;    // ç€åœ°
+                is_in_air_ = false;    // ’…’n
             }
         }
     }
 
     if(auto model = owner->GetComponent<ComponentModel>()) {
-        // â˜…2. ç©ºä¸­æŠ•ã’ï¼šãƒ¢ãƒ‡ãƒ«ã®Yåº§æ¨™ã‚’å›ºå®šï¼ˆãƒ«ãƒ¼ãƒˆãƒ¢ãƒ¼ã‚·ãƒ§ãƒ³ã®æ‰“ã¡æ¶ˆã—ï¼‰
+        // š2. ‹ó’†“Š‚°Fƒ‚ƒfƒ‹‚ÌYÀ•W‚ğŒÅ’èiƒ‹[ƒgƒ‚[ƒVƒ‡ƒ“‚Ì‘Å‚¿Á‚µj
         if(was_in_air_start) {
             matrix mat        = model->GetMatrix();
             mat.translate().y = 0.0f;
             model->SetMatrix(mat);
         }
 
-        // æ‰‹é›¢ã—åˆ¤å®šé–¾å€¤ï¼ˆ1.5å€é€Ÿã® ThrowFast ã«åˆã‚ã›ã¦æ‰‹é›¢ã—ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã‚‚ 0.20f ä»˜è¿‘ã«èª¿æ•´ï¼‰
+        // è—£‚µ”»’èè‡’li1.5”{‘¬‚Ì ThrowFast ‚É‡‚í‚¹‚Äè—£‚µƒ^ƒCƒ~ƒ“ƒO‚à 0.20f •t‹ß‚É’²®j
         float release_threshold = was_in_air_start ? 0.20f : 0.65f;
 
-        // æ‰‹ã‚’é›¢ã™å‡¦ç†
+        // è‚ğ—£‚·ˆ—
         if(!is_released_ && release_threshold <= model->GetAnimationTime()) {
             if(auto throw_object = throw_weak_ptr_.lock()) {
                 throw_object->RemoveComponent<ComponentAttachModel>();
@@ -90,8 +90,8 @@ void ComponentStateThrow::Update()
             }
         }
 
-        // ç©ºä¸­æŠ•ã’ã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³çµ‚äº†æ™‚ã¯ãƒ«ãƒ¼ãƒˆãƒ¢ãƒ¼ã‚·ãƒ§ãƒ³ã®Yè£œæ­£ã‚’è§£é™¤ã™ã‚‹
-        // (ã‚¹ãƒ†ãƒ¼ãƒˆé·ç§»ã¯ã‚¹ãƒ†ãƒ¼ãƒˆãƒã‚·ãƒ³å´ã® GetIsFinished ãƒãƒ¼ãƒªãƒ³ã‚°ã§è¡Œã†)
+        // ‹ó’†“Š‚°‚ÌƒAƒjƒ[ƒVƒ‡ƒ“I—¹‚Íƒ‹[ƒgƒ‚[ƒVƒ‡ƒ“‚ÌY•â³‚ğ‰ğœ‚·‚é
+        // (ƒXƒe[ƒg‘JˆÚ‚ÍƒXƒe[ƒgƒ}ƒVƒ“‘¤‚Ì GetIsFinished ƒ|[ƒŠƒ“ƒO‚Ås‚¤)
         if(was_in_air_start && !model->IsExPlaying("mixamorig:Spine")) {
             matrix mat        = model->GetMatrix();
             mat.translate().y = 0.0f;
@@ -109,10 +109,10 @@ void ComponentStateThrow::GUI()
         ImGui::Separator();
         if(ImGui::TreeNode("State Throw")) {
             bool enable = GetStatus(StatusBit::Enable);
-            if(ImGui::Checkbox(u8"æœ‰åŠ¹", &enable))
+            if(ImGui::Checkbox(u8"—LŒø", &enable))
                 SetStatus(StatusBit::Enable, enable);
 
-            if(ImGui::Button(u8"å‰Šé™¤"))
+            if(ImGui::Button(u8"íœ"))
                 GetOwner()->RemoveComponent(shared_from_this());
 
             ImGui::TreePop();
@@ -128,7 +128,7 @@ void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
 
 bool ComponentStateThrow::GetIsFinished()
 {
-    // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãŒæ­¢ã¾ã£ã¦ã„ã‚‹ã‹(ç©ºä¸­æŠ•ã’ã¯ä¸ŠåŠèº«ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®å†ç”Ÿçµ‚äº†ã‚‚å¾…ã¤)
+    // ƒAƒjƒ[ƒVƒ‡ƒ“‚ª~‚Ü‚Á‚Ä‚¢‚é‚©(‹ó’†“Š‚°‚Íã”¼gƒŒƒCƒ„[‚ÌÄ¶I—¹‚à‘Ò‚Â)
     if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
         return !model->IsPlaying() && !model->IsExPlaying("mixamorig:Spine");
     }
