@@ -41,7 +41,25 @@ PS_OUTPUT main(PS_INPUT_MODEL input)
     // アルファテスト
 	if(textureColor.a < 0.5) discard;
 
-	output.color0_ = textureColor; // * input.diffuse_;
+	//これ元のやつ
+	//output.color0_ = textureColor; // * input.diffuse_;
+	
+	//  丸太（テクスチャが無くて色情報を持っているモデル）だけを特定する判定 
+	// 1. テクスチャが白（テクスチャなし）
+	// 2. input.diffuse_ のアルファ（透明度）が 0 より大きい（色が設定されている）
+    bool isNoTexture = (textureColor.r >= 0.99f && textureColor.g >= 0.99f && textureColor.b >= 0.99f);
+    bool hasVertexColor = (input.diffuse_.a > 0.0f && (input.diffuse_.r > 0.0f || input.diffuse_.g > 0.0f || input.diffuse_.b > 0.0f));
+
+    if (isNoTexture && hasVertexColor)
+    {
+		// 【丸太限定】モデル自身の色（input.diffuse_）を使って描画
+        output.color0_ = input.diffuse_;
+    }
+    else
+    {
+		// 【その他のテクスチャありモデル】通常通りテクスチャの色を描画（真っ黒にならない！）
+        output.color0_ = textureColor;
+    }
 
 	// 出力パラメータを返す
 	return output;

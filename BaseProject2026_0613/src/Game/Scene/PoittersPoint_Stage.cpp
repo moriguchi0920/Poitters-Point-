@@ -24,6 +24,8 @@
 #include <Game/Component/ComponentCPUState.h>
 #include <Game/Component/ComponentItemSpawner.h>
 
+#include <Game/Component/ComponentKnockBack.h>
+
 namespace PoittersPoint {
 
 // namespace PoittersPoint
