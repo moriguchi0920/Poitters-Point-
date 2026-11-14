@@ -1,12 +1,15 @@
 ﻿#pragma once
-#include <Game/Object/PoittersPoint_Player.h>
+//---------------------------------------------------------------------------
+//! @file   ComponentPlayerState.cpp
+//! @brief  プレイヤー状態制御コンポーネント
+//---------------------------------------------------------------------------
 #include <Game/Component/ComponentPlayerState.h>
-#include "ComponentStateWalkBase.h"
-#include "ComponentStateGrab.h"
-#include "ComponentStateThrow.h"
-#include "ComponentGrabbable.h"
-#include "ComponentStateControllerWalk.h"
-#include "ComponentStatePlayerJump.h"
+#include <Game/Component/ComponentStateControllerWalk.h>
+#include <Game/Component/ComponentStateGrab.h>
+#include <Game/Component/ComponentStateThrow.h>
+#include <Game/Component/ComponentStatePlayerJump.h>
+#include <Game/Component/ComponentGrabbable.h>
+#include <Game/Object/PoittersPoint_Player.h>
 
 //===========================================================================
 // 初期化処理
@@ -90,30 +93,13 @@ void ComponentPlayerState::Update()
             ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
         }
     }
-    if(auto component_grab = owner->GetComponent<ComponentStateGrab>()) {
-        if(component_grab->GetIsFinished()) {
-            if(!grabbing_object_ptr_.expired()) {
-                auto object = grabbing_object_ptr_.lock();
 
-                if(auto collider = object->GetComponent<ComponentCollision>()) {
-                    collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
-                }
-
-                // 投げアニメーションが終了したら歩きステートに戻る
-                if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
-                    if(component_throw->GetIsFinished()) {
-                        if(character_casted_owner) {
-                            ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
-                        }
-                    }
-                }
-                auto grabbable = object->GetComponent<ComponentGrabbable>();
-                grabbable->SetIsGrabbed(true);
-
-                grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
+    // 投げアニメーションが終了したら歩きステートに戻る
+    if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
+        if(component_throw->GetIsFinished()) {
+            if(character_casted_owner) {
+                ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
             }
-            can_throw_ = true;
-            ChangeState<ComponentStateWalkBase>()->SetIsHolding(true);
         }
     }
 }
@@ -155,11 +141,6 @@ void ComponentPlayerState::GUI()
     }
     ImGui::End();
 }
-void ComponentPlayerState::GrabbableHit(ObjectPtr target)
-{
-    auto owner = GetOwner();
-    if(owner->GetComponent<ComponentStateWalkBase>()) {
-        grabbing_object_ptr_ = target;
-    }
-}
-CEREAL_REGISTER_TYPE(ComponentPlayerState) CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentPlayerState)
+
+CEREAL_REGISTER_TYPE(ComponentPlayerState)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentPlayerState)

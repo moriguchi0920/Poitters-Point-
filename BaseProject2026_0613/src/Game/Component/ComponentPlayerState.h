@@ -14,6 +14,8 @@ class ComponentPlayerState : public ComponentStateMachine
 public:
     friend class PoittersPoint::Player;
 
+    BP_COMPONENT_DECL(ComponentPlayerState, u8"プレイヤー状態制御コンポーネント");
+
     void Init() override;
 
     void Update() override;
@@ -21,8 +23,6 @@ public:
     void LateUpdate() override;
 
     void GUI() override;
-
-    void GrabbableHit(ObjectPtr target);
 
 private:
     //--------------------------------------------------------------------

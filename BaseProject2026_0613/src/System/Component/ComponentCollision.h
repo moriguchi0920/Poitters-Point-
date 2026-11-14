@@ -187,8 +187,6 @@ public:
             return static_cast<u32>(CollisionGroupBit::CAMERA);
         if(grp == CollisionGroup::ETC)
             return static_cast<u32>(CollisionGroupBit::ETC);
-        if(grp == CollisionGroup::LOG)
-            return static_cast<u32>(CollisionGroupBit::LOG);
 
         // 登録し忘れの可能性があります
         return -1;
@@ -220,8 +218,6 @@ public:
             return "CAMERA";
         if(grp == CollisionGroup::ETC)
             return "ETC";
-        if(grp == CollisionGroup::LOG)
-            return "LOG";
 
         // 登録し忘れの可能性があります
         return "UNKNOWN";
