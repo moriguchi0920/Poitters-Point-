@@ -24,6 +24,7 @@
 #include <Game/Component/ComponentCPUState.h>
 
 #include <Game/Component/ComponentKnockBack.h>
+#include <Game/Component/ComponentItemSpawner.h>
 
 namespace PoittersPoint {
 
@@ -152,12 +153,28 @@ bool PoittersPoint_Stage::Init()
     //    Scene::Object::Create<Bullet>();
     //}
 
-    Scene::Object::Create<Rock>();
-    Scene::Object::Create<Log>();
+    // --------------------------------------------------
+    // アイテムスポナーの生成
+    // --------------------------------------------------
+    {
+        auto spawner_obj = Scene::Object::Create<Object>("ItemSpawner");
 
-    Scene::Object::Create<Slime>();
+        // スポナーを置く位置
+        spawner_obj->SetTranslate({0.0f, 10.0f, 0.0f});    // X:0, Y:10, Z:0
 
-    return true;
+        //のちにモデルの変更をする際に使います
+        //spawner_obj->AddComponent<ComponentModel>("data/Game/Models/UFO/.mv1");
+
+        // アイテムスポナーコンポーネントを追加
+        spawner_obj->AddComponent<ComponentItemSpawner>();
+
+        Scene::Object::Create<Rock>();
+        Scene::Object::Create<Log>();
+
+        Scene::Object::Create<Slime>();
+
+        return true;
+    }
 }
 
 //! @brief 更新
