@@ -27,7 +27,6 @@
 #include "PoittersPoint_Camera.h"
 #include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
-#include "Game/Component/ComponentStateDead.h"
 
 #include <System/Scene.h>
 #include <System/ImGui.h>
@@ -236,11 +235,11 @@ std::vector<float3> Camera::CollectSurvivorPositions() const
         if(!player) {
             continue;
         }
-        // 死亡状態に入った(死亡処理が終わると名前が"dead"になる)キャラクターは除外
-        if(player->GetComponent<ComponentStateDead>() || player->GetName() == "dead") {
+        // 脱落した(HPが尽きて死亡処理が始まった)キャラクターは除外
+        if(!player->IsAlive()) {
             continue;
         }
-        // ※体力0では除外しない(現状プレイヤーは体力0でも行動を続けるため。脱落は死亡ステートか場外落下で判定)
+        // ※HPが0でも持ち上げ・投げの途中などは脱落処理を待つため、HPではなくIsAlive()で判定する
         float3 pos = player->GetTranslate();
         // ステージ外へ落下したキャラクターは除外
         // (除外しないと落ちていくキャラを追ってカメラが下へ引っ張られてしまう)
@@ -390,7 +389,7 @@ float Camera::CalcRequiredDistance(const std::vector<float3>& points, const floa
     //   例) screen_margin_ = 0.8 → 画面の中央80%の範囲に収める
     //-----------------------------------------------------------
     float tan_v = tanf(fovy_deg_ * 0.5f * DegToRad) * screen_margin_;    // 縦方向
-    float tan_h = tan_v * aspect_ratio_;                                  // 横方向(画面が横長な分だけ広い)
+    float tan_h = tan_v * aspect_ratio_;                                 // 横方向(画面が横長な分だけ広い)
 
     // どれだけ寄っても min_distance_ より近づかない
     float required = min_distance_;
