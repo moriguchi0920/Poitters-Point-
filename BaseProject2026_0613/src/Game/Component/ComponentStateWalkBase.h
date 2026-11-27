@@ -38,7 +38,7 @@ protected:
 
     float front_rot_ = 0.0f;    //!<前方ベクトルの回転角度(0-360度)
 
-    bool is_holding_;
+    bool is_holding_ = false;
 
 private:
     //--------------------------------------------------------------------

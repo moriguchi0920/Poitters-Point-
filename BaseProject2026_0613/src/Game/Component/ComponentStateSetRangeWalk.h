@@ -26,11 +26,11 @@ public:
 
 protected:
     // 移動方向
-    float3 walk_direction_;
+    float3 walk_direction_ = {0.0f, 0.0f, 1.0f};
     // 移動距離
-    float walk_distance_;
+    float walk_distance_ = 0.0f;
 
-    float       stopping_time_;
+    float       stopping_time_ = 0.0f;
     const float stop_judge_time_ = 0.5f;
 
 private:

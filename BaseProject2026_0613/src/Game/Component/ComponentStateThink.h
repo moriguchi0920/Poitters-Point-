@@ -46,7 +46,7 @@ public:
     void SetIsHolding(bool hold);
 
 private:
-    bool is_holding_;
+    bool is_holding_ = false;
 
     float thinking_time        = 0.0f;
     float thinking_finish_time = 0.0f;
