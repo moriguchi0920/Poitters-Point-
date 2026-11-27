@@ -14,7 +14,6 @@
 #include "Game/Object/PoittersPoint_Log.h"
 #include "Game/Object/PoittersPoint_Wall.h"
 
-
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <System/Component/ComponentModel.h>

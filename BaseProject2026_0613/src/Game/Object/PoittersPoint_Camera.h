@@ -57,32 +57,40 @@ private:
 private:
     //---------------------------------------------------------------
     // 調整用パラメーター
+    //  ※実行中はImGui(Cameraウィンドウ)から変更できる
+    //  ※追従速度(～_speed_)は「1秒あたりに差をどれだけ縮めるか」の強さ。
+    //    1秒後に残る差の割合は e^(-速度) になる
+    //      例) 1.2 → 約30%残る(ゆっくり) / 2.5 → 約8%残る / 5.0 → 約0.7%残る(ほぼ追いつく)
+    //  ※距離・高さ・半径はワールド座標の単位(キャラクターの身長が約22)
     //---------------------------------------------------------------
-    float fovy_deg_     = 45.0f;            //!< 縦の画角(度)
-    float aspect_ratio_ = 16.0f / 9.0f;     //!< アスペクト比
-    float pitch_deg_    = 38.0f;            //!< 見下ろし角度(度)
-    float yaw_deg_      = 0.0f;             //!< 水平方向の向き(度) 0で+Z側から-Z方向を見る
-    float screen_margin_ = 0.80f;           //!< 画面のどれだけの範囲に収めるか(1.0で画面端ぴったり)
-    float body_height_   = 22.0f;           //!< キャラクターの高さ(頭まで映すため)
-    float body_radius_   = 4.0f;            //!< キャラクターの半径(体の幅まで映すため)
-    float min_distance_  = 110.0f;          //!< 最も近づいたときの距離
-    float max_distance_  = 520.0f;          //!< 最も離れたときの距離
-    float target_follow_speed_ = 2.5f;      //!< 注視点の追従速度(大きいほど速い)
-    float zoom_in_speed_       = 1.2f;      //!< 寄るときの速度(ゆっくり)
-    float zoom_out_speed_      = 5.0f;      //!< 引くときの速度(映り切らないのを防ぐため速め)
-    float fall_out_height_     = -30.0f;    //!< これより下に落ちたキャラクターは生存者から除外
+    float fovy_deg_            = 45.0f;           //!< 縦の画角(度)
+    float aspect_ratio_        = 16.0f / 9.0f;    //!< アスペクト比
+    float pitch_deg_           = 38.0f;           //!< 見下ろし角度(度) 0で真横、90で真上から見下ろす
+    float yaw_deg_             = 0.0f;            //!< 水平方向の向き(度) 0で+Z側から-Z方向を見る
+    float screen_margin_       = 0.80f;           //!< 画面のどれだけの範囲に収めるか(1.0で画面端ぴったり)
+    float body_height_         = 22.0f;           //!< キャラクターの高さ(頭まで映すため)
+    float body_radius_         = 4.0f;            //!< キャラクターの半径(体の幅まで映すため)
+    float min_distance_        = 110.0f;          //!< 最も近づいたときの距離
+    float max_distance_        = 520.0f;          //!< 最も離れたときの距離
+    float target_follow_speed_ = 2.5f;            //!< 注視点の追従速度(大きいほど速い)
+    float zoom_in_speed_       = 1.2f;            //!< 寄るときの速度(ゆっくり)
+    float zoom_out_speed_      = 5.0f;            //!< 引くときの速度(映り切らないのを防ぐため速め)
+    float fall_out_height_     = -30.0f;          //!< これより下に落ちたキャラクターは生存者から除外
 
     bool debug_draw_ = false;    //!< 生存者が作る図形と中心点を描画する
 
     //---------------------------------------------------------------
     // 実行時の状態
     //---------------------------------------------------------------
-    bool   initialized_      = false;          //!< 初回フレームは補間せずに即座に合わせる
-    float3 current_target_   = {0, 0, 0};      //!< 現在の注視点(補間後)
-    float  current_distance_ = 250.0f;         //!< 現在のカメラ距離(補間後)
-    float3 desired_target_   = {0, 0, 0};      //!< 目標の注視点
-    float  desired_distance_ = 250.0f;         //!< 目標のカメラ距離
-    std::vector<float3> survivors_;            //!< 直近フレームの生存者位置(デバッグ描画用)
+    bool                initialized_      = false;        //!< 初回フレームは補間せずに即座に合わせる
+    float3              current_target_   = {0, 0, 0};    //!< 現在の注視点(補間後)
+    float               current_distance_ = 250.0f;       //!< 現在のカメラ距離(補間後)
+    float3              desired_target_   = {0, 0, 0};    //!< 目標の注視点
+    float               desired_distance_ = 250.0f;       //!< 目標のカメラ距離
+    std::vector<float3> survivors_;                       //!< 直近フレームの生存者位置(デバッグ描画用)
+    // ※desired(目標)は毎フレーム計算し直す値、current(現在)はdesiredを滑らかに追いかける値。
+    //   実際にカメラへ設定するのはcurrentの方
+
 };
 
 }    // namespace PoittersPoint

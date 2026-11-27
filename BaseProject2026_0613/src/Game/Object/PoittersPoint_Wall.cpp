@@ -7,7 +7,6 @@
 #include "PoittersPoint_Player.h"
 #include "PoittersPoint_Wall.h"
 
-
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
 #include <System/Component/ComponentCollision.h>
@@ -30,7 +29,7 @@ bool Wall::Init()
 {
     Super::Init();
 
-  auto   ground = Scene::Object::Get<Ground>();
+    auto   ground = Scene::Object::Get<Ground>();
     float3 center = {0, 0, 0};
 
     if(ground) {
@@ -57,7 +56,6 @@ bool Wall::Init()
 
         col->SetTranslate({x, wallY, z});    //下げた高さを使う
     }
-
 
     //float radius = 120.0f;
     //float height = 35.0f;
@@ -120,7 +118,6 @@ void Wall::OnHit(const ComponentCollision::HitInfo& hit_info)
 
     Super::OnHit(hit_info);
 }
-
 
 // Wallクラスや専用の描画用コンポーネントの描画フェーズ（Draw等）で呼ぶ
 void Wall::Draw()
