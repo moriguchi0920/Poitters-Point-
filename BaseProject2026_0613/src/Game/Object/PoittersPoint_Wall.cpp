@@ -13,7 +13,6 @@
 #include <System/Component/ComponentCollision.h>
 #include <System/Component/ComponentCollisionModel.h>
 #include "Game/Component/ComponentCameraController.h"
-#include "Game/Component/ComponentStateIdleWalk.h"
 #include "Game/Component/ComponentStateThrow.h"
 #include "Game/Component/ComponentPlayerState.h"
 #include "Game/Component/ComponentStateMachine.h"

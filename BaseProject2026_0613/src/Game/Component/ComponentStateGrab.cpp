@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <Game/Component/ComponentStateGrab.h>
-#include "ComponentStateIdleWalk.h"
+#include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 void ComponentStateGrab::Init()
@@ -63,7 +63,7 @@ void ComponentStateGrab::SetLiftTime(float time)
     lift_time_ = time;
 }
 
-bool ComponentStateGrab::GetFinished()
+bool ComponentStateGrab::GetIsFinished()
 {
     return finished_;
 }

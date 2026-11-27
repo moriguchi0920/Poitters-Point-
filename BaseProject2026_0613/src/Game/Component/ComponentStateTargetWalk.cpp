@@ -5,6 +5,10 @@ void ComponentStateTargetWalk::Init()
 {
     __super::Init();
     SetName<Component>("State Target Walk");
+    // AddComponentされたInit()は翌フレームに走るため、ここでResetTargetPtr()をすると
+    // AddComponent後にSetTargetPtr()した対象が消えてしまう
+    // weak_ptrは生成時点で空なのでリセットは不要
+    stopping_time_ = 0.0f;
 }
 
 void ComponentStateTargetWalk::Update()
@@ -15,13 +19,18 @@ void ComponentStateTargetWalk::Update()
     // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
     auto owner = GetOwner();
 
+    if(!target_ptr_.expired()) {
+        target_pos_ = target_ptr_.lock()->GetTranslate();
+    }
+
     // 移動方向
     float3 dir{0, 0, 0};
 
-    dir = target_pos_ - owner->GetTranslate();
+    dir   = target_pos_ - owner->GetTranslate();
+    dir.y = 0.0f;
 
     // 移動キーが押されているか?
-    if((float)length(dir) > 0.0f) {
+    if((float)length(dir) > 0.1f) {
         // 斜めが押されていることを考慮し、
         // その方向の移動スピードを1とし、スピードを掛け合わせる
         dir = normalize(dir);
@@ -41,8 +50,10 @@ void ComponentStateTargetWalk::Update()
                 mdl->PlayAnimationNoSame("walk", true);
             }
         }
+        stopping_time_ = 0.0f;
     }
     else {
+        stopping_time_ += GetDeltaTime();
         if(auto mdl = owner->GetComponent<ComponentModel>()) {
             if(is_holding_) {
                 mdl->PlayAnimationNoSame("grab idle", true);
@@ -54,35 +65,33 @@ void ComponentStateTargetWalk::Update()
     }
 }
 
-ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetMoveSpeed(const float speed)
+ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetTargetPos(const float3& position)
 {
-    move_speed_ = speed;
-    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
-}
-ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetRotateSpeed(const float speed)
-{
-    rot_speed_ = speed;
+    target_pos_ = position;
     return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
 }
 
-const float ComponentStateTargetWalk::GetMoveSpeed() const
+void ComponentStateTargetWalk::SetTargetPtr(const ObjectWeakPtr ptr)
 {
-    return move_speed_;
+    target_ptr_ = ptr;
 }
 
-const float ComponentStateTargetWalk::GetRotateSpeed() const
+void ComponentStateTargetWalk::ResetTargetPtr()
 {
-    return rot_speed_;
+    target_ptr_.reset();
 }
 
-ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetKeys(int up, int down, int left, int right)
+const float3& ComponentStateTargetWalk::GetTargetPos()
 {
-    // 移動キーの設定
-    key_up_    = up;
-    key_down_  = down;
-    key_left_  = left;
-    key_right_ = right;
-    return std::dynamic_pointer_cast<ComponentStateTargetWalk>(shared_from_this());
+    return target_pos_;
+}
+
+bool ComponentStateTargetWalk::GetArrival()
+{
+    auto owner     = GetOwner();
+    auto translate = owner->GetTranslate();
+    auto vec       = target_pos_ - translate;
+    return fabsf(vec.x) < 0.1 && fabsf(vec.y) < 0.1 && fabsf(vec.z) < 0.1;
 }
 
 void ComponentStateTargetWalk::GUI()
@@ -110,6 +119,7 @@ void ComponentStateTargetWalk::GUI()
             // 移動の基本情報
             ImGui::DragFloat(u8"移動速度", &move_speed_, 0.1f);
             ImGui::DragFloat(u8"移動回転角度", &rot_speed_, 1.0f);
+            ImGui::DragFloat3(u8"目的地", target_pos_.RawArray(), 1.0f);
 
             // 移動の基本情報
             ImGui::DragFloat(u8"オブジェクト オフセット回転", &front_rot_, 1.0f);
@@ -121,9 +131,17 @@ void ComponentStateTargetWalk::GUI()
     ImGui::End();
 }
 
-void ComponentStateTargetWalk::SetIsHolding(bool hold)
+bool ComponentStateTargetWalk::GetStopped()
 {
-    is_holding_ = hold;
+    return stop_judge_time_ < stopping_time_;
+}
+
+bool ComponentStateTargetWalk::GetNearby()
+{
+    auto owner     = GetOwner();
+    auto translate = owner->GetTranslate();
+    auto vec       = target_pos_ - translate;
+    return fabsf(vec.x) < 10.0 && fabsf(vec.y) < 10.0 && fabsf(vec.z) < 10.0;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)

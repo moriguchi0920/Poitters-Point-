@@ -35,6 +35,38 @@ float3 merge(float3 v1, float3 v2)
 
     return vh;
 }
+
+// カプセルのワールド行列からカプセル軸(Y軸)を単位ベクトルとして取得する
+float3 CapsuleWorldAxis(const matrix& world_matrix)
+{
+    float3 axis = world_matrix.axisY();
+    float  len  = length(axis);
+
+    if(len < 1.0e-5f)
+        return {0.0f, 1.0f, 0.0f};
+
+    return axis / len;
+}
+
+// カプセルの高さ方向オフセットをワールド行列のY軸から取得する
+float3 CapsuleWorldHeightOffset(const matrix& world_matrix, float height)
+{
+    float3 axis = world_matrix.axisY();
+    float  len  = length(axis);
+
+    if(len < 1.0e-5f)
+        return {0.0f, height, 0.0f};
+
+    return axis * height;
+}
+
+// 縦向き時の既存Capsule判定を崩さないための互換判定
+bool IsWorldVerticalAxis(float3 axis)
+{
+    float vertical_dot = dot(axis, float3(0.0f, 1.0f, 0.0f));
+
+    return vertical_dot > 0.999999f;
+}
 }    // namespace
 
 ComponentCollision::ComponentCollision()
@@ -827,14 +859,19 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
     float3 cpos{};
     float3 opos1{};
     float3 cpos1{};
-    auto   trans = col1->GetWorldMatrix();
+    auto   trans     = col1->GetWorldMatrix();
+    auto   old_trans = col1->GetOldWorldMatrix();
+    float3 axis_now  = CapsuleWorldAxis(trans);
+    float3 axis_old  = CapsuleWorldAxis(old_trans);
 
     if(col1->attach_node_ >= 0) {
         cpos  = trans.translate();
-        cpos1 = normalize((float3&)trans.axisVectorY()) * col1->GetHeight() + cpos;
+        cpos1 = axis_now * col1->GetHeight() + cpos;
 
         opos  = cpos;
         opos1 = cpos1;
+
+        axis_old = axis_now;
     }
     else {
         // オブジェクト位置に対するコリジョン(1フレーム前)
@@ -861,8 +898,8 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
         }
 
         // その頭の位置
-        opos1 = mul(float4(col1->GetTranslate() + float3(0, col1->GetHeight(), 0), 1), col1->GetOwner()->GetOldWorldMatrix()).xyz;
-        cpos1 = mul(float4(col1->GetTranslate() + float3(0, col1->GetHeight(), 0), 1), col1->GetOwner()->GetWorldMatrix()).xyz;
+        opos1 = opos + CapsuleWorldHeightOffset(old_trans, col1->GetHeight());
+        cpos1 = cpos + CapsuleWorldHeightOffset(trans, col1->GetHeight());
     }
 
     float scale = 1.0f;
@@ -875,6 +912,9 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
     }
 
     float radius = col1->GetRadius() * scale;
+
+    float3 radius_axis_now = axis_now * radius;
+    float3 radius_axis_old = axis_old * radius;
 
 #if 1
     {
@@ -904,8 +944,8 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
 
         MV1_COLL_RESULT_POLY_DIM hit_poly_dim{};
 
-        float3 oc = opos1 - float3(0, radius, 0) + info.push_;
-        float3 cc = cpos1 - float3(0, radius, 0) + info.push_;
+        float3 oc = opos1 - radius_axis_old + info.push_;
+        float3 cc = cpos1 - radius_axis_now + info.push_;
 
         // DrawCapsule3D( cast( oc ), cast( cc ), radius, 10, GetColor( 0, 0, 255 ), GetColor( 0, 0, 255 ), FALSE );
 
@@ -934,7 +974,11 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
                 vh         = merge(vh, v);
             }
         }
-        vh.y = 0;
+        if(IsWorldVerticalAxis(axis_now))
+            vh.y = 0;
+        else
+            vh = vh - axis_now * dot(vh, axis_now);
+
         if(hit_poly_dim.HitNum > 0) {
             info.push_         += vh;
             info.hit_           = true;
@@ -957,11 +1001,11 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
 
         MV1_COLL_RESULT_POLY_DIM hit_poly_dim{};
 
-        float3 bottom_e = cpos + info.push_ + float3(0, radius, 0);
-        float3 top_e    = cpos1 + info.push_ - float3(0, radius, 0);
+        float3 bottom_e = cpos + info.push_ + radius_axis_now;
+        float3 top_e    = cpos1 + info.push_ - radius_axis_now;
 
-        float3 bottom_s = opos + info.push_ + float3(0, radius, 0);
-        float3 top_s    = opos1 + info.push_ - float3(0, radius, 0);
+        float3 bottom_s = opos + info.push_ + radius_axis_old;
+        float3 top_s    = opos1 + info.push_ - radius_axis_old;
 
         float3 bottom_len = (bottom_e - bottom_s);
         float3 top_len    = (top_e - top_s);
@@ -1010,12 +1054,19 @@ ComponentCollision::HitInfo ComponentCollision::isHit(ComponentCollisionCapsuleP
 
                 // カプセルへの戻し方向
                 //if( HelperLib::Math::NearlyEqual( length( line_pos - tri_pos ), 0 ) )
-                float3 v = n * len;
-                vh       = merge(vh, v);
-                if(vh.y > difficult_to_climb_ || vh.y < 0) {
-                    vh.y  = 0;
-                    vh.x *= 1.25f;
-                    vh.z *= 1.25f;
+                float3 v        = n * len;
+                vh              = merge(vh, v);
+                float axial_len = IsWorldVerticalAxis(axis_now) ? vh.y : dot(vh, axis_now);
+                if(axial_len > difficult_to_climb_ || axial_len < 0) {
+                    if(IsWorldVerticalAxis(axis_now)) {
+                        vh.y  = 0;
+                        vh.x *= 1.25f;
+                        vh.z *= 1.25f;
+                    }
+                    else {
+                        vh  = vh - axis_now * axial_len;
+                        vh *= 1.25f;
+                    }
                 }
             }
 

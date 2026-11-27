@@ -4,7 +4,7 @@
 //! @brief  掴み可能コンポーネント(投げ物・キャラクター共通)
 //---------------------------------------------------------------------------
 #include <Game/Component/ComponentGrabbable.h>
-#include "ComponentStateIdleWalk.h"
+#include <Game/Component/ComponentStateControllerWalk.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
 
 //============================================================================
