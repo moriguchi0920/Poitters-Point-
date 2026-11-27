@@ -9,25 +9,40 @@
 #include "Game/Object/PoittersPoint_Camera.h"
 #include "Game/Object/PoittersPoint_Enemy.h"
 #include "Game/Object/PoittersPoint_Rock.h"
-#include "Game/system/PoittersPoint_Timer.h"
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
+#include "Game/System/PoittersPoint_Timer.h"
+#include "Game/System/PoittersPoint_PhysicsHelper.h"
 
 #include <System/Scene.h>
-#include <System/Component/Component.h>
-#include <System/Component/ComponentModel.h>
-#include <System/Component/ComponentCollisionModel.h>
-#include <System/Component/ComponentCollisionCapsule.h>
-#include <System/Component/ComponentSpringArm.h>
-#include <System/Component/ComponentObjectController.h>
 #include <Game/Component/ComponentPlayerState.h>
 #include <Game/Component/ComponentCPUState.h>
-
-#include <Game/Component/ComponentKnockBack.h>
+#include <Game/Component/ComponentGrabbable.h>
 
 namespace PoittersPoint {
 
-// namespace PoittersPoint
+namespace {
+//! @brief 標準キャラクターのデータ(プレイヤー/CPU共通。キャラ選択を作る時はここを差し替える)
+CharacterData MakeDefaultCharacterData()
+{
+    return CharacterData("data/Game/Models/Player/Player.mv1",
+                         {
+                             {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                             {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                             {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                             {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
+                             {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                             { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                             { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+                             {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
+                             { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
+    },
+                         {0.11f, 0.11f, 0.11f},
+                         0.3f,
+                         1.0f,
+                         1.0f);
+}
+}    // namespace
 
 //! @brief 初期化
 //! @return 初期化済み
@@ -36,125 +51,33 @@ bool PoittersPoint_Stage::Init()
     // 最初に1回動作する
     // ただし trueを返さなければ Initに何回も来る仕様。
 
-    // create<>(名前、transformがいるか、更新の優先順位、描画の優先順位);
+    // 地面(物理の静的メッシュ + 外周の壁)
+    ground_ = Scene::Object::Create<Ground>();
 
-#if 1
-    Scene::Object::Create<Ground>();
-#else
-    // 地面生成(Component: モデル、モデルコリジョン)
+    // プレイヤー
     {
-        auto ground = Scene::Object::Create<Object>("Ground");
-        Scene::Object::Create<PoittersPoint_Timer>();
-        ground->AddComponent<ComponentModel>("data/Sample/SwordBout/Stage/Stage00.mv1");
-        ground->AddComponent<ComponentCollisionModel>();
-        if(auto collision = ground->GetComponent<ComponentCollisionModel>()) {
-            // 所属するグループを「GROUND」とします
-            collision->SetCollisionGroup(ComponentCollision::CollisionGroup::GROUND);
-            collision->AttachToModel();    // コリジョンをモデルに合わせる
-        }
+        auto player = Scene::Object::Create<Player>();
+        player->SetCharacterStatus(MakeDefaultCharacterData());
+        // プレイヤー入力用のステートマシンをここで付与する(Player::Initでは付与しない)
+        player->AddComponent<ComponentPlayerState>();
     }
-#endif
-#if 1    //プレイヤー作成
-    CharacterData playerdata("data/Game/Models/Player/Player.mv1",
-                             {
-                                 {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                                 {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                                 {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                                 {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
-                                 {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                                 { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
-                                 { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
-                                 {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
-                                 { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
-    },
-                             {0.11f, 0.11f, 0.11f},
-                             0.3f,
-                             1.0f,
-                             1.0f);
-    auto          player = Scene::Object::Create<Player>();
-    player->SetCharacterStatus(playerdata);
-    // プレイヤー入力用のステートマシンをここで付与する(Player::Initでは付与しない)
-    player->AddComponent<ComponentPlayerState>();
 
-    //Scene::Object::Create<Player>();
-#else
-    // プレイヤー生成(Component: モデル、カプセルコリジョン、オブジェクトコントローラ)
-    {
-        auto player = Scene::Object::Create<Object>("Player");
-        player->SetTranslate({0, 5, 0});
-        player->AddComponent<ComponentModel>("data/Sample/Player/Model.mv1");
-        if(auto model = player->GetComponent<ComponentModel>()) {
-            model->SetAnimation({
-                {"idle", "data/Sample/Player/Anim/Idle.mv1", 1, 1.0f}, // Idle
-                {"walk", "data/Sample/Player/Anim/Walk.mv1", 1, 1.0f}  // Walk
-            });
-        }
-        player->AddComponent<ComponentCollisionCapsule>();
-        if(auto collision = player->GetComponent<ComponentCollisionCapsule>()) {
-            // 所属するグループを「PLAYER」とします
-            collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
-            // Collisionの重力を有効にします
-            collision->UseGravity();
-            collision->SetRadius(3.0f);     // コリジョンの半径を3.0 にする
-            collision->SetHeight(13.0f);    // コリジョンの高さを13.0 にする
-        }
-        player->AddComponent<ComponentObjectController>();
-        if(auto ctl = player->GetComponent<ComponentObjectController>()) {
-            ctl->SetMoveSpeed(0.3f);
-            ctl->SetRotateSpeed(20.0f);
-        }
-    }
-#endif
-
-#if 1
     Scene::Object::Create<Camera>();
-#else
-    // カメラ生成(Component: モデル、カプセルコリジョン、オブジェクトコントローラ)
+
+    // CPU
     {
-        auto camera = Scene::Object::Create<Object>("Camera");    //オブジェクトをカメラという名前で生成
-        camera->AddComponent<ComponentCamera>();                  //カメラコンポーネントを付ける
-        if(auto c = camera->GetComponent<ComponentCamera>()) {
-            c->SetPositionAndTarget({0, 20, -50}, {0, 10, 0});
-        }
-        camera->AddComponent<ComponentSpringArm>();
-        if(auto c = camera->GetComponent<ComponentSpringArm>()) {
-            c->SetSpringArmObject("Player");
-        }
+        auto cpu_character = Scene::Object::Create<Player>();
+        cpu_character->SetName("CPU1");
+        cpu_character->SetCharacterStatus(MakeDefaultCharacterData());
+        // 物理ボディを持つので SetTranslate ではなく Warp で位置を変える
+        PhysicsHelper::Warp(cpu_character.get(), {20.0f, 8.0f, 0.0f});
+        // CPU用のステートマシンをここで付与する(Player::Initでは付与しない)
+        cpu_character->AddComponent<ComponentCPUState>();
     }
-#endif
-    //for(int i = 0; i < MAX_ENEMIES; i++) {
-    //    Scene::Object::Create<Enemy>();
-    //}
-    CharacterData cpu_data("data/Game/Models/Player/Player.mv1",
-                           {
-                               {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                               {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                               {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                               {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
-                               {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                               { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
-                               { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
-                               {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
-                               { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
-    },
-                           {0.11f, 0.11f, 0.11f},
-                           0.3f,
-                           1.0f,
-                           1.0f);
-    auto          cpu_character = Scene::Object::Create<Player>();
-    cpu_character->SetName("CPU1");
-    cpu_character->SetCharacterStatus(cpu_data);
-    cpu_character->SetTranslate({20.0f, 8.0f, 0.0f});
-    // CPU用のステートマシンをここで付与する(Player::Initでは付与しない)
-    cpu_character->AddComponent<ComponentCPUState>();
 
-    //for(int i = 0; i < 5; i++) {
-    //    Scene::Object::Create<Bullet>();
-    //}
-
+    // 投げ物
     Scene::Object::Create<Rock>();
     Scene::Object::Create<Log>();
-
     Scene::Object::Create<Slime>();
 
     return true;
@@ -163,60 +86,31 @@ bool PoittersPoint_Stage::Init()
 //! @brief 更新
 void PoittersPoint_Stage::Update()
 {
-    //// 毎フレーム動作する
-    //counter2++;
+    RespawnFallenObjects();
+}
 
-    ////テスト用
-    //if(auto obj = Scene::Object::Get<Object>("OBJ")) {
-    //    obj->AddTranslate({0.001, 0, 0});
-    //}
+//! @brief ステージ外へ落ちた物・キャラクターを中央へ戻す
+void PoittersPoint_Stage::RespawnFallenObjects()
+{
+    auto ground = ground_.lock();
+    if(!ground)
+        return;
 
-    //printfDx("\nDEAD ENEMY: %d", enemy_dead_count);
+    const float fall_out_y = ground->GetFallOutHeight();
+    for(auto& obj : Scene::Object::GetArray<Object>()) {
+        // 物理で動く物(投げ物・キャラクター)だけが対象。持たれている物は持ち主が落ちれば一緒に戻る
+        auto grabbable = obj->GetComponent<ComponentGrabbable>();
+        if(!grabbable || grabbable->IsHeld())
+            continue;
 
-    //{
-    //    // Enemyという名前がついたObjectをVectorで複数取得
-    //    auto enemies = Scene::Base::GetObjectsPtr<Object>("Enemy");
-
-    //    // Vectorのメソッドでサイズを取得
-    //    auto enemy_num = enemies.size();
-
-    //    // エネミーの上限数から先ほど取得したサイズを引いてリリース済みのエネミー数を求める
-    //    auto released_enemy_num = MAX_ENEMIES - enemy_num;
-    //    // 死亡カウントの中身に代入する
-    //    enemy_dead_count = released_enemy_num;
-
-    //    // もし死亡カウントがエネミーの上限数以上なら
-    //    if(MAX_ENEMIES <= released_enemy_num) {
-    //        //Scene::Change(Scene::GetScene<TutorialX_GameOver>());
-
-    //        bool canCreateEnemy = true;
-    //        auto objs           = Scene::Object::GetArray<Enemy>();
-    //        for(int i = 0; i < objs.size(); i++) {
-    //            if(objs[i]->GetName() == "Enemy" || objs[i]->is_dead == false) {
-    //                canCreateEnemy = false;
-    //            }
-    //        }
-
-    //        if(canCreateEnemy) {
-    //            // エネミーを生成する
-    //            createEnemy();
-
-    //            for(int i = 0; i < objs.size(); i++) {
-    //                Scene::Object::Release(objs[i]);
-    //            }
-    //        }
-    //    }
-    //}
+        if((float)obj->GetTranslate().y < fall_out_y)
+            PhysicsHelper::Warp(obj.get(), ground->GetRespawnPosition());
+    }
 }
 
 //! @brief GUI表示
 void PoittersPoint_Stage::GUI()
 {
-    // 入力(Int)で、privateにある counter を指定
-    ImGui::InputInt("Counter", &counter);
-
-    ImGui::InputInt("(Test)Counter2", &counter2);
-    ImGui::InputInt("(Test)Counter3", &counter3);
 }
 
 void PoittersPoint_Stage::AddDeadEnemy()

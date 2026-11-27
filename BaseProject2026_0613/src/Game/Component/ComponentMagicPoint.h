@@ -40,10 +40,11 @@ public:
 
 private:
     // マジックポイント
-    float magic_points_;
+    float magic_points_ = 5.0f;
 
     // 最大マジックポイント
-    static float max_magic_points_;
+    // (static だと全キャラ共通になるため、通常のメンバーにする)
+    float max_magic_points_ = 5.0f;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

@@ -115,7 +115,7 @@ void Bullet::OnHit(const ComponentCollision::HitInfo& hit_info)
     hit_info.collision_->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
 
     auto mat = GetWorldMatrix();
-    auto rot = matrix::rotateY(-0.5 * DX_PI);
+    auto rot = matrix::rotateY(-0.5f * DX_PI_F);
 
     mat = mul(rot, mat);
 

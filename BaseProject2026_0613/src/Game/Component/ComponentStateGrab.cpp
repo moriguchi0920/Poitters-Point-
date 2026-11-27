@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentStateGrab.h>
+﻿#include <Game/Component/ComponentStateGrab.h>
 #include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 

@@ -552,8 +552,8 @@ void EngineImpl::update(f32 dt)
     constexpr s32 max_steps = 4;
 
     // 1/60秒ごとに1回の衝突ステップ（サブステップは1。Tutorial_13 準拠の設定を維持）
-    const u32 collision_steps        = 1;
-    const u32 integration_sub_steps  = 1;
+    const u32 collision_steps       = 1;
+    const u32 integration_sub_steps = 1;
 
     update_accumulator_ += dt;
 

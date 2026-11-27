@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentStateSetRangeWalk.h>
+﻿#include <Game/Component/ComponentStateSetRangeWalk.h>
 
 void ComponentStateSetRangeWalk::Init()
 {
@@ -11,42 +10,31 @@ void ComponentStateSetRangeWalk::Update()
 {
     auto owner = GetOwner();
     __super::Update();
-    // 移動方向
-    float3 dir = walk_direction_;
 
-    if(walk_distance_ > 0.1f) {
-        dir = normalize(dir);
+    // 実際に進んだ距離だけ残り距離を減らす(壁に当たって進めない場合は止まっている扱い)
+    const float3 pos = owner->GetTranslate();
+    if(has_prev_pos_) {
+        float3 moved    = pos - prev_pos_;
+        moved.y         = 0.0f;
+        float  distance = (float)length(moved);
+        walk_distance_ -= distance;
 
-        // キャラのローカル方向で移動をさせる
-        owner->AddTranslate(dir * move_speed_, true);
-
-        float3 move     = dir * move_speed_;
-        walk_distance_ -= sqrtf(move.x * move.x + move.y * move.y + move.z + move.z);
-
-        // モデルを移動の方向に向けます
-        if(auto mdl = owner->GetComponent<ComponentModel>()) {
-            auto rot = quaternion::rotation_axis({0, 1, 0}, front_rot_ * DegToRad);    //< Y軸1度回転
-
-            mdl->SetRotationToVectorWithLimit(mul(dir, rot), rot_speed_);
-            if(is_holding_) {
-                mdl->PlayAnimationNoSame("grab walk", true);
-            }
-            else {
-                mdl->PlayAnimationNoSame("walk", true);
-            }
-        }
+        const float expected = move_speed_ * GetDeltaTime() * 60.0f;
+        if(distance < expected * 0.5f)
+            stopping_time_ += GetDeltaTime();
+        else
+            stopping_time_ = 0.0f;
     }
-    else {
-        stopping_time_ += GetDeltaTime();
-        if(auto mdl = owner->GetComponent<ComponentModel>()) {
-            if(is_holding_) {
-                mdl->PlayAnimationNoSame("grab idle", true);
-            }
-            else {
-                mdl->PlayAnimationNoSame("idle", true);
-            }
-        }
+    prev_pos_     = pos;
+    has_prev_pos_ = true;
+
+    float3 dir = {0.0f, 0.0f, 0.0f};
+    if(walk_distance_ > 0.1f && (float)length(walk_direction_) > 0.0f) {
+        dir = normalize(walk_direction_);
+        MoveOwner(dir * move_speed_);
     }
+
+    UpdateModel(dir);
 }
 
 void ComponentStateSetRangeWalk::GUI()
@@ -110,5 +98,5 @@ bool ComponentStateSetRangeWalk::GetNearby()
     return walk_distance_ < 1.0f;
 }
 
-CEREAL_REGISTER_TYPE(ComponentStateWalkBase)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateWalkBase)
+CEREAL_REGISTER_TYPE(ComponentStateSetRangeWalk)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Component, ComponentStateSetRangeWalk)

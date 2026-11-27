@@ -150,6 +150,14 @@ public:
         return hit_status_[id];
     }
 
+    //! @brief 指定オブジェクトとの物理接触を無視する (nullptrで解除)
+    //! @details 投げた本人・持っている本人と投げ物がぶつからないようにする用途。
+    //!          物理スレッドから比較のみ行うため、アドレス比較用の生ポインタで保持する(参照外しはしない)
+    inline void SetIgnoreObject(const Object* obj) { ignore_object_ = obj; }
+
+    //! @brief 指定オブジェクトとの接触を無視しているか
+    inline bool IsIgnoreObject(const Object* obj) const { return ignore_object_ != nullptr && ignore_object_ == obj; }
+
     inline void SetOverlapCollision(u16 hit) { overlap_status_ = hit; }
 
     inline const u16 GetOverlapCollision() const { return overlap_status_; }
@@ -295,6 +303,9 @@ private:
 
     // オーバーラップ情報
     u16 overlap_status_ = 0;
+
+    // 接触を無視するオブジェクト(アドレス比較専用)
+    const Object* ignore_object_ = nullptr;
 
     // コリジョンヒットの情報(共通)
     static u16 hit_status_[CollisionTypeSize];

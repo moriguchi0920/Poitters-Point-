@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentCPUState.h>
+﻿#include <Game/Component/ComponentCPUState.h>
 #include <Game/Component/ComponentStateTargetWalk.h>
 #include <Game/Component/ComponentStateGrab.h>
 #include <Game/Component/ComponentStateThrow.h>
@@ -13,10 +12,8 @@
 void ComponentCPUState::Init()
 {
     __super::Init();
-    auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+    auto owner = GetOwner();
 
-    can_grab_  = true;
     can_throw_ = false;
     // 思考はprevに入れないため、行動実績がない初期状態は
     // 手が空いているATTACK後と同じ基準で最初の行動を決めさせる
@@ -29,18 +26,11 @@ void ComponentCPUState::Update()
 {
     __super::Update();
 
-    auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+    auto owner = GetOwner();
 
-    if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
-        if(GetGrabbing()) {
-            grabbable->SetCanGrab(false);
-        }
-
-        if(grabbable->GetIsGrabbed()) {
-            return;
-        }
-    }
+    // ダウン中(掴まれている間も含む)は行動しない
+    if(IsDown())
+        return;
 
     // 回避ジャンプのクールダウンを進める
     if(evasion_jump_cooldown_timer_ > 0.0f) {
@@ -62,25 +52,28 @@ void ComponentCPUState::Update()
     case CPU_ACTION::ACTION_GRAB:
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
+                // 目的の物が誰かに取られた・動き出したら考え直す
+                bool give_up = target_want_grab_.expired();
                 if(auto target = target_want_grab_.lock()) {
-                    if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-                        if(!grabbable->GetCanGrab()) {
-                            StartThink();
-                            target_want_grab_.reset();
-                        }
-                    }
+                    if(auto grabbable = target->GetComponent<ComponentGrabbable>(); !grabbable || !grabbable->CanBeGrabbed())
+                        give_up = true;
                 }
-                // 掴み対象に当たって掴める状態になるまで歩き続ける
-                // 掴めずにたどり着けない/止まってしまったら考え直す
-                if((component_walk->GetNearby() || component_walk->GetStopped())) {
-                    if(!StartGrab())
-                        StartThink();
+
+                // 物に向かって歩き、体が触れて正面に来たら(=視線判定の候補になったら)持ち上げる
+                // 引っかかって進めなくなったら考え直す
+                if(give_up) {
+                    target_want_grab_.reset();
+                    StartThink();
+                }
+                else if(!StartGrab() && component_walk->GetStopped()) {
+                    target_want_grab_.reset();
+                    StartThink();
                 }
             }
             if(FinishGrab()) {
                 StartThink();
                 if(auto component_think = owner->GetComponent<ComponentStateThink>()) {
-                    component_think->SetIsHolding(true);
+                    component_think->SetIsHolding(IsHolding());
                 }
             }
             break;
@@ -105,20 +98,17 @@ void ComponentCPUState::Update()
     case CPU_ACTION::ACTION_ATTACK:
         {
             if(auto component_walk = owner->GetComponent<ComponentStateWalkBase>()) {
-                if((component_walk->GetNearby() || component_walk->GetStopped()) && can_throw_) {
+                if((component_walk->GetNearby() || component_walk->GetStopped()) && CanThrow()) {
                     // 低確率で、投げの代わりにその場で真上へジャンプして回避する
                     if(IsEvadeJumpTrigger()) {
                         StartEvadeJump();
                         break;
                     }
-                    ChangeState<ComponentStateThrow>()->SetThrowObject(grabbing_object_ptr_);
-                    can_throw_ = false;
+                    StartThrow(false);
                 }
             }
             if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
                 if(component_throw->GetIsFinished()) {
-                    grabbing_object_ptr_.reset();
-                    can_grab_ = true;
                     StartThink();
                 }
             }
@@ -152,6 +142,16 @@ void ComponentCPUState::GUI()
         }
     }
     ImGui::End();
+}
+
+void ComponentCPUState::OnRecover()
+{
+    // ダウンから復帰したら、手ぶらの状態として考え直す
+    prev_action_ = CPU_ACTION::ACTION_ATTACK;
+    cur_action_  = CPU_ACTION::ACTION_THINK;
+    auto think   = ChangeState<ComponentStateThink>();
+    think->SetIsHolding(IsHolding());
+    think->SetThinkingFinishTime(think_time_);
 }
 
 void ComponentCPUState::StartThink()
@@ -232,6 +232,8 @@ void ComponentCPUState::StartAttackAction()
     target_walk->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     target_walk->SetTargetPtr(GetNearestCharacter());
     target_walk->SetIsHolding(true);
+    // 投げは離れた所から行う(物理で体や物がぶつかるため、密着するまで近づくと押し合いになって投げられない)
+    target_walk->SetNearbyDistance(attack_range_);
 
     cur_action_ = CPU_ACTION::ACTION_ATTACK;
 }
@@ -275,7 +277,7 @@ void ComponentCPUState::StartEvadeJump()
 
     auto jump = ChangeState<ComponentStatePlayerJump>();
     jump->SetIsCPU(true);
-    jump->SetIsHolding(!grabbing_object_ptr_.expired());
+    jump->SetIsHolding(IsHolding());
     jump->SetFrontRotate(front_rot);
 
     evasion_jump_cooldown_timer_ = evasion_jump_cooldown_;
@@ -384,7 +386,7 @@ ObjectWeakPtr ComponentCPUState::GetNearestCharacter()
     for(auto& character : characters) {
         if(character == owner->SharedThis())
             continue;
-        if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
+        if(auto state_machine = character->GetComponent<ComponentStateMachine>(); state_machine && !state_machine->IsEliminated()) {
             float3 vec = character->GetTranslate() - owner->GetTranslate();
             float  dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
             if(dis < nearest_distance) {
@@ -411,7 +413,7 @@ ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
         if(std::static_pointer_cast<Object>(character) == owner->SharedThis())
             continue;
         // 対象のステートマシン取得
-        if(auto state_machine = character->GetComponent<ComponentStateMachine>()) {
+        if(auto state_machine = character->GetComponent<ComponentStateMachine>(); state_machine && !state_machine->IsEliminated()) {
             // 座標を減算しベクトルを取得
             float3 vec = character->GetTranslate() - owner->GetTranslate();
             // ベクトルから距離を取得
@@ -432,32 +434,24 @@ ObjectWeakPtr ComponentCPUState::GetNearestAttacker()
 ObjectWeakPtr ComponentCPUState::GetNearestGrabbableObj()
 {
     auto owner = GetOwner();
-    // ターゲットとなるオブジェクトを取得(ターゲットは仮で岩のみとする)
-    auto      targets   = Scene::Object::GetArray<PoittersPoint::Rock>();
-    ObjectPtr targetPtr = nullptr;
-    // 最短距離
-    float nearest_distance = FLT_MAX;
-    // 岩オブジェクトを走査
+    // 掴めるオブジェクト(岩・丸太・スライムなど。キャラクターは除く)から一番近いものを探す
+    auto      targets          = Scene::Object::GetArray<Object>();
+    ObjectPtr target_ptr       = nullptr;
+    float     nearest_distance = FLT_MAX;
     for(auto& target : targets) {
-        // 距離を算出し比較、一番近い岩を目的地へ
-        if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-            if(grabbable->GetIsGrabbed()) {
-                continue;
-            }
-        }
-        // 座標を減算しベクトルを取得
-        float3 vec = target->GetTranslate() - owner->GetTranslate();
-        // 距離取得
-        float dis = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-        // 比較して最短であれば
+        if(target.get() == owner || std::dynamic_pointer_cast<PoittersPoint::Player>(target))
+            continue;
+        auto grabbable = target->GetComponent<ComponentGrabbable>();
+        if(!grabbable || !grabbable->CanBeGrabbed())
+            continue;
+
+        float dis = (float)length(target->GetTranslate() - owner->GetTranslate());
         if(dis < nearest_distance) {
-            // 最短距離を更新
             nearest_distance = dis;
-            // ターゲットとして登録
-            targetPtr = target;
+            target_ptr       = target;
         }
     }
-    return std::weak_ptr(targetPtr);
+    return std::weak_ptr(target_ptr);
 }
 
 bool ComponentCPUState::IsAttackerNearby()

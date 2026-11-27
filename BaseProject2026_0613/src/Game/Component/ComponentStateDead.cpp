@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 #include <Game/Component/ComponentStateDead.h>
 #include "Game/Scene/PoittersPoint_Stage.h"
+#include <Game/Component/ComponentCharacterPhysics.h>
 
 //! @brief 初期化
 //! 死亡アニメーションを再生する
@@ -32,11 +33,14 @@ void ComponentStateDead::Update()
         if(!model->IsPlaying()) {
             // 死亡処理：アニメ終了後に実行
             // 将来的にはCharacterクラスで共通化予定
-            owner->SetName("dead");
+            // (以前は SetName("dead") で死亡を表していたが、名前は一意でなく状態にも使えないためやめた。
+            //  死亡しているかは ComponentHitPoints::IsDead() で判定する)
 
-            if(auto col = owner->GetComponent<ComponentCollisionCapsule>()) {
-                owner->RemoveComponent<ComponentCollisionCapsule>();
-            }
+            // 死体が他の物の邪魔をしないよう、物理ボディごと当たり判定を消す
+            if(owner->GetComponent<ComponentCharacterPhysics>())
+                owner->RemoveComponent<ComponentCharacterPhysics>();
+            if(owner->GetComponent<ComponentPhysics>())
+                owner->RemoveComponent<ComponentPhysics>();
 
             RemoveThisComponent();
         }

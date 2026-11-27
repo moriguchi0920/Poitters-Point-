@@ -1,4 +1,10 @@
 ﻿#pragma once
+//---------------------------------------------------------------------------
+//! @file   ComponentStateThrow.h
+//! @brief  投げステート
+//! @details 投げモーションを再生し、手を離すタイミングで ComponentStateMachine::ReleaseThrow を呼ぶ。
+//!          空中投げでも落下は物理(重力)に任せるため、ここでは高さを扱わない。
+//---------------------------------------------------------------------------
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>
@@ -16,40 +22,31 @@ public:
 
     void GUI() override;
 
-    void SetThrowObject(ObjectWeakPtr object_ptr);
-
     bool GetIsFinished();
 
-    //! 空中投げパラメータの設定
-    void SetInAir(bool in_air, float current_velocity, float ground_y, float gravity)
-    {
-        is_in_air_        = in_air;
-        current_velocity_ = current_velocity;
-        ground_y_         = ground_y;
-        gravity_          = gravity;
-    }
+    //! @brief 空中投げか(上半身だけの速い投げモーションを使う)
+    void SetInAir(bool in_air) { is_in_air_ = in_air; }
 
 private:
-    ObjectWeakPtr throw_weak_ptr_;
+    //! @brief 投げる初速を計算する(正面 + 少し上向き)
+    float3 CalcThrowVelocity() const;
 
-    // 空中投げ用パラメータ
-    bool  is_in_air_        = false;
-    float current_velocity_ = 0.0f;
-    float ground_y_         = 0.0f;
-    float gravity_          = 0.05f;
-    bool  is_released_      = false;    // 手離しが完了したか
+    //! @brief 投げモーションが終わったか
+    bool IsMotionEnd() const;
 
-    float throw_speed_ = 100.0f;    // Jolt 剛体を投げるときの初速（GUI で調整）
+    bool is_in_air_   = false;
+    bool is_released_ = false;    //!< 手離しが完了したか
+    bool is_started_  = false;    //!< モーション再生を開始したか
+
+    float throw_speed_    = 160.0f;    //!< 正面方向の初速(単位/秒)
+    float throw_up_speed_ = 60.0f;     //!< 上向きの初速(単位/秒)
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
     //--------------------------------------------------------------------
     //@{
-
-    //! @brief セーブ
-    // @param arc アーカイバ
-    // @param ver バージョン
     CEREAL_SAVELOAD(arc, ver) { arc(cereal::make_nvp("Component", cereal::base_class<Component>(this))); }
+    //@}
 };
 
 CEREAL_CLASS_VERSION(ComponentStateThrow, 1);

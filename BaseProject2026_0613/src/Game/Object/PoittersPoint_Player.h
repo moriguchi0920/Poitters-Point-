@@ -42,12 +42,9 @@ public:
     //! 視界内の掴み可能対象を検知する
     void Update() override;
 
-    //! @brief 当たり判定のコールバック
-    //! 投げられた物体が移動中に当たった場合、ダメージを与える
-    void OnHit(const ComponentCollision::HitInfo& hit_info) override;
-
-    //! @brief 視界判定
-    //! 正面45度・距離50以内の掴み可能対象を検知する(プレイヤーとCPU共通)
+    //! @brief 掴み対象の判定(プレイヤーとCPU共通)
+    //! 体が触れていて、向いている方向(正面 grab_half_angle_ 度以内)にある「今掴める」物を探す
+    //! 物を優先し、物が無い時だけキャラクターを対象にする
     void OnEyeSight();
 
     //! @brief 視線判定で捕らえた一番近い掴み可能対象を取得する
@@ -59,9 +56,18 @@ public:
     //! @brief 移動スピードを取得する
     float GetMoveSpeed();
 
+    //! @brief 投げる力の倍率を取得する
+    float GetThrowPower() const { return throw_power_; }
+
+    //! @brief 持ち上げ時間の倍率を取得する
+    float GetLiftTimeRatio() const { return lift_time_ratio_; }
+
 private:
     // 視線判定で捕らえた一番近い掴み可能対象
     ObjectWeakPtr eyesight_target_;
+
+    // 掴める方向(正面からの角度・度)。距離は「体が触れていること」で判定する
+    float grab_half_angle_ = 60.0f;
 
     // モデルのファイルパス
     std::string model_path_ = "data/Game/Models/Player/Player.mv1";

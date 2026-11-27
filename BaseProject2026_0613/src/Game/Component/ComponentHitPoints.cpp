@@ -1,16 +1,13 @@
-﻿#pragma once
-#include <Game/Component/ComponentHitPoints.h>
-
-float ComponentHitPoints::max_hit_points_ = 5.0f;
+﻿#include <Game/Component/ComponentHitPoints.h>
 
 void ComponentHitPoints::Init()
 {
     __super::Init();
-
-    hit_points_ = max_hit_points_;
+    // Init は AddComponent の翌フレームに走るため、ここで HP を上書きすると
+    // 直後に呼んだ SetMaxAndCurrentHP() や、その間に受けたダメージが消えてしまう
 }
 
-float ComponentHitPoints::GetHitPoints()
+float ComponentHitPoints::GetHitPoints() const
 {
     return hit_points_;
 }
@@ -18,7 +15,7 @@ float ComponentHitPoints::GetHitPoints()
 void ComponentHitPoints::TakeDamage(float damage)
 {
     // HPが0以下なら
-    if(GetHitPoints() < 0) {
+    if(GetHitPoints() <= 0.0f) {
         // これ以上ダメージを与える必要は無いのでここで弾く
         return;
     }

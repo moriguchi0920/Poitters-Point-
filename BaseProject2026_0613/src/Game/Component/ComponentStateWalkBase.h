@@ -33,12 +33,20 @@ public:
     virtual bool GetNearby() { return false; }
 
 protected:
+    //! @brief ワールド方向へ移動させる(物理移動コンポーネントがあれば速度で、無ければ従来どおり座標で)
+    //! @param velocity60 1/60秒あたりの移動量
+    void MoveOwner(const float3& velocity60);
+
+    //! @brief 移動方向にモデルを向け、歩き/待機アニメーションを再生する
+    //! @param dir 移動方向(長さ0なら待機)
+    void UpdateModel(const float3& dir);
+
     float move_speed_ = 0.3f;
     float rot_speed_  = 20.0f;
 
     float front_rot_ = 0.0f;    //!<前方ベクトルの回転角度(0-360度)
 
-    bool is_holding_;
+    bool is_holding_ = false;
 
 private:
     //--------------------------------------------------------------------

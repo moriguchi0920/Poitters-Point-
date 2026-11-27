@@ -36,7 +36,7 @@ void SlimeExplosion::Update()
     // 一定時間経過したらエフェクトを削除
     lifetime_ -= GetDeltaTime();
     if(lifetime_ <= 0.0f) {
-        Scene::ReleaseObject(SharedThis());
+        Scene::Object::Release(SharedThis());
     }
 }
 

@@ -19,18 +19,14 @@ public:
     bool Init() override;
 
     //! @brief 更新
-    //! キーを確認して弾を撃たせるために必要
     void Update() override;
 
     //! @brief GUI
-    //! GUIでの弾の速度調整のために必要
     void GUI() override;
 
-    //! @brief 当たり判定のコールバック
-    //! 当たり判定が行われたときに自動で呼び出される関数
-    void OnHit(const ComponentCollision::HitInfo& hit_info) override;
-
 private:
+    float radius_  = 5.0f;     //!< 物理形状の半径(モデルの大きさから自動計算)
+    float density_ = 1000.0f;  //!< 密度(重さ)
 };
 
 }    // namespace PoittersPoint

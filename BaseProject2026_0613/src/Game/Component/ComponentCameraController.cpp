@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentCameraController.h>
+﻿#include <Game/Component/ComponentCameraController.h>
 // システムのコンポーネントはすべてインクルードされるようなっているので
 // 消してもいい
 

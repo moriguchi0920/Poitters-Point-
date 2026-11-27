@@ -15,7 +15,13 @@ public:
 
     //! @brief ヒットポイントを取得する
     //! @return ヒットポイント
-    float GetHitPoints();
+    float GetHitPoints() const;
+
+    //! @brief 最大HPを取得する
+    float GetMaxHitPoints() const { return max_hit_points_; }
+
+    //! @brief 倒れているか(HPが0)
+    bool IsDead() const { return hit_points_ <= 0.0f; }
 
     //! @brief 引数のダメージでHPを減算する
     //! @param damage
@@ -40,10 +46,11 @@ public:
 
 private:
     // ヒットポイント
-    float hit_points_;
+    float hit_points_ = 5.0f;
 
     // 最大ヒットポイント
-    static float max_hit_points_;
+    // (以前は static で全キャラ共通になっており、Enemy の SetMaxAndCurrentHP(2) で Player の最大HPも変わっていた)
+    float max_hit_points_ = 5.0f;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

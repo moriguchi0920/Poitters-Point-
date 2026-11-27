@@ -16,6 +16,10 @@ public:
 
     void GUI() override;
 
+protected:
+    //! @brief ダウンから復帰したら考え直す
+    void OnRecover() override;
+
 private:
     const float escape_offset_ = 20.0f;
     const float think_time_    = 1.5f;
@@ -64,6 +68,7 @@ private:
 
     bool          IsAttackerNearby();
     const float   attacker_near_distance_ = 1.0f;
+    const float   attack_range_           = 40.0f;    //!< この距離まで近づいたら投げる
     ObjectWeakPtr target_want_grab_;
 
     //--------------------------------------------------------------------

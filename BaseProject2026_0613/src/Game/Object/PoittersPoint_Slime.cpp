@@ -1,16 +1,18 @@
 ﻿//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Slime.cpp
-//! @brief  PoittersPoint_Slime
+//! @brief  PoittersPoint_Slime (投げ物：スライム。投げて何かに当たると爆発する)
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Slime.h"
 #include "PoittersPoint_Slime_Explosion.h"    // SlimeExplosionの型定義を読み込む
-#include "Game/Scene/PoittersPoint_Stage.h"
+#include "Game/Component/ComponentGrabbable.h"
+#include "Game/Component/ComponentHitPoints.h"
+#include "Game/Component/ComponentStateMachine.h"
+#include "Game/Component/ComponentCharacterPhysics.h"
+#include "Game/System/PoittersPoint_PhysicsHelper.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
-#include <System/Component/ComponentCollisionSphere.h>
-#include "Game/Component/ComponentGrabbable.h"
-#include "Game/Component/ComponentHitPoints.h"
+#include <System/Component/ComponentPhysics.h>
 
 namespace PoittersPoint {
 
@@ -21,33 +23,34 @@ bool Slime::Init()
 
     SetName("Slime");
 
-    // スケール・位置設定
-    SetScaleAxisXYZ({0.2f, 0.2f, 0.2f});
+    // 物理ボディは作成時の位置に置かれるため、先に位置を決めておく
     SetTranslate({0.0f, 6.0f, 12.0f});
 
     // 3Dモデルの設定
+    // 物理ボディの行列にはスケールが無く、PostPhysics でオブジェクトの行列が上書きされるため
+    // 大きさはオブジェクトではなくモデル側に持たせる
+    // (ComponentModel の既定スケールは 0.1。以前はオブジェクトに 0.2 を掛けていたので合計 0.02 倍)
     auto model = AddComponent<ComponentModel>("data/Game/Models/Slime/Slime.mv1");
+    model->SetScaleAxisXYZ(model->GetScaleAxisXYZ() * 0.2f);
 
-    // 当たり判定（球体）の設定
-    ComponentCollisionSphere* col = AddComponent<ComponentCollisionSphere>().get();
-    if(col) {
-        col->SetRadius(5.0f);
-        col->UseGravity(true);
-        col->SetGravity(-0.2f);
-        col->SetCollisionGroup(ComponentCollision::CollisionGroup::ETC);
-        col->SetHitCollisionGroup(static_cast<u32>(ComponentCollision::CollisionGroup::GROUND) | static_cast<u32>(ComponentCollision::CollisionGroup::PLAYER) |
-                                  static_cast<u32>(ComponentCollision::CollisionGroup::ETC) | static_cast<u32>(ComponentCollision::CollisionGroup::WEAPON));
-        col->SetMass(5.0f);
-    }
+    // 柔らかく弾む球(モデルの大きさに合わせる)
+    auto physics = AddComponent<ComponentPhysics>();
+    radius_      = PhysicsHelper::CreateSphereFitModel(physics, model, radius_, density_);
+    physics->SetPhysicsStatus(ComponentPhysics::PhysicsBit::Actived, true);
+    physics->SetPhysicsReal(1.0f);
+    physics->SetCollisionType(ComponentPhysics::CollisionType::ITEM);
+    physics->SetFriction(0.6f);
+    physics->SetRestitution(0.25f);    //!< 少し弾む(大きすぎると静止中も細かく跳ね続ける)
+    physics->SetLinearDamping(2.0f);
+    physics->SetAngularDamping(2.0f);
 
     // 持ち上げ機能（Grabbable）
     auto grabbable = AddComponent<ComponentGrabbable>();
-    if(grabbable) {
-        grabbable->SetBounceOffset(0.2f);
-        grabbable->SetLiftTime(1.0f);
-        grabbable->SetCanGrab(true);
-        grabbable->SetDamage(2.0f);
-    }
+    grabbable->SetLiftTime(1.0f);
+    grabbable->SetDamage(2.0f);
+
+    // 投げられて何かに当たったら爆発する(物理コールバック中にオブジェクトを消さないよう、次の Update で爆発させる)
+    grabbable->OnImpactFunc = [this](Object*) { explode_requested_ = true; };
 
     return true;
 }
@@ -55,79 +58,70 @@ bool Slime::Init()
 void Slime::Update()
 {
     Super::Update();
+
+    if(explode_requested_) {
+        explode_requested_ = false;
+        Explode();
+    }
 }
 
 void Slime::GUI()
 {
     Super::GUI();
-}
 
-void Slime::OnHit(const ComponentCollision::HitInfo& hit_info)
-{
-    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        // 投げられて移動中（飛行中）の場合
-        if(grabbable->IsMoving()) {
-            auto hitter = hit_info.hit_collision_->GetOwner();
-
-            // 投げた本人との衝突判定はスキップ
-            if(hitter && grabbable->IsThrower(hitter->SharedThis())) {
-                Super::OnHit(hit_info);
-                return;
-            }
-
-            // 地面または他のオブジェクトに当たったら爆発
-            Explode();
-            return;
-        }
-
-        // 通常の着地処理
-        if(hit_info.hit_collision_ && hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-            grabbable->SetCanGrab(true);
-            if(grabbable->IsGrounded()) {
-                grabbable->SetBounceOffset(0.2f);
-            }
+    ImGui::Begin(GetName().data());
+    {
+        ImGui::Separator();
+        if(ImGui::TreeNode("Slime")) {
+            ImGui::DragFloat(u8"爆発範囲", &explosion_radius_, 1.0f, 0.0f, 500.0f);
+            ImGui::DragFloat(u8"爆発ダメージ", &explosion_damage_, 0.1f, 0.0f, 999.0f);
+            ImGui::DragFloat(u8"爆風の強さ", &explosion_power_, 1.0f, 0.0f, 1000.0f);
+            ImGui::TreePop();
         }
     }
-
-    Super::OnHit(hit_info);
+    ImGui::End();
 }
 
 //===========================================================================
-//! @brief 爆発処理
+//! @brief 爆発処理：範囲内のHPを持つ相手にダメージ + 外向きに吹き飛ばす
 //===========================================================================
 void Slime::Explode()
 {
-    float3 myPos           = GetTranslate();
-    float  explosionRadius = 100.0f;    // ★範囲を 45.0f から 100.0f 等に広げてみる
-    float  explosionDamage = 999.0f;    // ★確実に倒すため大ダメージを設定してみる
+    const float3 my_pos = GetTranslate();
 
-    auto objArray = Scene::Object::GetArray<Object>();
-    for(auto& obj : objArray) {
-        if(!obj || obj == static_cast<ObjectPtr>(shared_from_this())) {
+    for(auto& obj : Scene::Object::GetArray<Object>()) {
+        if(!obj || obj.get() == this)
             continue;
-        }
 
-        float3 targetPos = obj->GetTranslate();
-        float3 vec       = targetPos - myPos;
+        auto hp = obj->GetComponent<ComponentHitPoints>();
+        if(!hp)
+            continue;
 
-        // 距離の計算（三次元距離）
-        float distance = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+        float3 vec      = obj->GetTranslate() - my_pos;
+        float  distance = (float)length(vec);
+        if(distance > explosion_radius_)
+            continue;
 
-        if(distance <= explosionRadius) {
-            if(auto hp = obj->GetComponent<ComponentHitPoints>()) {
-                hp->TakeDamage(explosionDamage);    // ダメージ送信
-            }
-        }
+        hp->TakeDamage(explosion_damage_);
+
+        // 爆心から外向き + 上向きに吹き飛ばす(近いほど強い)
+        float3 dir      = {vec.x, 0.0f, vec.z};
+        dir             = (float)length(dir) > 0.0001f ? normalize(dir) : float3(0.0f, 0.0f, 1.0f);
+        float  strength = explosion_power_ * (1.0f - 0.5f * distance / std::max(explosion_radius_, 0.001f));
+        float3 knock    = dir * strength + float3(0.0f, strength * 0.6f, 0.0f);
+
+        if(auto state_machine = obj->GetComponent<ComponentStateMachine>())
+            state_machine->KnockDown(knock);
+        else if(auto mover = obj->GetComponent<ComponentCharacterPhysics>())
+            mover->Launch(knock);
     }
 
     // 爆発エフェクトの生成
-    auto explosion = Scene::Object::Create<SlimeExplosion>();
-    if(explosion) {
-        explosion->SetTranslate(myPos);
-    }
+    if(auto explosion = Scene::Object::Create<SlimeExplosion>())
+        explosion->SetTranslate(my_pos);
 
     // スライム自身の削除
-    Scene::ReleaseObject(SharedThis());
+    Scene::Object::Release(SharedThis());
 }
 
 }    // namespace PoittersPoint

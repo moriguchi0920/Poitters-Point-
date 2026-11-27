@@ -97,10 +97,7 @@ protected:
         void Exec x;                                                           \
                                                                                \
     private:                                                                   \
-        CEREAL_SAVELOAD(arc, ver)                                              \
-        {                                                                      \
-            arc(CEREAL_NVP(name_));                                            \
-        }                                                                      \
+        CEREAL_SAVELOAD(arc, ver) { arc(CEREAL_NVP(name_)); }                  \
     };                                                                         \
     std::shared_ptr<Callable##name> name = std::make_shared<Callable##name>(); \
     CEREAL_REGISTER_TYPE(Callable##name);                                      \

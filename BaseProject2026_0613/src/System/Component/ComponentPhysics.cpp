@@ -98,6 +98,10 @@ public:
         if(pd2 == nullptr)
             return JPH::ValidateResult::RejectContact;
 
+        // 特定オブジェクトとの接触無視(投げた本人・持っている本人との接触回避など)
+        if(pd1->IsIgnoreObject(pd2->GetOwner()) || pd2->IsIgnoreObject(pd1->GetOwner()))
+            return JPH::ValidateResult::RejectAllContactsForThisBodyPair;
+
         ComponentPhysics::CollisionType ct1 = pd1->GetCollisionType();
         ComponentPhysics::CollisionType ct2 = pd2->GetCollisionType();
 
@@ -121,51 +125,7 @@ public:
                                 const JPH::ContactManifold& inManifold,
                                 JPH::ContactSettings& /*ioSettings*/)
     {
-        ComponentPhysicsWeakPtr pd1w = collisions_.at(inBody1.GetID());
-        ComponentPhysicsWeakPtr pd2w = collisions_.at(inBody2.GetID());
-        ComponentPhysicsPtr     pd1  = pd1w.lock();
-        ComponentPhysicsPtr     pd2  = pd2w.lock();
-        if(pd1 == nullptr)
-            return;
-        if(pd2 == nullptr)
-            return;
-
-        {
-            ComponentPhysics::HitInfo info;
-            info.hit_           = true;
-            info.collision_     = pd1.get();
-            info.hit_collision_ = pd2.get();
-
-            JPH::Vec3 pos = {0, 0, 0};
-            for(auto& px : inManifold.mRelativeContactPointsOn1) pos += inBody1.GetCenterOfMassPosition() + px;
-            if(inManifold.mRelativeContactPointsOn1.size() > 0)
-                pos /= (float)inManifold.mRelativeContactPointsOn1.size();
-
-            info.hit_position_.x = pos.GetX();
-            info.hit_position_.y = pos.GetY();
-            info.hit_position_.z = pos.GetZ();
-            //pd1->OnHit( info );		// ここで呼ぶことができません
-            std::scoped_lock lock(mutex_infos_);
-            pd1->SetHitInfo(info);
-        }
-        {
-            ComponentPhysics::HitInfo info;
-            info.hit_           = true;
-            info.collision_     = pd2.get();
-            info.hit_collision_ = pd1.get();
-
-            JPH::Vec3 pos = {0, 0, 0};
-            for(auto& px : inManifold.mRelativeContactPointsOn2) pos += inBody2.GetCenterOfMassPosition() + px;
-            if(inManifold.mRelativeContactPointsOn2.size() > 0)
-                pos /= (float)inManifold.mRelativeContactPointsOn2.size();
-
-            info.hit_position_.x = pos.GetX();
-            info.hit_position_.y = pos.GetY();
-            info.hit_position_.z = pos.GetZ();
-            //pd2->OnHit( info );		// ここで呼ぶことができません
-            std::scoped_lock lock(mutex_infos_);
-            pd2->SetHitInfo(info);
-        }
+        PushHitInfos(inBody1, inBody2, inManifold);
     }
 
     virtual void OnContactPersisted(const JPH::Body&            inBody1,
@@ -173,51 +133,49 @@ public:
                                     const JPH::ContactManifold& inManifold,
                                     JPH::ContactSettings& /*ioSettings*/)
     {
-        ComponentPhysicsWeakPtr pd1w = collisions_.at(inBody1.GetID());
-        ComponentPhysicsWeakPtr pd2w = collisions_.at(inBody2.GetID());
-        ComponentPhysicsPtr     pd1  = pd1w.lock();
-        ComponentPhysicsPtr     pd2  = pd2w.lock();
-        if(pd1 == nullptr)
+        PushHitInfos(inBody1, inBody2, inManifold);
+    }
+
+private:
+    //! @brief 接触情報を両方のコンポーネントへ積む (OnHit はここでは呼べないため PostPhysics で処理する)
+    //! @details 接触点は GetWorldSpaceContactPointOn1/On2 でワールド座標を求める。
+    //!          (旧実装は mRelativeContactPointsOn2 に Body2 の重心を足しており、Body2 側の位置がずれていた。
+    //!           相対座標の基準は mBaseOffset であり、各ボディの重心ではない)
+    void PushHitInfos(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold)
+    {
+        ComponentPhysicsPtr pd1 = collisions_.at(inBody1.GetID()).lock();
+        ComponentPhysicsPtr pd2 = collisions_.at(inBody2.GetID()).lock();
+        if(pd1 == nullptr || pd2 == nullptr)
             return;
-        if(pd2 == nullptr)
-            return;
 
-        {
-            ComponentPhysics::HitInfo info;
-            info.hit_           = true;
-            info.collision_     = pd1.get();
-            info.hit_collision_ = pd2.get();
+        const JPH::uint count = inManifold.mRelativeContactPointsOn1.size();
 
-            JPH::Vec3 pos = {0, 0, 0};
-            for(auto& px : inManifold.mRelativeContactPointsOn1) pos += inBody1.GetCenterOfMassPosition() + px;
-            if(inManifold.mRelativeContactPointsOn1.size() > 0)
-                pos /= (float)inManifold.mRelativeContactPointsOn1.size();
-
-            info.hit_position_.x = pos.GetX();
-            info.hit_position_.y = pos.GetY();
-            info.hit_position_.z = pos.GetZ();
-            //pd1->OnHit( info );		// ここで呼ぶことができません
-            std::scoped_lock lock(mutex_infos_);
-            pd1->SetHitInfo(info);
+        JPH::RVec3 pos1 = JPH::RVec3::sZero();
+        JPH::RVec3 pos2 = JPH::RVec3::sZero();
+        for(JPH::uint i = 0; i < count; ++i) {
+            pos1 += inManifold.GetWorldSpaceContactPointOn1(i);
+            pos2 += inManifold.GetWorldSpaceContactPointOn2(i);
         }
-        {
-            ComponentPhysics::HitInfo info;
-            info.hit_           = true;
-            info.collision_     = pd2.get();
-            info.hit_collision_ = pd1.get();
-
-            JPH::Vec3 pos = {0, 0, 0};
-            for(auto& px : inManifold.mRelativeContactPointsOn2) pos += inBody2.GetCenterOfMassPosition() + px;
-            if(inManifold.mRelativeContactPointsOn2.size() > 0)
-                pos /= (float)inManifold.mRelativeContactPointsOn2.size();
-
-            info.hit_position_.x = pos.GetX();
-            info.hit_position_.y = pos.GetY();
-            info.hit_position_.z = pos.GetZ();
-            //pd2->OnHit( info );		// ここで呼ぶことができません
-            std::scoped_lock lock(mutex_infos_);
-            pd2->SetHitInfo(info);
+        if(count > 0) {
+            pos1 /= (float)count;
+            pos2 /= (float)count;
         }
+
+        ComponentPhysics::HitInfo info1;
+        info1.hit_           = true;
+        info1.collision_     = pd1.get();
+        info1.hit_collision_ = pd2.get();
+        info1.hit_position_  = {(float)pos1.GetX(), (float)pos1.GetY(), (float)pos1.GetZ()};
+
+        ComponentPhysics::HitInfo info2;
+        info2.hit_           = true;
+        info2.collision_     = pd2.get();
+        info2.hit_collision_ = pd1.get();
+        info2.hit_position_  = {(float)pos2.GetX(), (float)pos2.GetY(), (float)pos2.GetZ()};
+
+        std::scoped_lock lock(mutex_infos_);
+        pd1->SetHitInfo(info1);
+        pd2->SetHitInfo(info2);
     }
 };
 
@@ -618,7 +576,7 @@ void ComponentPhysics::PrePhysics()
     // Jolt本体の mLinearDamping/mAngularDamping はこのバージョンでは
     // 剛体統合で適用されない（車両側のみ使用）ため、コンポーネント側で掛ける。
     if(body_ && (linear_damping_ > 0.0f || angular_damping_ > 0.0f) && !Scene::IsPause()) {
-        const float dt          = GetDeltaTime();
+        const float dt = GetDeltaTime();
         // Joltの睡眠しきい値(0.03)と近似。停止中のボディを減衰処理で無理に起こさないためのガード
         const float sleep_speed = 0.03f;
 

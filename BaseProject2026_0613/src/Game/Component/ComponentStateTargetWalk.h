@@ -19,6 +19,8 @@ public:
     void                        SetTargetPtr(const ObjectWeakPtr ptr);
     void                        ResetTargetPtr();
     const float3&               GetTargetPos();
+    //! @brief 「近くに着いた(GetNearby)」とみなす水平距離を設定する(拾う時は近く、投げる時は射程)
+    void SetNearbyDistance(float distance) { nearby_distance_ = distance; }
     bool                        GetArrival() override;
 
     void GUI() override;
@@ -26,10 +28,12 @@ public:
     bool GetNearby() override;
 
 private:
-    float3        target_pos_;
+    float3        target_pos_ = {0.0f, 0.0f, 0.0f};
+    float3        prev_pos_   = {0.0f, 0.0f, 0.0f};    //!< 前フレームの位置(引っかかり判定用)
     ObjectWeakPtr target_ptr_;
 
-    float       stopping_time_;
+    float       stopping_time_   = 0.0f;
+    float       nearby_distance_ = 10.0f;    //!< 近くに着いたとみなす水平距離
     const float stop_judge_time_ = 1.0f;
     //--------------------------------------------------------------------
     //! @name Cereal処理

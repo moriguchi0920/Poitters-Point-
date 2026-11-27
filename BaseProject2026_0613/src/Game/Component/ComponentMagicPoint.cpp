@@ -1,12 +1,9 @@
 ﻿#include <Game/Component/ComponentMagicPoint.h>
 
-float ComponentMagicPoint::max_magic_points_ = 5.0f;
-
 void ComponentMagicPoint::Init()
 {
     __super::Init();
-
-    magic_points_ = max_magic_points_;
+    // Init は AddComponent の翌フレームに走るため、ここで MP を上書きすると直後に設定した値が消える
 }
 
 float ComponentMagicPoint::GetMagicPoints()
@@ -17,7 +14,7 @@ float ComponentMagicPoint::GetMagicPoints()
 void ComponentMagicPoint::UseMP(float cost)
 {
     // MPが0以下なら
-    if(GetMagicPoints() <= 0) {
+    if(GetMagicPoints() <= 0.0f) {
         // これ以上消費する必要は無いのでここで弾く
         return;
     }

@@ -3,8 +3,8 @@
 //! @brief  PoittersPoint_Enemy
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Enemy.h"
+#include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
-#include "Game/Scene/PoittersPoint_GameOver.h";
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
@@ -12,7 +12,7 @@
 #include <Game/Component/ComponentHitPoints.h>
 #include <Game/Component/ComponentStateDead.h>
 
-#include <Game/Component/ComponentKnockBack.h>
+#include <Game/Component/ComponentCharacterPhysics.h>
 
 namespace PoittersPoint {
 // namespace PoittersPoint
@@ -44,26 +44,13 @@ bool Enemy::Init()
     }
 
     // ラムダ式
-    auto randomRange = [](int start, int end) { return start + rand() % ((end - start) + 1); };
+    auto randomRange = [](int start, int end) { return (float)(start + rand() % ((end - start) + 1)); };
 
-    //SetTranslate({30, 5, -30});
-    SetTranslate({randomRange(-150, 150), 50, randomRange(-150, 150)});
+    // 物理ボディは作成時の位置に置かれるため、先に位置を決めておく
+    SetTranslate({randomRange(-150, 150), 50.0f, randomRange(-150, 150)});
 
-    AddComponent<ComponentCollisionCapsule>()
-        // 所属するグループを「ENEMY」とします
-        ->SetCollisionGroup(ComponentCollision::CollisionGroup::ENEMY)
-        ->SetRadius(4.0f)     // コリジョンの半径を4.0 にする
-        ->SetHeight(23.0f)    // コリジョンの高さを23.0 にする
-        ->UseGravity();       // Collisionの重力を有効にします
-
-    //↑ if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
-    //   は処理が増えるので削除
-
-    //AddComponent<ComponentObjectController>();
-    //if(auto ctl = GetComponent<ComponentObjectController>()) {
-    //    ctl->SetMoveSpeed(0.3f);
-    //    ctl->SetRotateSpeed(20.0f);
-    //}
+    // 当たり判定・重力・移動・吹き飛びはキャラクター共通の物理移動に任せる
+    AddComponent<ComponentCharacterPhysics>()->Setup(4.0f, 23.0f, ComponentPhysics::CollisionType::ENEMY);
 
     // 掴まれて投げられるようにする
     auto grabbable = AddComponent<ComponentGrabbable>();
@@ -72,11 +59,6 @@ bool Enemy::Init()
 
     AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(2.0f);
 
-    AddComponent<ComponentKnockBack>();
-
-    // コリジョン以外のコンポーネントにも当たりを返すようにする
-    // これが有効でないと KnockBack の OnHitComponent が呼ばれない
-    SetStatus(Object::StatusBit::OnHitAllComponent, true);
 
     return true;
 }
@@ -91,15 +73,46 @@ void Enemy::Update()
     //-------------------------------------------------------------------------------
     // 敵の方向をプレイヤーのほうに向ける　
     //-------------------------------------------------------------------------------
-    auto player = Scene::Object::Get<Object>("Player");
+    // 一番近いキャラクターを狙う(名前 "Player" で探すと、複数いる時にどれが返るか分からない)
+    ObjectPtr player  = nullptr;
+    float     nearest = FLT_MAX;
+    for(auto& character : Scene::Object::GetArray<Player>()) {
+        float d = (float)length(character->GetTranslate() - GetTranslate());
+        if(d < nearest) {
+            nearest = d;
+            player  = character;
+        }
+    }
+    auto mover  = GetComponent<ComponentCharacterPhysics>();
+
+    // HPが無くなったら死亡状態へ(ダメージ自体は投げ物側の ComponentGrabbable が与える)
+    if(!is_down) {
+        if(auto hp = GetComponent<ComponentHitPoints>(); hp && hp->IsDead()) {
+            is_down = true;
+            AddComponent<ComponentStateDead>();
+        }
+    }
+
+    // 吹き飛ばされた後、着地して止まったら操作を戻す
+    if(mover && !mover->IsControlEnabled() && mover->IsGrounded() && (float)length(mover->GetVelocity()) < 5.0f)
+        mover->SetControlEnabled(true);
 
     // プレイヤーとエネミーが存在している時のみ
-    if(player && is_down == false && is_dead == false) {
+    if(player && mover && is_down == false && is_dead == false) {
         float3 vec    = player->GetTranslate() - GetTranslate();
         auto   length = sqrtf(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
         auto   model  = GetComponent<ComponentModel>();
-        // プレイヤーの方向に、敵の向きを最大3度回転させます
-        SetRotationToPositionWithLimit(player->GetTranslate(), 3.0f);
+        // プレイヤーの方向に、敵(モデル)の向きを最大3度回転させます
+        // (オブジェクト自体の回転は物理ボディで固定されているため、向きはモデルで表現する)
+        vec.y = 0.0f;
+        if((float)sqrtf(vec.x * vec.x + vec.z * vec.z) > 0.001f)
+            model->SetRotationToVectorWithLimit(normalize(vec), 3.0f);
+
+        // モデルの正面(-Z)方向
+        float3 forward     = -model->GetWorldVectorAxisZ();
+        forward.y          = 0.0f;
+        float forward_len  = sqrtf(forward.x * forward.x + forward.z * forward.z);
+        forward            = forward_len > 0.0001f ? forward / forward_len : float3(0.0f, 0.0f, 0.0f);
 
         //==========================================
         // 状態の更新
@@ -123,27 +136,14 @@ void Enemy::Update()
         if(is_running) {
             model->PlayAnimationNoSame("run", true, 0.7f);
             // 向きに移動させる
-            AddTranslate({0, 0, -0.3f}, true);
+            mover->Move(forward * 0.3f);
         }
         else {
             model->PlayAnimationNoSame("walk", true, 0.5f);
             // 向きに移動させる
-            AddTranslate({0, 0, -0.1f}, true);
+            mover->Move(forward * 0.1f);
         }
 
-        /*
-        // これだと距離の中間点でアニメーションの連続遷移でガタつく
-        if(40.0f <= length) {
-            model->PlayAnimationNoSame("run", true, 1.5f);
-            // 向きに移動させる
-            AddTranslate({0, 0, -0.3}, true);
-        }
-        else if(length < 40.0f) {
-            model->PlayAnimationNoSame("walk", true, 1.5f);
-            // 向きに移動させる
-            AddTranslate({0, 0, -0.1}, true);
-        }
-        */
     }
 
     // 死亡アニメーション終了時にis_deadをtrueにする
@@ -155,72 +155,6 @@ void Enemy::Update()
             }
         }
     }
-}
-
-//============================================================================
-// 当たり判定のコールバック
-//============================================================================
-void Enemy::OnHit(const ComponentCollision::HitInfo& hit_info)
-{
-    auto hitter = hit_info.hit_collision_->GetOwner();
-
-    // ヒットした相手が掴めるものなら
-    if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
-        // 投げた本人自身の場合はダメージなし
-        if(grabbable->IsThrower(SharedThis())) {
-            Super::OnHit(hit_info);
-            return;
-        }
-
-        // 地面で停止中はダメージなし
-        if(!grabbable->IsMoving()) {
-            Super::OnHit(hit_info);
-            return;
-        }
-
-        // 連続ヒット防止のために既にこの敵をHit済みならスルー
-        if(grabbable->IsAlreadyHit(SharedThis())) {
-            Super::OnHit(hit_info);
-            return;
-        }
-
-        // 初Hitならダメージ処理へ
-        //grabbable->AddHitTarget(SharedThis());
-        // Hitの記録(grabbable->AddHitTarget)は KnockBack の OnHitComponent 側で行う。
-        // ここで記録すると、ノックバック前に IsAlreadyHit で弾かれて飛ばなくなる
-    }
-    else {
-        // 弾などgrabbable以外は今まで通りのHit処理を行う
-        Super::OnHit(hit_info);
-        return;
-    }
-
-    // 今のシーンを取得
-    auto now_scene = Scene::GetCurrentScene();
-    // sharedポインタのdynamic_cast
-    // 間違っている場合nullptrが返ってくるため処理が行われない
-    if(auto scene = dynamic_cast<PoittersPoint_Stage*>(now_scene)) {
-        if(auto hp = GetComponent<ComponentHitPoints>()) {
-            // 投げれる物ごとダメージを与える
-            hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
-
-            if(hp->GetHitPoints() <= 0.0f) {
-                is_down = true;
-
-                // 死亡状態へ
-                if(auto model = GetComponent<ComponentModel>()) {
-                    AddComponent<ComponentStateDead>();
-                }
-
-                if(auto col = GetComponent<ComponentCollisionCapsule>()) {
-                    RemoveComponent<ComponentCollisionCapsule>();
-                }
-            }
-        }
-    }
-
-    // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
-    Super::OnHit(hit_info);
 }
 
 }    // namespace PoittersPoint

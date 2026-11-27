@@ -43,8 +43,8 @@ void PoittersPoint_Title::Update()
 
 void PoittersPoint_Title::LateDraw()
 {
-    DrawBoxAA(0, 0, WINDOW_W, WINDOW_H, GetColor(245, 240, 230), TRUE);
-    DrawBoxAA(0, 150, WINDOW_W, 450, GetColor(240, 240, 200), TRUE);
+    DrawBoxAA(0.0f, 0.0f, (float)WINDOW_W, (float)WINDOW_H, GetColor(245, 240, 230), TRUE);
+    DrawBoxAA(0.0f, 150.0f, (float)WINDOW_W, 450.0f, GetColor(240, 240, 200), TRUE);
 
     float ADJUST_X = (WINDOW_W / 1280.0f);
     float ADJUST_Y = (WINDOW_H / 720.0f);

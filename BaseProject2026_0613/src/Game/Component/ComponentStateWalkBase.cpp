@@ -1,5 +1,31 @@
-﻿#pragma once
-#include <Game/Component/ComponentStateWalkBase.h>
+﻿#include <Game/Component/ComponentStateWalkBase.h>
+#include <Game/Component/ComponentCharacterPhysics.h>
+
+void ComponentStateWalkBase::MoveOwner(const float3& velocity60)
+{
+    auto owner = GetOwner();
+    if(auto mover = owner->GetComponent<ComponentCharacterPhysics>()) {
+        mover->Move(velocity60);
+        return;
+    }
+    owner->AddTranslate(velocity60);
+}
+
+void ComponentStateWalkBase::UpdateModel(const float3& dir)
+{
+    auto mdl = GetOwner()->GetComponent<ComponentModel>();
+    if(!mdl)
+        return;
+
+    if((float)length(dir) > 0.0f) {
+        auto rot = quaternion::rotation_axis({0, 1, 0}, front_rot_ * DegToRad);
+        mdl->SetRotationToVectorWithLimit(mul(dir, rot), rot_speed_);
+        mdl->PlayAnimationNoSame(is_holding_ ? "grab walk" : "walk", true);
+    }
+    else {
+        mdl->PlayAnimationNoSame(is_holding_ ? "grab idle" : "idle", true);
+    }
+}
 
 void ComponentStateWalkBase::Init()
 {
