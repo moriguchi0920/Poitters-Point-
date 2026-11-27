@@ -42,6 +42,15 @@ public:
 private:
     void createEnemy();
 
+    //! @brief CPUキャラクターを生成する
+    //! @param position 出現位置
+    void createCPU(const float3& position);
+
+    //! @brief (デバッグ用)CPUを1体場から取り除いて脱落させる
+    void dropOutCPU();
+
+    int cpu_count_ = 0;    //!< これまでに生成したCPUの数(名前付け用)
+
     int enemy_dead_count = 0;
 
     // GUIで表示している(int)

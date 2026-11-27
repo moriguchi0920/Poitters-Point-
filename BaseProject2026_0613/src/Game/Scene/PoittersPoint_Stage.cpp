@@ -26,6 +26,8 @@
 #include <Game/Component/ComponentCPUState.h>
 
 #include <Game/Component/ComponentKnockBack.h>
+#include <Game/Component/ComponentStateMachine.h>
+#include <Game/Component/ComponentGrabbable.h>
 
 namespace PoittersPoint {
 
@@ -127,28 +129,11 @@ bool PoittersPoint_Stage::Init()
     //for(int i = 0; i < MAX_ENEMIES; i++) {
     //    Scene::Object::Create<Enemy>();
     //}
-    CharacterData cpu_data("data/Game/Models/Player/Player.mv1",
-                           {
-                               {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                               {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                               {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                               {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
-                               {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                               { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
-                               { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
-                               {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
-                               { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
-    },
-                           {0.11f, 0.11f, 0.11f},
-                           0.3f,
-                           1.0f,
-                           1.0f);
-    auto          cpu_character = Scene::Object::Create<Player>();
-    cpu_character->SetName("CPU1");
-    cpu_character->SetCharacterStatus(cpu_data);
-    cpu_character->SetTranslate({20.0f, 8.0f, 0.0f});
-    // CPU用のステートマシンをここで付与する(Player::Initでは付与しない)
-    cpu_character->AddComponent<ComponentCPUState>();
+
+    // CPUキャラクター(操作プレイヤーと合わせて4人対戦)
+    createCPU({40.0f, 8.0f, -30.0f});
+    createCPU({-45.0f, 8.0f, 25.0f});
+    createCPU({10.0f, 8.0f, 55.0f});
 
     //for(int i = 0; i < 5; i++) {
     //    Scene::Object::Create<Bullet>();
@@ -165,6 +150,25 @@ bool PoittersPoint_Stage::Init()
 //! @brief 更新
 void PoittersPoint_Stage::Update()
 {
+    //---------------------------------------------------------------
+    // デバッグ操作(カメラ確認用)
+    //  F7 : CPUを追加 / F8 : CPUを1体脱落させる / F9 : カメラの図形・中心点表示切替
+    //---------------------------------------------------------------
+    if(Input::IsKeyDown(KEY_INPUT_F7)) {
+        auto  randomRange = [](float start, float end) { return start + (end - start) * ((float)rand() / RAND_MAX); };
+        float theta       = randomRange(0.0f, DX_TWO_PI_F);
+        float r           = randomRange(10.0f, 90.0f);
+        createCPU({cosf(theta) * r, 30.0f, sinf(theta) * r});
+    }
+    if(Input::IsKeyDown(KEY_INPUT_F8)) {
+        dropOutCPU();
+    }
+    if(Input::IsKeyDown(KEY_INPUT_F9)) {
+        if(auto camera = Scene::Object::Get<Camera>()) {
+            camera->SetDebugDraw(!camera->IsDebugDraw());
+        }
+    }
+
     //// 毎フレーム動作する
     //counter2++;
 
@@ -219,6 +223,71 @@ void PoittersPoint_Stage::GUI()
 
     ImGui::InputInt("(Test)Counter2", &counter2);
     ImGui::InputInt("(Test)Counter3", &counter3);
+
+    // カメラ確認用のデバッグ操作
+    ImGui::Separator();
+    ImGui::Text(u8"F7:CPU追加 / F8:CPU脱落 / F9:カメラ図形表示");
+    if(ImGui::Button(u8"CPUを追加")) {
+        createCPU({0.0f, 30.0f, -40.0f});
+    }
+    ImGui::SameLine();
+    if(ImGui::Button(u8"CPUを1体脱落")) {
+        dropOutCPU();
+    }
+}
+
+void PoittersPoint_Stage::createCPU(const float3& position)
+{
+    CharacterData cpu_data("data/Game/Models/Player/Player.mv1",
+                           {
+                               {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
+                               {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
+                               {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
+                               {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
+                               {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
+                               { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
+                               { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
+                               {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
+                               { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
+    },
+                           {0.11f, 0.11f, 0.11f},
+                           0.3f,
+                           1.0f,
+                           1.0f);
+
+    cpu_count_++;
+    auto cpu_character = Scene::Object::Create<Player>();
+    cpu_character->SetName("CPU" + std::to_string(cpu_count_));
+    cpu_character->SetCharacterStatus(cpu_data);
+    cpu_character->SetTranslate(position);
+    // CPU用のステートマシンをここで付与する(Player::Initでは付与しない)
+    cpu_character->AddComponent<ComponentCPUState>();
+}
+
+void PoittersPoint_Stage::dropOutCPU()
+{
+    // 最後に生成されたCPUを場から取り除く(脱落の再現)
+    // ※キャラクターはJoltのキャラクターコントローラーで動くため、SetTranslateでの瞬間移動では地面を抜けられない
+    // ※物を持ち上げ中/保持中のCPUを消すと持っている物が宙に残るため、その間は対象外にする
+    auto players = Scene::Object::GetArray<Player>();
+    for(auto it = players.rbegin(); it != players.rend(); ++it) {
+        auto& p = *it;
+        if(!p || p->GetName().rfind("CPU", 0) != 0) {
+            continue;
+        }
+        if(auto state_machine = p->GetComponent<ComponentStateMachine>()) {
+            if(state_machine->GetGrabbing()) {
+                continue;
+            }
+        }
+        if(auto grabbable = p->GetComponent<ComponentGrabbable>()) {
+            if(grabbable->GetIsGrabbed()) {
+                continue;    // 誰かに持たれている
+            }
+        }
+        Scene::Object::Release(p);
+        break;
+    }
 }
 
 void PoittersPoint_Stage::AddDeadEnemy()
