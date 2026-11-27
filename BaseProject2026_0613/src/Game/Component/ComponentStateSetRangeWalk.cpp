@@ -20,8 +20,10 @@ void ComponentStateSetRangeWalk::Update()
         // キャラのローカル方向で移動をさせる
         owner->AddTranslate(dir * move_speed_, true);
 
+        // 進んだ距離だけ残り距離を減らす
+        // ※以前は move.z + move.z になっており、-Z方向へ歩くとsqrtfの中が負になって残り距離が壊れていた
         float3 move     = dir * move_speed_;
-        walk_distance_ -= sqrtf(move.x * move.x + move.y * move.y + move.z + move.z);
+        walk_distance_ -= sqrtf(move.x * move.x + move.y * move.y + move.z * move.z);
 
         // モデルを移動の方向に向けます
         if(auto mdl = owner->GetComponent<ComponentModel>()) {

@@ -13,6 +13,8 @@
 #include <System/Component/ComponentObjectController.h>
 #include "Game/Component/ComponentHitPoints.h"
 
+#include <algorithm>
+
 namespace PoittersPoint {
 
 bool Player::Init()
@@ -204,6 +206,14 @@ void Player::OnEyeSight()
         if(obj == static_cast<ObjectPtr>(shared_from_this())) {
             continue;
         }
+        // 掴めない物(地面・カメラ・壁など)は最初に除外する
+        // ※以前は掴めない物でも「一番近い物」の距離を更新していたため、原点付近にある地面やカメラより
+        //   遠い物は視線で捉えられず、CPUがほとんど物を拾えなかった
+        // 誰かが持っている物も同じ理由で除外する
+        auto obj_grabbable = obj->GetComponent<ComponentGrabbable>();
+        if(!obj_grabbable || obj_grabbable->GetIsGrabbed()) {
+            continue;
+        }
 
         // 親の座標(斜めに当てたいので上に上げて判定)
         float3 pos = GetTranslate() - vec * 0.5f + float3(0.0f, 1.0f, 0.0f);
@@ -215,7 +225,8 @@ void Player::OnEyeSight()
         // 親の正面ベクトルと敵へのベクトルの内積をとる
         float targetDot = dot(normalize(vec), normalize(targetVec));
         // 正規化ベクトル同士の内積なのでarccosで角度がとれる
-        float angle = acosf(targetDot);
+        // (誤差で±1を少し超えるとacosfがNaNになるため範囲内に収める)
+        float angle = acosf(std::clamp(targetDot, -1.0f, 1.0f));
         // スカラー付きベクトルの長さは各要素の二乗を足したものの平方根でとれる
         float distance = sqrtf(targetVec.x * targetVec.x + targetVec.y * targetVec.y + targetVec.z * targetVec.z);
         // 内積と距離をかけて円錐の範囲にいるかをとる

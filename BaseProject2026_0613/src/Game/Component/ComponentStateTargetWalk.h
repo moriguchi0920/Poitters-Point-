@@ -25,11 +25,17 @@ public:
     bool GetStopped() override;
     bool GetNearby() override;
 
+    //! @brief GetNearby()で「近くに来た」とみなす距離を設定する(初期値10)
+    //! 投げる時は遠めから、拾う時は近くまで、のように行動ごとに変えるために使う
+    void SetNearbyDistance(float distance) { nearby_distance_ = distance; }
+
 private:
-    float3        target_pos_;
+    float3        target_pos_ = {0.0f, 0.0f, 0.0f};
     ObjectWeakPtr target_ptr_;
 
-    float       stopping_time_;
+    float nearby_distance_ = 10.0f;    //!< 目的地の近くに来たとみなす距離(XZ平面)
+
+    float       stopping_time_ = 0.0f;
     const float stop_judge_time_ = 1.0f;
     //--------------------------------------------------------------------
     //! @name Cereal処理

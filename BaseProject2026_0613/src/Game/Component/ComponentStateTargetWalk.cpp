@@ -140,8 +140,11 @@ bool ComponentStateTargetWalk::GetNearby()
 {
     auto owner     = GetOwner();
     auto translate = owner->GetTranslate();
-    auto vec       = target_pos_ - translate;
-    return fabsf(vec.x) < 10.0 && fabsf(vec.y) < 10.0 && fabsf(vec.z) < 10.0;
+    float3 vec     = target_pos_ - translate;
+    float  dx      = vec.x;
+    float  dz      = vec.z;
+    // 高さの違い(相手がジャンプ中など)で判定がずれないようにXZ平面の距離で判定する
+    return (dx * dx + dz * dz) < nearby_distance_ * nearby_distance_;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)
