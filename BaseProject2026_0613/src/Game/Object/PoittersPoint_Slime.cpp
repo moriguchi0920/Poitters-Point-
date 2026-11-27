@@ -98,8 +98,11 @@ void Slime::OnHit(const ComponentCollision::HitInfo& hit_info)
 void Slime::Explode()
 {
     float3 myPos           = GetTranslate();
-    float  explosionRadius = 100.0f;    // ★範囲を 45.0f から 100.0f 等に広げてみる
-    float  explosionDamage = 999.0f;    // ★確実に倒すため大ダメージを設定してみる
+    // ※HPによる脱落を有効にしたため仮の値に調整
+    //   (半径100・ダメージ999だとステージのほぼ全域が範囲に入り、投げた本人も含めて全員が即死して試合が終わってしまう)
+    //   投擲オブジェクトの担当者側で正式な値に調整してください
+    float explosionRadius = 30.0f;
+    float explosionDamage = 2.0f;
 
     auto objArray = Scene::Object::GetArray<Object>();
     for(auto& obj : objArray) {

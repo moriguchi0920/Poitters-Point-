@@ -65,13 +65,15 @@ public:
     bool IsThrower(ObjectPtr target) const;
 
 private:
-    float lift_time_;        //!< リフト時間
-    float bounce_offset_;    //!< バウンスオフセット
-    bool  is_grabbed_;       //!< 掴まれているか
-    bool  can_grab_this_;    //!< 掴み可能か
-    float damage_;           //!< このオブジェクトのダメージ値
+    // ※初期値が無いと不定値になり、出現直後から「投げられて移動中」と判定されてしまう
+    //   (スライムが出現直後に爆発する、プレイヤー同士が触れただけでダメージを受ける原因だった)
+    float lift_time_     = 1.0f;     //!< リフト時間
+    float bounce_offset_ = 0.0f;     //!< バウンスオフセット
+    bool  is_grabbed_    = false;    //!< 掴まれているか
+    bool  can_grab_this_ = true;     //!< 掴み可能か
+    float damage_        = 1.0f;     //!< このオブジェクトのダメージ値
 
-    float3 translation_;    //!< 現在の移動量
+    float3 translation_ = {0.0f, 0.0f, 0.0f};    //!< 現在の移動量
 
     // std::setはSTLに含まれる「集合」を扱うためのデータ構造
     // 特徴は、要素が自動的にソートされ、要素の重複を許さない。(検索も早い)
