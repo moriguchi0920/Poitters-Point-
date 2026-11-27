@@ -1,13 +1,15 @@
 ﻿#pragma once
 #include <Game/Component/ComponentHitPoints.h>
 
-float ComponentHitPoints::max_hit_points_ = 5.0f;
-
 void ComponentHitPoints::Init()
 {
     __super::Init();
 
-    hit_points_ = max_hit_points_;
+    // AddComponent直後にSetMaxAndCurrentHPなどで値が設定されている場合は、その値を優先する
+    // (Initは次のフレームの頭で呼ばれるため、ここで上書きすると設定した現在HPが消えてしまう)
+    if(!is_hp_set_) {
+        hit_points_ = max_hit_points_;
+    }
 }
 
 float ComponentHitPoints::GetHitPoints()
@@ -15,10 +17,21 @@ float ComponentHitPoints::GetHitPoints()
     return hit_points_;
 }
 
+float ComponentHitPoints::GetMaxHitPoints() const
+{
+    return max_hit_points_;
+}
+
+bool ComponentHitPoints::IsDead() const
+{
+    return hit_points_ <= 0.0f;
+}
+
 void ComponentHitPoints::TakeDamage(float damage)
 {
     // HPが0以下なら
-    if(GetHitPoints() < 0) {
+    // ※HPは0で止めているため、以前の「< 0」では絶対に弾かれなかった
+    if(IsDead()) {
         // これ以上ダメージを与える必要は無いのでここで弾く
         return;
     }
@@ -49,6 +62,7 @@ void ComponentHitPoints::SetMaxAndCurrentHP(float new_hp)
     // 最大HPと現在のHPを設定
     max_hit_points_ = new_hp;
     hit_points_     = new_hp;
+    is_hp_set_      = true;
 }
 
 void ComponentHitPoints::SetMaxAndCurrentHP(float new_max_hp, float new_hp)
@@ -56,6 +70,7 @@ void ComponentHitPoints::SetMaxAndCurrentHP(float new_max_hp, float new_hp)
     // 最大HPと現在のHPをそれぞれ設定
     max_hit_points_ = new_max_hp;
     hit_points_     = new_hp;
+    is_hp_set_      = true;
 }
 
 void ComponentHitPoints::GUI()

@@ -2,20 +2,28 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 
-USING_PTR(ComponentPlayerState);
+USING_PTR(ComponentHitPoints);
 
 class ComponentHitPoints : public Component
 {
 public:
     BP_COMPONENT_DECL(ComponentHitPoints, u8"ヒットポイント(HP)コンポーネント");
 
-    //! @brief
-
+    //! @brief 初期化
     void Init() override;
 
     //! @brief ヒットポイントを取得する
     //! @return ヒットポイント
     float GetHitPoints();
+
+    //! @brief 最大ヒットポイントを取得する
+    //! @return 最大ヒットポイント
+    float GetMaxHitPoints() const;
+
+    //! @brief HPが尽きているか
+    //! @retval true  HPが0以下
+    //! @retval false HPが残っている
+    bool IsDead() const;
 
     //! @brief 引数のダメージでHPを減算する
     //! @param damage
@@ -40,10 +48,15 @@ public:
 
 private:
     // ヒットポイント
-    float hit_points_;
+    float hit_points_ = 5.0f;
 
     // 最大ヒットポイント
-    static float max_hit_points_;
+    // ※以前はstaticだったため全キャラクターで共有されていた(Enemyで2にするとPlayerも2になる)
+    //   コンポーネントごとに持つようにした
+    float max_hit_points_ = 5.0f;
+
+    // SetMax～で値が設定済みか(設定済みならInitで現在HPを上書きしない)
+    bool is_hp_set_ = false;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理
