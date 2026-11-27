@@ -4,6 +4,8 @@
 #include "Game/Component/ComponentStateControllerWalk.h"
 #include "Game/Component/ComponentStateThrow.h"
 #include "Game/Component/ComponentStateMachine.h"
+#include "Game/Component/ComponentStateGrab.h"
+#include "Game/Component/ComponentStateDead.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
@@ -61,12 +63,91 @@ void Player::Update()
 {
     Super::Update();
 
+    // 脱落後は何もしない(倒れる演出はComponentStateDeadが行う)
+    if(is_dead_) {
+        return;
+    }
+
+    // HPが尽きていれば脱落処理
+    UpdateDead();
+    if(is_dead_) {
+        return;
+    }
+
     // 視線・ターゲット検出処理
     OnEyeSight();
 }
 
+void Player::UpdateDead()
+{
+    auto hp = GetComponent<ComponentHitPoints>();
+    if(!hp || !hp->IsDead()) {
+        return;
+    }
+
+    //-----------------------------------------------------------
+    // 脱落を待つ条件
+    //-----------------------------------------------------------
+    // 誰かに持たれている間は待つ(投げられて手から離れた後に脱落)
+    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+        if(grabbable->GetIsGrabbed()) {
+            return;
+        }
+    }
+    // 誰かが自分を持ち上げている最中も待つ
+    for(auto& obj : Scene::Object::GetArray<Object>()) {
+        if(obj.get() == this) {
+            continue;
+        }
+        if(auto other = obj->GetComponent<ComponentStateMachine>()) {
+            if(other->IsGrabbingObject(SharedThis())) {
+                return;
+            }
+        }
+    }
+    // 自分が持ち上げ中/投げ中なら終わるまで待つ(途中で止めると物が手に残るため)
+    if(GetComponent<ComponentStateGrab>() || GetComponent<ComponentStateThrow>()) {
+        return;
+    }
+
+    StartDead();
+}
+
+void Player::StartDead()
+{
+    is_dead_ = true;
+
+    // 持っている物はその場で手放し、操作/CPUのステートマシンを外す
+    if(auto state_machine = GetComponent<ComponentStateMachine>()) {
+        state_machine->DropGrabbingObject();
+        RemoveComponent(state_machine);
+    }
+    // 歩き・ジャンプなどのステートを全て外す(外さないと入力やAIで動き続ける)
+    for(auto& state : GetComponents<ComponentState>()) {
+        RemoveComponent(state);
+    }
+    // 脱落したキャラクターは掴めないようにする
+    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+        RemoveComponent(grabbable);
+    }
+
+    // 死亡状態へ(Playerには"dead"アニメーションが無いため、モデルを倒して演出する)
+    AddComponent<ComponentStateDead>()->SetUseAnimation(false);
+}
+
+bool Player::IsAlive() const
+{
+    return !is_dead_;
+}
+
 void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
 {
+    // 脱落後はダメージを受けない
+    if(is_dead_) {
+        __super::OnHit(hit_info);
+        return;
+    }
+
     auto hitter = hit_info.hit_collision_->GetOwner();
 
     // ヒットした相手が掴めるもの(=投げられて移動中)か判定

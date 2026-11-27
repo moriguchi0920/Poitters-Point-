@@ -90,7 +90,6 @@ private:
     std::vector<float3> survivors_;                       //!< 直近フレームの生存者位置(デバッグ描画用)
     // ※desired(目標)は毎フレーム計算し直す値、current(現在)はdesiredを滑らかに追いかける値。
     //   実際にカメラへ設定するのはcurrentの方
-
 };
 
 }    // namespace PoittersPoint

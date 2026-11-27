@@ -4,12 +4,13 @@
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Stage.h"
 #include "PoittersPoint_GameOver.h"
+#include "PoittersPoint_Clear.h"
 #include "Game/Object/PoittersPoint_Player.h"
 #include "Game/Object/PoittersPoint_Ground.h"
 #include "Game/Object/PoittersPoint_Camera.h"
 #include "Game/Object/PoittersPoint_Enemy.h"
 #include "Game/Object/PoittersPoint_Rock.h"
-#include "Game/system/PoittersPoint_Timer.h"
+#include "Game/System/PoittersPoint_Timer.h"
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
 #include "Game/Object/PoittersPoint_Wall.h"
@@ -27,6 +28,9 @@
 #include <Game/Component/ComponentKnockBack.h>
 #include <Game/Component/ComponentStateMachine.h>
 #include <Game/Component/ComponentGrabbable.h>
+#include <Game/Component/ComponentHitPoints.h>
+
+#include <algorithm>
 
 namespace PoittersPoint {
 
@@ -40,6 +44,17 @@ bool PoittersPoint_Stage::Init()
     // ただし trueを返さなければ Initに何回も来る仕様。
 
     // create<>(名前、transformがいるか、更新の優先順位、描画の優先順位);
+
+    //---------------------------------------------------------------
+    // 試合の初期化
+    // ※タイトル → キャラセレ → ステージ と2周目以降に来た時のため、ここで必ず戻す
+    //---------------------------------------------------------------
+    game_state_   = GameState::Playing;
+    is_win_       = false;
+    result_timer_ = 0.0f;
+    cpu_count_    = 0;
+    timer_.SetMaxTime(MATCH_TIME);
+    timer_.Init();    // 残り時間を制限時間にする
 
 #if 1
     Scene::Object::Create<Ground>();
@@ -78,6 +93,8 @@ bool PoittersPoint_Stage::Init()
     player->SetCharacterStatus(playerdata);
     // プレイヤー入力用のステートマシンをここで付与する(Player::Initでは付与しない)
     player->AddComponent<ComponentPlayerState>();
+    // 勝敗判定のために操作プレイヤーを覚えておく
+    player_ = player;
 
     //Scene::Object::Create<Player>();
 #else
@@ -150,9 +167,12 @@ bool PoittersPoint_Stage::Init()
 void PoittersPoint_Stage::Update()
 {
     //---------------------------------------------------------------
-    // デバッグ操作(カメラ確認用)
-    //  F7 : CPUを追加 / F8 : CPUを1体脱落させる / F9 : カメラの図形・中心点表示切替
+    // デバッグ操作
+    //  F3 : 操作プレイヤーを倒す / F7 : CPUを追加 / F8 : CPUを1体倒す / F9 : カメラの図形・中心点表示切替
     //---------------------------------------------------------------
+    if(Input::IsKeyDown(KEY_INPUT_F3)) {
+        defeatPlayer();
+    }
     if(Input::IsKeyDown(KEY_INPUT_F7)) {
         auto  randomRange = [](float start, float end) { return start + (end - start) * ((float)rand() / RAND_MAX); };
         float theta       = randomRange(0.0f, DX_TWO_PI_F);
@@ -160,12 +180,40 @@ void PoittersPoint_Stage::Update()
         createCPU({cosf(theta) * r, 30.0f, sinf(theta) * r});
     }
     if(Input::IsKeyDown(KEY_INPUT_F8)) {
-        dropOutCPU();
+        defeatCPU();
     }
     if(Input::IsKeyDown(KEY_INPUT_F9)) {
         if(auto camera = Scene::Object::Get<Camera>()) {
             camera->SetDebugDraw(!camera->IsDebugDraw());
         }
+    }
+
+    //---------------------------------------------------------------
+    // 試合の進行
+    //---------------------------------------------------------------
+    switch(game_state_) {
+    case GameState::Playing:
+        // 残り時間を減らし、勝敗を判定する
+        timer_.Update();
+        updateJudge();
+        break;
+
+    case GameState::Result:
+        // 倒れる演出や勝敗の表示を見せてからシーンを切り替える
+        result_timer_ += GetDeltaTime();
+        if(RESULT_WAIT_TIME <= result_timer_) {
+            if(is_win_) {
+                Scene::Change(Scene::GetScene<PoittersPoint_Clear>());
+            }
+            else {
+                Scene::Change(Scene::GetScene<PoittersPoint_GameOver>());
+            }
+            game_state_ = GameState::Finished;    // シーン切り替えの要求は1回だけ
+        }
+        break;
+
+    case GameState::Finished:
+        break;
     }
 
     //// 毎フレーム動作する
@@ -223,16 +271,150 @@ void PoittersPoint_Stage::GUI()
     ImGui::InputInt("(Test)Counter2", &counter2);
     ImGui::InputInt("(Test)Counter3", &counter3);
 
-    // カメラ確認用のデバッグ操作
+    // 試合の状態
     ImGui::Separator();
-    ImGui::Text(u8"F7:CPU追加 / F8:CPU脱落 / F9:カメラ図形表示");
+    ImGui::Text(u8"残り時間: %.1f 秒 / 生存者: %d 人", timer_.GetTimer(), countAlive());
+
+    // デバッグ操作
+    ImGui::Text(u8"F3:自分を倒す / F7:CPU追加 / F8:CPUを倒す / F9:カメラ図形表示");
     if(ImGui::Button(u8"CPUを追加")) {
         createCPU({0.0f, 30.0f, -40.0f});
     }
     ImGui::SameLine();
-    if(ImGui::Button(u8"CPUを1体脱落")) {
-        dropOutCPU();
+    if(ImGui::Button(u8"CPUを1体倒す")) {
+        defeatCPU();
     }
+    ImGui::SameLine();
+    if(ImGui::Button(u8"自分を倒す")) {
+        defeatPlayer();
+    }
+    if(ImGui::Button(u8"残り時間を5秒にする")) {
+        timer_.SetTime(5.0f);
+    }
+}
+
+//! @brief 勝敗の判定
+//!
+//! ルール
+//!  - 操作プレイヤーが脱落した                     → 負け
+//!  - 操作プレイヤー以外が全員脱落した(1人残った)  → 勝ち
+//!  - 時間切れ: 生存者の中で操作プレイヤーのHPが一番多ければ勝ち(同じHPなら勝ち)、少なければ負け
+void PoittersPoint_Stage::updateJudge()
+{
+    auto player = std::dynamic_pointer_cast<Player>(player_.lock());
+
+    bool decided = false;
+
+    if(!player || !player->IsAlive()) {
+        // 自分が脱落
+        is_win_ = false;
+        decided = true;
+    }
+    else if(countAlive() <= 1) {
+        // 自分だけが生き残った
+        is_win_ = true;
+        decided = true;
+    }
+    else if(timer_.IsTimeUp()) {
+        // 時間切れ: 生存者のHPで比べる
+        float my_hp    = 0.0f;
+        float other_hp = 0.0f;    // 自分以外の生存者の最大HP
+        for(auto& character : Scene::Object::GetArray<Player>()) {
+            if(!character->IsAlive()) {
+                continue;
+            }
+            float hp = 0.0f;
+            if(auto hp_cmp = character->GetComponent<ComponentHitPoints>()) {
+                hp = hp_cmp->GetHitPoints();
+            }
+            if(character == player) {
+                my_hp = hp;
+            }
+            else {
+                other_hp = std::max(other_hp, hp);
+            }
+        }
+        is_win_ = (other_hp <= my_hp);
+        decided = true;
+    }
+
+    if(decided) {
+        game_state_   = GameState::Result;
+        result_timer_ = 0.0f;
+        timer_.SetPause(true);
+    }
+}
+
+//! @brief 生存しているキャラクターの数を数える
+int PoittersPoint_Stage::countAlive() const
+{
+    int count = 0;
+    for(auto& character : Scene::Object::GetArray<Player>()) {
+        if(character->IsAlive()) {
+            count++;
+        }
+    }
+    return count;
+}
+
+//! @brief 描画(UI)
+void PoittersPoint_Stage::LateDraw()
+{
+    // 画面サイズが1280x720以外でも同じ見た目になるように補正
+    float ADJUST_X = (WINDOW_W / 1280.0f);
+    float ADJUST_Y = (WINDOW_H / 720.0f);
+
+    const unsigned int white  = GetColor(255, 255, 255);
+    const unsigned int shadow = GetColor(0, 0, 0);
+
+    // 影付きの文字を描く(背景が明るくても読めるように)
+    auto drawText = [&](float x, float y, unsigned int color, const char* text) {
+        DrawString(static_cast<int>(x * ADJUST_X) + 2, static_cast<int>(y * ADJUST_Y) + 2, text, shadow);
+        DrawString(static_cast<int>(x * ADJUST_X), static_cast<int>(y * ADJUST_Y), text, color);
+    };
+
+    char buf[64];
+
+    //---------------------------------------------------------------
+    // 残り時間(画面上中央) 例: 1:58
+    //---------------------------------------------------------------
+    SetFontSize(static_cast<int>(48 * ADJUST_X));
+    int remain = static_cast<int>(ceilf(timer_.GetTimer()));
+    snprintf(buf, sizeof(buf), "%d:%02d", remain / 60, remain % 60);
+    // 残り10秒を切ったら赤くする
+    drawText(590.0f, 20.0f, (remain <= 10) ? GetColor(255, 80, 80) : white, buf);
+
+    //---------------------------------------------------------------
+    // 残り人数・自分のHP(画面左上)
+    // ※HPの画像表示は別ブランチ(HPView)で作業中のため、ここでは文字で仮表示
+    // ※日本語はソースの文字コード(UTF-8)とDxLibの文字コードが合わず文字化けするため英字で表示
+    //---------------------------------------------------------------
+    SetFontSize(static_cast<int>(28 * ADJUST_X));
+    snprintf(buf, sizeof(buf), "ALIVE %d", countAlive());
+    drawText(30.0f, 20.0f, white, buf);
+
+    if(auto player = player_.lock()) {
+        if(auto hp = player->GetComponent<ComponentHitPoints>()) {
+            snprintf(buf, sizeof(buf), "HP %d / %d", static_cast<int>(ceilf(hp->GetHitPoints())), static_cast<int>(hp->GetMaxHitPoints()));
+            drawText(30.0f, 60.0f, white, buf);
+        }
+    }
+
+    //---------------------------------------------------------------
+    // 勝敗(画面中央)
+    //---------------------------------------------------------------
+    if(game_state_ != GameState::Playing) {
+        SetFontSize(static_cast<int>(96 * ADJUST_X));
+        if(is_win_) {
+            drawText(470.0f, 300.0f, GetColor(255, 220, 60), "WIN!");
+        }
+        else {
+            drawText(420.0f, 300.0f, GetColor(120, 160, 255), "LOSE...");
+        }
+    }
+
+    // 他の描画に影響しないようにフォントサイズを戻す
+    SetFontSize(16);
 }
 
 void PoittersPoint_Stage::createCPU(const float3& position)
@@ -263,29 +445,32 @@ void PoittersPoint_Stage::createCPU(const float3& position)
     cpu_character->AddComponent<ComponentCPUState>();
 }
 
-void PoittersPoint_Stage::dropOutCPU()
+void PoittersPoint_Stage::defeatCPU()
 {
-    // 最後に生成されたCPUを場から取り除く(脱落の再現)
-    // ※キャラクターはJoltのキャラクターコントローラーで動くため、SetTranslateでの瞬間移動では地面を抜けられない
-    // ※物を持ち上げ中/保持中のCPUを消すと持っている物が宙に残るため、その間は対象外にする
+    // 生存している最後のCPUのHPを0にする
+    // 脱落処理(倒れる演出・持ち物を手放す等)は通常の被弾と同じくPlayer側で行われる
     auto players = Scene::Object::GetArray<Player>();
     for(auto it = players.rbegin(); it != players.rend(); ++it) {
         auto& p = *it;
-        if(!p || p->GetName().rfind("CPU", 0) != 0) {
+        if(!p || !p->IsAlive() || !p->GetComponent<ComponentCPUState>()) {
             continue;
         }
-        if(auto state_machine = p->GetComponent<ComponentStateMachine>()) {
-            if(state_machine->GetGrabbing()) {
-                continue;
+        if(auto hp = p->GetComponent<ComponentHitPoints>()) {
+            if(hp->IsDead()) {
+                continue;    // 既にHP0で脱落待ち
             }
+            hp->TakeDamage(hp->GetMaxHitPoints());
+            break;
         }
-        if(auto grabbable = p->GetComponent<ComponentGrabbable>()) {
-            if(grabbable->GetIsGrabbed()) {
-                continue;    // 誰かに持たれている
-            }
+    }
+}
+
+void PoittersPoint_Stage::defeatPlayer()
+{
+    if(auto player = player_.lock()) {
+        if(auto hp = player->GetComponent<ComponentHitPoints>()) {
+            hp->TakeDamage(hp->GetMaxHitPoints());
         }
-        Scene::Object::Release(p);
-        break;
     }
 }
 

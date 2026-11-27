@@ -123,19 +123,46 @@ bool ComponentStateMachine::FinishGrab()
                     collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, true);
                 }
 
-                auto grabbable = object->GetComponent<ComponentGrabbable>();
-                grabbable->SetIsGrabbed(true);
+                // 持ち上げ中に相手が掴めなくなった(脱落してGrabbableが外れた等)場合は何もしない
+                if(auto grabbable = object->GetComponent<ComponentGrabbable>()) {
+                    grabbable->SetIsGrabbed(true);
 
-                // 投げ直後に誰にも当たるようにヒット記録をクリアする
-                grabbable->ClearHitTargets();
+                    // 投げ直後に誰にも当たるようにヒット記録をクリアする
+                    grabbable->ClearHitTargets();
 
-                grabbing_object_ptr_.lock()->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
+                    object->AddComponent<ComponentAttachModel>()->SetAttachObject(owner->GetName(), "mixamorig:RightHand");
+                }
             }
             can_throw_ = true;
             return true;
         }
     }
     return false;
+}
+
+void ComponentStateMachine::DropGrabbingObject()
+{
+    // 持ち上げ中/保持中でなければ何もしない
+    if(can_grab_ || grabbing_object_ptr_.expired()) {
+        grabbing_object_ptr_.reset();
+        return;
+    }
+
+    // 投げずにその場で手放す(ComponentStateThrowの手離し処理から、投げる力を除いたもの)
+    auto object = grabbing_object_ptr_.lock();
+    object->RemoveComponent<ComponentAttachModel>();
+
+    if(auto grabbable = object->GetComponent<ComponentGrabbable>()) {
+        grabbable->SetIsGrabbed(false);
+        grabbable->SetCanGrab(true);
+    }
+    if(auto collider = object->GetComponent<ComponentCollision>()) {
+        collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
+    }
+
+    grabbing_object_ptr_.reset();
+    can_grab_  = true;
+    can_throw_ = false;
 }
 
 void ComponentStateMachine::ReleaseGrabbingObj()

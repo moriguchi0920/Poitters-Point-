@@ -1,12 +1,13 @@
 ﻿#include <Game/Component/ComponentMagicPoint.h>
 
-float ComponentMagicPoint::max_magic_points_ = 5.0f;
-
 void ComponentMagicPoint::Init()
 {
     __super::Init();
 
-    magic_points_ = max_magic_points_;
+    // AddComponent直後にSetMaxAndCurrentMPなどで値が設定されている場合は、その値を優先する
+    if(!is_mp_set_) {
+        magic_points_ = max_magic_points_;
+    }
 }
 
 float ComponentMagicPoint::GetMagicPoints()
@@ -48,6 +49,7 @@ void ComponentMagicPoint::SetMaxAndCurrentMP(float new_mp)
     // 最大MPと現在のMPを設定
     max_magic_points_ = new_mp;
     magic_points_     = new_mp;
+    is_mp_set_        = true;
 }
 
 void ComponentMagicPoint::SetMaxAndCurrentMP(float new_max_mp, float new_mp)
@@ -55,6 +57,7 @@ void ComponentMagicPoint::SetMaxAndCurrentMP(float new_max_mp, float new_mp)
     // 最大MPと現在のMPをそれぞれ設定
     max_magic_points_ = new_max_mp;
     magic_points_     = new_mp;
+    is_mp_set_        = true;
 }
 
 void ComponentMagicPoint::GUI()

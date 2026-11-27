@@ -59,7 +59,23 @@ public:
     //! @brief 移動スピードを取得する
     float GetMoveSpeed();
 
+    //! @brief 生存しているか(脱落処理が始まったらfalse)
+    //! カメラの生存者判定やステージの勝敗判定で使う
+    bool IsAlive() const;
+
 private:
+    //! @brief 脱落できる状態になっていれば脱落処理を始める
+    //! HPが0になった瞬間に脱落させると、持ち上げ・投げの途中で物が手に残ったり、
+    //! 掴んでいる相手の処理が壊れたりするため、安全なタイミングまで待つ
+    void UpdateDead();
+
+    //! @brief 脱落処理を始める
+    //! 操作/CPUのステートマシンとステートを外し、持ち物を手放してComponentStateDeadを付ける
+    void StartDead();
+
+    // 脱落処理を始めたか
+    bool is_dead_ = false;
+
     // 視線判定で捕らえた一番近い掴み可能対象
     ObjectWeakPtr eyesight_target_;
 

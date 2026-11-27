@@ -2,7 +2,7 @@
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 
-USING_PTR(ComponentPlayerState);
+USING_PTR(ComponentMagicPoint);
 
 class ComponentMagicPoint : public Component
 {
@@ -40,10 +40,14 @@ public:
 
 private:
     // マジックポイント
-    float magic_points_;
+    float magic_points_ = 5.0f;
 
     // 最大マジックポイント
-    static float max_magic_points_;
+    // ※以前はstaticだったため全キャラクターで共有されていた。コンポーネントごとに持つようにした
+    float max_magic_points_ = 5.0f;
+
+    // SetMax～で値が設定済みか(設定済みならInitで現在MPを上書きしない)
+    bool is_mp_set_ = false;
 
     //--------------------------------------------------------------------
     //! @name Cereal処理

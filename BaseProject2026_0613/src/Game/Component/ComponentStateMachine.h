@@ -24,6 +24,8 @@ public:
         if(auto state = GetOwner()->GetComponent<ComponentState>()) {
             return state->ChangeState<T>();
         }
+        // ステートが無い(脱落してステートが外れた等)場合
+        return nullptr;
     }
 
     const std::string GetStateName() const;
@@ -35,6 +37,9 @@ public:
     bool FinishGrab();
 
     void ReleaseGrabbingObj();
+
+    //! @brief 持ち上げ中/保持中の物を投げずにその場で手放す(脱落時などに使う)
+    void DropGrabbingObject();
 
     bool GetCanGrab();
 
