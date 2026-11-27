@@ -42,6 +42,9 @@ public:
 
     bool IsGrabTargetExist();
 
+    //! @brief 指定のオブジェクトを持ち上げ中/保持中か
+    bool IsGrabbingObject(const ObjectPtr& target) const;
+
 protected:
     bool          can_grab_;
     bool          can_throw_;

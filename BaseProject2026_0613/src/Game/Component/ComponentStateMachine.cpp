@@ -65,9 +65,28 @@ bool ComponentStateMachine::GrabbableHit(ObjectPtr target)
     return false;
 }
 
+bool ComponentStateMachine::IsGrabbingObject(const ObjectPtr& target) const
+{
+    return !can_grab_ && !grabbing_object_ptr_.expired() && grabbing_object_ptr_.lock() == target;
+}
+
 bool ComponentStateMachine::StartGrab()
 {
     if(!grabbing_object_ptr_.expired()) {
+        // 他のキャラクターが既に同じ物を持ち上げ中/保持中なら掴めない
+        // (持ち上げ中はGrabbable側で再び掴み可能に戻るため、同時掴みでAttachModelが二重に付くのを防ぐ)
+        auto target = grabbing_object_ptr_.lock();
+        for(auto& obj : Scene::Object::GetArray<Object>()) {
+            if(obj.get() == GetOwner()) {
+                continue;
+            }
+            if(auto other = obj->GetComponent<ComponentStateMachine>()) {
+                if(other->IsGrabbingObject(target)) {
+                    return false;
+                }
+            }
+        }
+
         // 持ち上げるオブジェクトのGrabbableコンポーネントを取得
         auto grabbable = grabbing_object_ptr_.lock()->GetComponent<ComponentGrabbable>();
         // コンポーネントがあったら
