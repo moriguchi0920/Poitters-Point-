@@ -1,0 +1,6 @@
+# Git LFS の共有設定
+# .fbx はモデルの元データで、ゲームは .mv1 を読み込むため実行には不要。
+# クローン・プルを軽くするため、.fbx の本体は自動ではダウンロードしない。
+# 必要な人は「git lfs pull -I "*.fbx" -X """ で取得する(README.md 参照)。
+[lfs]
+	fetchexclude = *.fbx
