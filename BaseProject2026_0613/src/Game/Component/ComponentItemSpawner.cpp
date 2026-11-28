@@ -23,48 +23,17 @@ void ComponentItemSpawner::Init()
 
     LoadModel();
 
-    spawner_points_.clear();
+    has_target_     = false;
+    wait_timer_     = 0.0f;
+    interval_timer_ = 0.0f;
+}
 
-    // 各マスの中心座標から少しずらしてまばらに生成している感を出す
-    std::uniform_real_distribution<float> offset_dist(-8.0f, 8.0f);
-    std::uniform_int_distribution<int>    type_dist(1, 3);    // 1: Crate(岩), 2: Slime, 3: Log
-
-    const int   grid_size = 4;         // スポーンは4*4
-    const float start_pos = -45.0f;
-    const float step      = 30.0f;     // 少し広めの間隔(スポーン同士)
-
-    for(int z = 0; z < grid_size; ++z) {
-        for(int x = 0; x < grid_size; ++x) {
-            float px = start_pos + x * step + offset_dist(random_);
-            float pz = start_pos + z * step + offset_dist(random_);
-
-            SpawnerPoint point;
-            // ステージの地面は平らではないため、物理のレイキャストで地面の高さを調べる
-            point.position = float3(px, GetGroundHeight(px, pz, 0.0f), pz);
-
-            // ※以前は if(type_dist(gen) == 1) と2回目の抽選をしていたため、種類の出方が偏っていた
-            int type = type_dist(random_);
-            if(type == 1) {
-                point.assigned_type = ItemType::Crate;
-            }
-            else if(type == 2) {
-                point.assigned_type = ItemType::Slime;
-            }
-            else {
-                point.assigned_type = ItemType::Log;
-            }
-            spawner_points_.push_back(point);
-        }
-    }
-
-    spawn_timer_        = 0.0f;
-    target_point_index_ = GetEmptyPointIndex();
-
-    if(auto owner = GetOwner()) {
-        if(target_point_index_ != -1) {
-            float3 first_pos  = spawner_points_[target_point_index_].position;
-            first_pos.y      += flight_height_;
-            owner->SetTranslate(first_pos);
+void ComponentItemSpawner::SetMaxCount(ItemType type, int max_count)
+{
+    for(auto& rule : rules_) {
+        if(rule.type == type) {
+            rule.max_count = max_count;
+            return;
         }
     }
 }
@@ -77,134 +46,190 @@ void ComponentItemSpawner::Update()
     if(!owner)
         return;
 
-    float delta_time = GetDeltaTime();
+    const float dt = GetDeltaTime();
+    if(interval_timer_ > 0.0f)
+        interval_timer_ -= dt;
 
-    if(spawn_timer_ > 0.0f) {
-        spawn_timer_ -= delta_time;
-    }
-
-    if(target_point_index_ == -1 || !IsPointEmpty(spawner_points_[target_point_index_]) || max_active_items_ <= CountActiveItems()) {
-        target_point_index_ = GetEmptyPointIndex();
-    }
-
-    float3 current_pos = owner->GetTranslate();
-
-    // 補充が必要なマスが無い場合は画面外に待機させておく
-    if(target_point_index_ == -1) {
-        float3 retreat_pos = float3(0.0f, 80.0f, -120.0f);
-        float  dx          = retreat_pos.x - current_pos.x;
-        float  dy          = retreat_pos.y - current_pos.y;
-        float  dz          = retreat_pos.z - current_pos.z;
-        float  dist        = std::sqrt(dx * dx + dy * dy + dz * dz);
-
-        if(dist > 2.0f) {
-            float speed    = move_speed_ * 1.5f;
-            current_pos.x += (dx / dist) * speed * delta_time;
-            current_pos.y += (dy / dist) * speed * delta_time;
-            current_pos.z += (dz / dist) * speed * delta_time;
-            owner->SetTranslate(current_pos);
+    //-----------------------------------------------------------
+    // 次に落とす物と場所を決める
+    //-----------------------------------------------------------
+    if(!has_target_ && interval_timer_ <= 0.0f) {
+        ItemType type = ChooseShortageType();
+        if(type != ItemType::None && ChooseDropPosition(target_ground_)) {
+            target_type_ = type;
+            has_target_  = true;
+            wait_timer_  = drop_wait_time_;
         }
-        else {
-            float_timer_  += delta_time * 2.0f;
-            current_pos.y  = retreat_pos.y + std::sin(float_timer_) * 0.01f;
-            owner->SetTranslate(current_pos);
+    }
+
+    //-----------------------------------------------------------
+    // 落とす物が無い時は画面外で待機する
+    //-----------------------------------------------------------
+    if(!has_target_) {
+        const float3 retreat_pos = float3(0.0f, 80.0f, -120.0f);
+        if(FlyTo(retreat_pos, move_speed_ * 1.5f)) {
+            float_timer_ += dt * 2.0f;
+            float3 pos    = owner->GetTranslate();
+            pos.y         = retreat_pos.y + std::sin(float_timer_) * 0.5f;
+            owner->SetTranslate(pos);
         }
         return;
     }
 
-    float3 target_pos  = spawner_points_[target_point_index_].position;
-    target_pos.y      += flight_height_;
-
-    float dx          = target_pos.x - current_pos.x;
-    float dz          = target_pos.z - current_pos.z;
-    float distance_xz = std::sqrt(dx * dx + dz * dz);
-
-    if(distance_xz > 1.5f) {
-        float dy       = target_pos.y - current_pos.y;
-        current_pos.x += (dx / distance_xz) * move_speed_ * delta_time;
-        current_pos.y += (dy / distance_xz) * move_speed_ * delta_time;
-        current_pos.z += (dz / distance_xz) * move_speed_ * delta_time;
-        float_timer_  += delta_time * 4.0f;
-        current_pos.y += std::sin(float_timer_) * 0.015f;
-        owner->SetTranslate(current_pos);
-    }
-    else {
-        if(spawn_timer_ <= 0.0f) {
-            SpawnItemAt(target_point_index_);
-            spawn_timer_        = spawn_delay_time_;
-            target_point_index_ = -1;
-        }
-        else {
-            float_timer_  += delta_time * 3.0f;
-            current_pos.y  = target_pos.y + std::sin(float_timer_) * 0.02f;
-            owner->SetTranslate(current_pos);
+    //-----------------------------------------------------------
+    // 落とす位置の上空まで飛んで、少し待ってから落とす
+    //-----------------------------------------------------------
+    float3 above = target_ground_ + float3(0.0f, flight_height_, 0.0f);
+    if(FlyTo(above, move_speed_)) {
+        wait_timer_ -= dt;
+        if(wait_timer_ <= 0.0f) {
+            // 向かっている間に上限に達していたら(他の方法で増えた等)落とさない
+            if(ChooseShortageType() != ItemType::None)
+                DropItem(target_type_, target_ground_);
+            has_target_     = false;
+            interval_timer_ = spawn_interval_;
         }
     }
 }
 
-bool ComponentItemSpawner::IsPointEmpty(const SpawnerPoint& point) const
+bool ComponentItemSpawner::FlyTo(const float3& target, float speed)
 {
-    if(point.assigned_type == ItemType::None)
-        return false;
+    auto   owner = GetOwner();
+    float3 pos   = owner->GetTranslate();
+    float3 diff  = target - pos;
 
-    auto item = point.current_item_ptr.lock();
-    if(!item)
-        return true;    // 消えた(スライムの爆発など)
+    float3 diff_xz = {diff.x, 0.0f, diff.z};
+    float  dist_xz = (float)length(diff_xz);
+    float  dist    = (float)length(diff);
+    if(dist < 1.5f)
+        return true;
 
-    // 岩・丸太は壊れずに残るため、「持たれた・投げられた」「置き場所から離れた」時点で
-    // そのマスは使い終わったとみなして補充する(総数は max_active_items_ で抑える)
-    if(auto grabbable = item->GetComponent<ComponentGrabbable>()) {
-        if(grabbable->GetState() != ComponentGrabbable::State::Free)
-            return true;
-    }
-    float3 diff = item->GetTranslate() - point.position;
-    diff.y      = 0.0f;
-    return leave_distance_ < (float)length(diff);
+    // 1フレームで行き過ぎないようにする
+    float step = std::min(speed * GetDeltaTime(), dist);
+    pos       += diff * (step / dist);
+
+    // 上下にふわふわ揺らす
+    float_timer_ += GetDeltaTime() * 4.0f;
+    pos.y        += std::sin(float_timer_) * 0.05f;
+    owner->SetTranslate(pos);
+
+    // 水平方向に動いている時だけ進行方向へ向ける(真上・真下への移動では向きを変えない)
+    if(dist_xz > 0.5f)
+        FaceTo(diff_xz / dist_xz);
+    return false;
 }
 
-size_t ComponentItemSpawner::CountActiveItems() const
+void ComponentItemSpawner::FaceTo(const float3& move_dir)
 {
-    size_t count = 0;
+    auto model = GetOwner()->GetComponent<ComponentModel>();
+    if(!model)
+        return;
+
+    // モデルごとの正面のずれを補正して、進行方向へ少しずつ回す
+    auto rot = quaternion::rotation_axis({0, 1, 0}, model_front_rot_ * DegToRad);
+    model->SetRotationToVectorWithLimit(mul(move_dir, rot), turn_speed_);
+}
+
+int ComponentItemSpawner::CountItems(ItemType type) const
+{
+    int count = 0;
     for(auto& obj : Scene::Object::GetArray<Object>()) {
-        // キャラクターも掴めるが、投げ物の数には含めない
-        if(std::dynamic_pointer_cast<PoittersPoint::Player>(obj))
-            continue;
-        if(obj->GetComponent<ComponentGrabbable>())
+        bool match = false;
+        switch(type) {
+        case ItemType::Crate:
+            match = std::dynamic_pointer_cast<PoittersPoint::Rock>(obj) != nullptr;
+            break;
+        case ItemType::Slime:
+            match = std::dynamic_pointer_cast<PoittersPoint::Slime>(obj) != nullptr;
+            break;
+        case ItemType::Log:
+            match = std::dynamic_pointer_cast<PoittersPoint::Log>(obj) != nullptr;
+            break;
+        default:
+            break;
+        }
+        if(match)
             count++;
     }
     return count;
 }
 
-float ComponentItemSpawner::GetGroundHeight(float x, float z, float fallback) const
+ItemType ComponentItemSpawner::ChooseShortageType()
 {
-    if(auto ground = Scene::Object::Get<PoittersPoint::Ground>()) {
-        float y = 0.0f;
-        if(ground->FindGroundHeight(x, z, y))
-            return y;
+    // 足りない数が一番多い種類を選ぶ(同じなら候補の中からランダム)
+    std::vector<ItemType> candidates;
+    int                   best_shortage = 0;
+    for(auto& rule : rules_) {
+        int shortage = rule.max_count - CountItems(rule.type);
+        if(shortage <= 0)
+            continue;
+        if(best_shortage < shortage) {
+            best_shortage = shortage;
+            candidates.clear();
+        }
+        if(shortage == best_shortage)
+            candidates.push_back(rule.type);
     }
-    return fallback;
+    if(candidates.empty())
+        return ItemType::None;
+
+    std::uniform_int_distribution<size_t> pick(0, candidates.size() - 1);
+    return candidates[pick(random_)];
 }
 
-int ComponentItemSpawner::GetEmptyPointIndex()
+bool ComponentItemSpawner::ChooseDropPosition(float3& out_ground_pos)
 {
-    // ステージ上の投げ物が上限に達していたら補充しない
-    if(max_active_items_ <= CountActiveItems()) {
-        return -1;
-    }
+    auto ground = Scene::Object::Get<PoittersPoint::Ground>();
+    if(!ground)
+        return false;
 
-    std::vector<int> empty_indices;
-    for(size_t i = 0; i < spawner_points_.size(); ++i) {
-        if(IsPointEmpty(spawner_points_[i])) {
-            empty_indices.push_back(static_cast<int>(i));
+    // ステージの範囲(外周の壁の内側)から、端に寄りすぎない範囲を使う
+    const auto& bounds = ground->GetStageBounds();
+    float       min_x  = (float)bounds.min_.x + edge_margin_;
+    float       max_x  = (float)bounds.max_.x - edge_margin_;
+    float       min_z  = (float)bounds.min_.z + edge_margin_;
+    float       max_z  = (float)bounds.max_.z - edge_margin_;
+    if(max_x <= min_x || max_z <= min_z)
+        return false;
+
+    // ステージ中央の地面の高さ(段差の上に落とさないための基準)
+    float3 center   = bounds.Center();
+    float  center_y = 0.0f;
+    if(!ground->FindGroundHeight(center.x, center.z, center_y))
+        center_y = 0.0f;
+
+    std::uniform_real_distribution<float> rand_x(min_x, max_x);
+    std::uniform_real_distribution<float> rand_z(min_z, max_z);
+
+    // 条件に合う場所が見つかるまで何回か試す
+    for(int attempt = 0; attempt < 30; ++attempt) {
+        float x = rand_x(random_);
+        float z = rand_z(random_);
+        float y = 0.0f;
+        if(!ground->FindGroundHeight(x, z, y))
+            continue;
+        if(height_tolerance_ < std::fabs(y - center_y))
+            continue;
+
+        // キャラクターや他のアイテム(掴める物)のすぐ近くには落とさない
+        bool too_close = false;
+        for(auto& obj : Scene::Object::GetArray<Object>()) {
+            if(!obj->GetComponent<ComponentGrabbable>())
+                continue;
+            float3 d = obj->GetTranslate() - float3(x, y, z);
+            d.y      = 0.0f;
+            if((float)length(d) < min_spacing_) {
+                too_close = true;
+                break;
+            }
         }
-    }
-    if(empty_indices.empty()) {
-        return -1;
-    }
+        if(too_close)
+            continue;
 
-    // 空きのスポーン位置の中からランダムに1つ選んでドラゴンに向かわせる
-    std::uniform_int_distribution<size_t> pick(0, empty_indices.size() - 1);
-    return empty_indices[pick(random_)];
+        out_ground_pos = {x, y, z};
+        return true;
+    }
+    return false;
 }
 
 ObjectPtr ComponentItemSpawner::CreateItemInstance(ItemType type)
@@ -220,29 +245,19 @@ ObjectPtr ComponentItemSpawner::CreateItemInstance(ItemType type)
     case ItemType::Log:
         return Scene::Object::Create<PoittersPoint::Log>();
     default:
-        return Scene::Object::Create<PoittersPoint::Rock>();
+        return nullptr;
     }
 }
 
-void ComponentItemSpawner::SpawnItemAt(int point_index)
+void ComponentItemSpawner::DropItem(ItemType type, const float3& ground_pos)
 {
-    if(point_index < 0 || point_index >= static_cast<int>(spawner_points_.size()))
+    auto item = CreateItemInstance(type);
+    if(!item)
         return;
 
-    auto& point = spawner_points_[point_index];
-    if(!IsPointEmpty(point))
-        return;
-
-    float3 spawn_pos  = point.position;
-    spawn_pos.y      += drop_height_;
-
-    auto item = CreateItemInstance(point.assigned_type);
-    if(item) {
-        // 投げ物は物理ボディを持つため、SetTranslate ではなく Warp で物理ボディごと移動する
-        // (SetTranslate だけだと次の物理更新で元の位置に戻されてしまう)
-        PoittersPoint::PhysicsHelper::Warp(item.get(), spawn_pos);
-        point.current_item_ptr = item;
-    }
+    // 投げ物は物理ボディを持つため、SetTranslate ではなく Warp で物理ボディごと移動する
+    // (SetTranslate だけだと次の物理更新で元の位置に戻されてしまう)
+    PoittersPoint::PhysicsHelper::Warp(item.get(), ground_pos + float3(0.0f, drop_height_, 0.0f));
 }
 
 void ComponentItemSpawner::GUI()
@@ -253,24 +268,25 @@ void ComponentItemSpawner::GUI()
     {
         ImGui::Separator();
         if(ImGui::TreeNode(u8"Item Spawner")) {
-            int empty_count = 0;
-            for(auto& point : spawner_points_) {
-                if(IsPointEmpty(point))
-                    empty_count++;
+            ImGui::Text(u8"種類ごとの数 (場にある数 / 上限)");
+            for(auto& rule : rules_) {
+                ImGui::PushID(static_cast<int>(rule.type));
+                ImGui::Text("%s: %d", rule.name, CountItems(rule.type));
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(100.0f);
+                ImGui::DragInt(u8"上限", &rule.max_count, 0.1f, 0, 30);
+                ImGui::PopID();
             }
-            ImGui::Text(u8"場の投げ物: %d / %d  空きマス: %d / %d",
-                        static_cast<int>(CountActiveItems()),
-                        static_cast<int>(max_active_items_),
-                        empty_count,
-                        static_cast<int>(spawner_points_.size()));
-            ImGui::Text(u8"向かっているマス: %d", target_point_index_);
+            ImGui::Text(u8"状態: %s", has_target_ ? u8"落としに向かっている" : u8"待機中");
 
-            int max_items = static_cast<int>(max_active_items_);
-            if(ImGui::DragInt(u8"投げ物の最大数", &max_items, 1, 0, 100))
-                max_active_items_ = static_cast<size_t>(std::max(0, max_items));
+            ImGui::Separator();
             ImGui::DragFloat(u8"移動速度", &move_speed_, 1.0f, 1.0f, 500.0f);
-            ImGui::DragFloat(u8"次に置くまでの時間(秒)", &spawn_delay_time_, 0.05f, 0.0f, 30.0f);
-            ImGui::DragFloat(u8"置き場所から離れたら空きとみなす距離", &leave_distance_, 0.5f, 1.0f, 200.0f);
+            ImGui::DragFloat(u8"向きを変える速さ", &turn_speed_, 0.1f, 0.1f, 60.0f);
+            ImGui::DragFloat(u8"モデルの正面の補正(度)", &model_front_rot_, 1.0f, -180.0f, 180.0f);
+            ImGui::DragFloat(u8"次に落としに行くまでの時間(秒)", &spawn_interval_, 0.1f, 0.0f, 60.0f);
+            ImGui::DragFloat(u8"ステージの端からの余白", &edge_margin_, 1.0f, 0.0f, 500.0f);
+            ImGui::DragFloat(u8"キャラ・アイテムとの最小間隔", &min_spacing_, 0.5f, 0.0f, 200.0f);
+            ImGui::DragFloat(u8"落とせる高さの範囲(中央の地面から)", &height_tolerance_, 0.5f, 0.0f, 500.0f);
             ImGui::TreePop();
         }
     }
