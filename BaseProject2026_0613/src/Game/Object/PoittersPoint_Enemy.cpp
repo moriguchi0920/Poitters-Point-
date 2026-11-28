@@ -43,11 +43,12 @@ bool Enemy::Init()
         model->SetScaleAxisXYZ({0.12f, 0.12f, 0.12f});
     }
 
-    // ラムダ式
-    auto randomRange = [](int start, int end) { return (float)(start + rand() % ((end - start) + 1)); };
+    // 原点 (0, 0, 0) を中心とした半径 50 以内の円形範囲にランダム配置
+    float theta = ((float)rand() / RAND_MAX) * DX_TWO_PI_F;    // 0 ～ 2π のランダムな角度
+    float r     = sqrtf((float)rand() / RAND_MAX) * 50.0f;     // 0 ～ 50 のランダムな半径（面積が均等になるように調整）
 
-    // 物理ボディは作成時の位置に置かれるため、先に位置を決めておく
-    SetTranslate({randomRange(-150, 150), 50.0f, randomRange(-150, 150)});
+    // 物理ボディは作成時の位置に置かれるため、先に位置を決めておく(Y軸の高さは50から落下させる想定)
+    SetTranslate({cosf(theta) * r, 50.0f, sinf(theta) * r});
 
     // 当たり判定・重力・移動・吹き飛びはキャラクター共通の物理移動に任せる
     AddComponent<ComponentCharacterPhysics>()->Setup(4.0f, 23.0f, ComponentPhysics::CollisionType::ENEMY);

@@ -54,14 +54,14 @@ void PoittersPoint_Clear::LateDraw()
     float ADJUST_Y = (WINDOW_H / 720.0f);
 
     SetFontSize(static_cast<int>(clear_size_ * ADJUST_X));
-    DrawFormatString(static_cast<int>(clear_x_ * ADJUST_X), static_cast<int>(clear_y_ * ADJUST_Y), GetColor(255, 255, 255), "GameOver");
+    DrawFormatString(static_cast<int>(clear_x_ * ADJUST_X), static_cast<int>(clear_y_ * ADJUST_Y), GetColor(255, 255, 255), "Clear");
 }
 
 void PoittersPoint_Clear::GUI()
 {
-    ImGui::DragInt("GameOverLeft", &clear_x_);
-    ImGui::DragInt("GameOverTop", &clear_y_);
-    ImGui::DragInt("GameOverSize", &clear_size_);
+    ImGui::DragInt("ClearLeft", &clear_x_);
+    ImGui::DragInt("ClearTop", &clear_y_);
+    ImGui::DragInt("ClearSize", &clear_size_);
 }
 
 }    // namespace PoittersPoint

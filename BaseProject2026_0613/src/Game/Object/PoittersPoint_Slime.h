@@ -33,7 +33,7 @@ private:
 
     float radius_           = 5.0f;     //!< 物理形状の半径(モデルの大きさから自動計算。取得できない時の既定値)
     float density_          = 300.0f;   //!< 密度(軽い)
-    float explosion_radius_ = 45.0f;    //!< 爆発範囲
+    float explosion_radius_ = 30.0f;    //!< 爆発範囲(develop側の仮調整値。広すぎると投げた本人も含めて全員が倒れる)
     float explosion_damage_ = 2.0f;     //!< 爆発ダメージ
     float explosion_power_  = 180.0f;   //!< 爆風で吹き飛ばす強さ
 };

@@ -63,6 +63,12 @@ public:
     //! @brief 投げステートから呼ばれる：手を離して投げる
     void ReleaseThrow(const float3& velocity);
 
+    //! @brief 持ち上げ中/保持中の物を投げずにその場で手放す(脱落時などに使う)
+    void DropGrabbingObject() { DropHolding(); }
+
+    //! @brief 指定のオブジェクトを持ち上げ中/保持中か
+    bool IsGrabbingObject(const ObjectPtr& target) const { return target && grabbing_object_ptr_.lock() == target; }
+
     //! @brief 何かを持っている(持ち上げ中を含む)
     bool IsHolding() const { return !grabbing_object_ptr_.expired(); }
     //! @brief 互換用

@@ -3,7 +3,11 @@
 void ComponentMagicPoint::Init()
 {
     __super::Init();
-    // Init は AddComponent の翌フレームに走るため、ここで MP を上書きすると直後に設定した値が消える
+
+    // AddComponent直後にSetMaxAndCurrentMPなどで値が設定されている場合は、その値を優先する
+    if(!is_mp_set_) {
+        magic_points_ = max_magic_points_;
+    }
 }
 
 float ComponentMagicPoint::GetMagicPoints()
@@ -14,7 +18,7 @@ float ComponentMagicPoint::GetMagicPoints()
 void ComponentMagicPoint::UseMP(float cost)
 {
     // MPが0以下なら
-    if(GetMagicPoints() <= 0.0f) {
+    if(GetMagicPoints() <= 0) {
         // これ以上消費する必要は無いのでここで弾く
         return;
     }
@@ -45,6 +49,7 @@ void ComponentMagicPoint::SetMaxAndCurrentMP(float new_mp)
     // 最大MPと現在のMPを設定
     max_magic_points_ = new_mp;
     magic_points_     = new_mp;
+    is_mp_set_        = true;
 }
 
 void ComponentMagicPoint::SetMaxAndCurrentMP(float new_max_mp, float new_mp)
@@ -52,6 +57,7 @@ void ComponentMagicPoint::SetMaxAndCurrentMP(float new_max_mp, float new_mp)
     // 最大MPと現在のMPをそれぞれ設定
     max_magic_points_ = new_max_mp;
     magic_points_     = new_mp;
+    is_mp_set_        = true;
 }
 
 void ComponentMagicPoint::GUI()

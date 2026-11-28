@@ -8,6 +8,10 @@
 #include "Game/Component/ComponentGrabbable.h"
 #include "Game/Component/ComponentHitPoints.h"
 #include "Game/Component/ComponentCharacterPhysics.h"
+#include "Game/Component/ComponentStateGrab.h"
+#include "Game/Component/ComponentStateThrow.h"
+#include "Game/Component/ComponentStateDown.h"
+#include "Game/Component/ComponentStateDead.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
@@ -44,8 +48,97 @@ void Player::Update()
 {
     Super::Update();
 
+    // 脱落後は何もしない(倒れた姿勢は ComponentStateDown / ComponentStateDead が保つ)
+    if(is_dead_) {
+        return;
+    }
+
+    // HPが尽きていれば脱落処理
+    UpdateDead();
+    if(is_dead_) {
+        return;
+    }
+
     // 視線・ターゲット検出処理
     OnEyeSight();
+}
+
+void Player::UpdateDead()
+{
+    auto hp = GetComponent<ComponentHitPoints>();
+    if(!hp || !hp->IsDead()) {
+        return;
+    }
+
+    //-----------------------------------------------------------
+    // 脱落を待つ条件
+    // (HPが0になった時点で ComponentStateMachine が持ち物を落としてダウンさせているので、
+    //  ここでは「安全に物理ボディを外せるか」だけを待つ)
+    //-----------------------------------------------------------
+    // 誰かに持ち上げられている/持たれている間は待つ(投げられて手から離れた後に脱落)
+    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+        auto state = grabbable->GetState();
+        if(state == ComponentGrabbable::State::Reserved || state == ComponentGrabbable::State::Held) {
+            return;
+        }
+    }
+    // 自分が持ち上げ中/投げ中なら終わるまで待つ(途中で止めると物が手に残るため)
+    if(GetComponent<ComponentStateGrab>() || GetComponent<ComponentStateThrow>()) {
+        return;
+    }
+    // 吹き飛んでいる最中は着地まで待つ(空中で物理ボディを外すとその場で止まってしまう)
+    if(auto mover = GetComponent<ComponentCharacterPhysics>()) {
+        if(!mover->IsGrounded()) {
+            return;
+        }
+    }
+
+    StartDead();
+}
+
+void Player::StartDead()
+{
+    is_dead_ = true;
+
+    // 持っている物はその場で手放し、操作/CPUのステートマシンを外す
+    if(auto state_machine = GetComponent<ComponentStateMachine>()) {
+        state_machine->DropGrabbingObject();
+        RemoveComponent(state_machine);
+    }
+
+    // 歩き・ジャンプなどのステートを外す(外さないと入力やAIで動き続ける)
+    // 脱落でダウンしている場合は、倒れた姿勢を保つためダウンだけ残す
+    bool lying = false;
+    for(auto& state : GetComponents<ComponentState>()) {
+        if(std::dynamic_pointer_cast<ComponentStateDown>(state)) {
+            lying = true;
+            continue;
+        }
+        RemoveComponent(state);
+    }
+
+    // 脱落したキャラクターは掴めないようにする
+    if(auto grabbable = GetComponent<ComponentGrabbable>()) {
+        RemoveComponent(grabbable);
+    }
+
+    if(lying) {
+        // 既に倒れているので、死体が他の物の邪魔をしないよう物理ボディだけ外す
+        if(GetComponent<ComponentCharacterPhysics>())
+            RemoveComponent<ComponentCharacterPhysics>();
+        if(GetComponent<ComponentPhysics>())
+            RemoveComponent<ComponentPhysics>();
+    }
+    else {
+        // ダウンしていない(ステートマシンが無い等)場合は、モデルを倒して演出してから物理ボディを外す
+        // (Playerには"dead"アニメーションが無いため SetUseAnimation(false))
+        AddComponent<ComponentStateDead>()->SetUseAnimation(false);
+    }
+}
+
+bool Player::IsAlive() const
+{
+    return !is_dead_;
 }
 
 void Player::OnEyeSight()
