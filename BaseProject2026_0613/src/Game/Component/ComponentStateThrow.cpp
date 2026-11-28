@@ -1,26 +1,27 @@
-﻿#pragma once
+﻿//---------------------------------------------------------------------------
+//! @file   ComponentStateThrow.cpp
+//! @brief  投げステート
+//---------------------------------------------------------------------------
 #include <Game/Component/ComponentStateThrow.h>
-#include "ComponentStateControllerWalk.h"
-#include "Game/Scene/PoittersPoint_Stage.h"
-#include <Game/Component/ComponentGrabbable.h>
+#include <Game/Component/ComponentStateMachine.h>
+#include <Game/Object/PoittersPoint_Player.h>
 
 void ComponentStateThrow::Init()
 {
     __super::Init();
 
     SetName<Component>("State Throw");
-    auto owner = GetOwner();
 
     is_released_ = false;
+    is_started_  = true;
 
-    if(auto model = owner->GetComponent<ComponentModel>()) {
+    if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
         if(is_in_air_) {
-            // ★空中投げ：ThrowFast を上半身のみ 1.5倍速で再生
-            // PlayAnimationEx の引数（name, node, loop, blend_time, start_time）
+            // 空中投げ：ThrowFast を上半身のみで再生
             model->PlayAnimationEx("throw_fast", "mixamorig:Spine", false);
         }
         else {
-            // ★地上投げ：通常版（1.0倍速）を全身で再生
+            // 地上投げ：通常版を全身で再生
             model->PlayAnimationNoSame("throw", false);
         }
     }
@@ -30,74 +31,50 @@ void ComponentStateThrow::Update()
 {
     __super::Update();
 
-    auto owner            = GetOwner();
-    bool was_in_air_start = is_in_air_;
+    if(!is_started_)
+        return;
 
-    // ★1. 空中投げの移動処理（カプセル本体の物理移動）
+    auto owner = GetOwner();
+    auto model = owner->GetComponent<ComponentModel>();
+    if(!model)
+        return;
+
+    // 空中投げ：アニメーションのルートモーション(Y)を打ち消す
     if(is_in_air_) {
-        float effective_gravity = is_released_ ? gravity_ : (gravity_ * 0.1f);
-
-        owner->AddTranslate({0.0f, current_velocity_, 0.0f}, true);
-        current_velocity_ -= effective_gravity;
-
-        // ★投げ切るまでは着地しない（ジャンプ＋投げを保つ）
-        if(is_released_) {
-            auto pos = owner->GetTranslate();
-            if(pos.y <= ground_y_) {
-                pos.y = ground_y_;
-                owner->SetTranslate(pos);
-                is_in_air_ = false;    // 着地
-            }
-        }
+        matrix mat        = model->GetMatrix();
+        mat.translate().y = 0.0f;
+        model->SetMatrix(mat);
     }
 
+    // 手を離すタイミング(上半身の速い投げは早めに離す)
+    // (手離し前にモーションが終わってしまった場合も、持ったまま固まらないよう離す)
+    const float release_threshold = is_in_air_ ? 0.20f : 0.65f;
+    if(!is_released_ && (release_threshold <= model->GetAnimationTime() || IsMotionEnd())) {
+        if(auto state_machine = owner->GetComponent<ComponentStateMachine>())
+            state_machine->ReleaseThrow(CalcThrowVelocity());
+        is_released_ = true;
+    }
+}
+
+float3 ComponentStateThrow::CalcThrowVelocity() const
+{
+    auto owner = GetOwner();
+
+    // 正面ベクトル(モデルの -Z)。スケールやモーションの俯仰に左右されないよう水平成分だけ正規化する
+    float3 forward = {0.0f, 0.0f, -1.0f};
     if(auto model = owner->GetComponent<ComponentModel>()) {
-        // ★2. 空中投げ：モデルのY座標を固定（ルートモーションの打ち消し）
-        if(was_in_air_start) {
-            matrix mat        = model->GetMatrix();
-            mat.translate().y = 0.0f;
-            model->SetMatrix(mat);
-        }
-
-        // 手離し判定閾値（1.5倍速の ThrowFast に合わせて手離しタイミングも 0.20f 付近に調整）
-        float release_threshold = was_in_air_start ? 0.20f : 0.65f;
-
-        // 手を離す処理
-        if(!is_released_ && release_threshold <= model->GetAnimationTime()) {
-            if(auto throw_object = throw_weak_ptr_.lock()) {
-                throw_object->RemoveComponent<ComponentAttachModel>();
-
-                auto grabbable = throw_object->GetComponent<ComponentGrabbable>();
-                grabbable->SetIsGrabbed(false);
-
-                float3 vec = {0.0f, 1.0f, 0.0f};
-                if(auto model = owner->GetComponent<ComponentModel>()) {
-                    constexpr float front_len = 5.0f;
-                    vec                       = -(model->GetWorldVectorAxisZ() * front_len);
-                }
-
-                throw_object->AddTranslate(vec * 5.0f);
-                grabbable->SetTranslation(vec * 5.0f);
-
-                if(auto collider = throw_object->GetComponent<ComponentCollision>()) {
-                    collider->SetCollisionStatus(ComponentCollision::CollisionBit::DisableHit, false);
-                }
-
-                grabbable->SetThrower(GetOwnerPtr());
-
-                throw_weak_ptr_.reset();
-                is_released_ = true;
-            }
-        }
-
-        // 空中投げのアニメーション終了時はルートモーションのY補正を解除する
-        // (ステート遷移はステートマシン側の GetIsFinished ポーリングで行う)
-        if(was_in_air_start && !model->IsExPlaying("mixamorig:Spine")) {
-            matrix mat        = model->GetMatrix();
-            mat.translate().y = 0.0f;
-            model->SetMatrix(mat);
-        }
+        float3 v = -model->GetWorldVectorAxisZ();
+        v.y      = 0.0f;
+        if((float)length(v) > 0.0001f)
+            forward = normalize(v);
     }
+
+    // キャラクターの投げる力
+    float power = 1.0f;
+    if(auto character = dynamic_cast<const PoittersPoint::Player*>(owner))
+        power = character->GetThrowPower();
+
+    return (forward * throw_speed_ + float3(0.0f, throw_up_speed_, 0.0f)) * power;
 }
 
 void ComponentStateThrow::GUI()
@@ -115,24 +92,32 @@ void ComponentStateThrow::GUI()
             if(ImGui::Button(u8"削除"))
                 GetOwner()->RemoveComponent(shared_from_this());
 
+            ImGui::DragFloat(u8"投げる初速(正面)", &throw_speed_, 1.0f, 0.0f, 1000.0f, "%.1f");
+            ImGui::DragFloat(u8"投げる初速(上)", &throw_up_speed_, 1.0f, 0.0f, 1000.0f, "%.1f");
+
             ImGui::TreePop();
         }
     }
     ImGui::End();
 }
 
-void ComponentStateThrow::SetThrowObject(ObjectWeakPtr object_ptr)
-{
-    throw_weak_ptr_ = object_ptr;
-}
-
 bool ComponentStateThrow::GetIsFinished()
 {
+    // 手を離し、モーションも終わったら終了
+    return is_released_ && IsMotionEnd();
+}
+
+bool ComponentStateThrow::IsMotionEnd() const
+{
+    // Init(モーション再生)前は終わっていない
+    if(!is_started_)
+        return false;
+
     // アニメーションが止まっているか(空中投げは上半身レイヤーの再生終了も待つ)
     if(auto model = GetOwner()->GetComponent<ComponentModel>()) {
         return !model->IsPlaying() && !model->IsExPlaying("mixamorig:Spine");
     }
-    return false;
+    return true;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateThrow)

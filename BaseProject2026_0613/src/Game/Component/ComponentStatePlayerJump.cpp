@@ -1,6 +1,10 @@
-﻿#pragma once
+﻿//---------------------------------------------------------------------------
+//! @file   ComponentStatePlayerJump.cpp
+//! @brief  ジャンプステート(プレイヤー/CPU共通)
+//---------------------------------------------------------------------------
 #include <Game/Component/ComponentStatePlayerJump.h>
 #include <Game/Component/ComponentStateControllerWalk.h>
+#include <Game/Component/ComponentCharacterPhysics.h>
 #include <Game/Object/PoittersPoint_Player.h>
 
 void ComponentStatePlayerJump::Init()
@@ -12,23 +16,21 @@ void ComponentStatePlayerJump::Init()
     if(!owner)
         return;
 
-    // 踏切時点の地面の高さを記録
-    ground_y_ = owner->GetTranslate().y;
-
-    // ジャンプ初期上昇速度を設定
-    current_jump_velocity_ = jump_power_;
-    is_landing_            = false;
+    is_jumped_  = false;
+    is_landing_ = false;
+    air_time_   = 0.0f;
 
     float3 dir{0, 0, 0};
     // CPU用ジャンプは入力キーを読まず直上ジャンプする
+    // (Init は AddComponent の翌フレームに走るため、押された瞬間ではなく押しっぱなしで判定する)
     if(!is_cpu_) {
-        if(Input::IsKeyDown(key_up_))
+        if(IsKey(key_up_))
             dir += {0, 0, -1};
-        if(Input::IsKeyDown(key_down_))
+        if(IsKey(key_down_))
             dir += {0, 0, 1};
-        if(Input::IsKeyDown(key_right_))
+        if(IsKey(key_right_))
             dir += {-1, 0, 0};
-        if(Input::IsKeyDown(key_left_))
+        if(IsKey(key_left_))
             dir += {1, 0, 0};
     }
 
@@ -48,12 +50,7 @@ void ComponentStatePlayerJump::Init()
 
     // アニメーション再生（Init時に再生開始し、踏ん張りモーションから見せる）
     if(auto mdl = owner->GetComponent<ComponentModel>()) {
-        if(is_holding_) {
-            mdl->PlayAnimation("grab jump", false);
-        }
-        else {
-            mdl->PlayAnimation("jump", false);
-        }
+        mdl->PlayAnimation(is_holding_ ? "grab jump" : "jump", false);
     }
 }
 
@@ -62,81 +59,78 @@ void ComponentStatePlayerJump::Update()
     __super::Update();
 
     auto owner = GetOwner();
-    if(!owner)
+    auto mover = owner->GetComponent<ComponentCharacterPhysics>();
+    if(!mover) {
+        // 物理移動が無いキャラクターはジャンプできない
+        FinishJump();
         return;
+    }
 
-    // 踏ん張り（溜め）動作中の処理
+    const float dt = GetDeltaTime();
+
+    // 踏ん張り（溜め）動作中は地上に留める
     if(startup_timer_ > 0.0f) {
-        startup_timer_ -= GetDeltaTime();
-        return;    // 溜めが終わるまで上昇・空中移動を行わずに地上に留める
+        startup_timer_ -= dt;
+        return;
     }
 
-    // 水平移動処理
-    if((float)length(jump_direction_) > 0.0f) {
-        owner->AddTranslate(jump_direction_ * air_move_speed_, true);
+    // 踏み切り：上向きの初速を与える。以降の放物線は重力(物理)が描く
+    if(!is_jumped_) {
+        mover->Jump(jump_speed_);
+        is_jumped_ = true;
+        air_time_  = 0.0f;
     }
 
-    // Y軸移動処理
-    owner->AddTranslate({0.0f, current_jump_velocity_, 0.0f}, true);
+    air_time_ += dt;
 
-    float current_gravity = gravity_;
-    if(std::abs(current_jump_velocity_) < 0.2f) {
-        current_gravity *= 0.6f;
-    }
+    if(!is_landing_) {
+        // 空中の水平移動(踏切時の方向で固定)
+        if((float)length(jump_direction_) > 0.0f)
+            mover->Move(jump_direction_ * air_move_speed_);
 
-    current_jump_velocity_ -= current_gravity;
-
-    // 着地判定
-    auto pos = owner->GetTranslate();
-    if(pos.y <= ground_y_) {
-        pos.y = ground_y_;
-        owner->SetTranslate(pos);
-
-        // 着地アニメーションを1回だけ再生
-        if(!is_landing_) {
+        // 着地判定(踏み切った直後の接地は無視する)
+        if(air_time_ > 0.15f && mover->IsGrounded()) {
             is_landing_    = true;
-            landing_Timer_ = 0.15f;    // 着地時の硬直(0.15)
+            landing_Timer_ = 0.15f;    // 着地時の硬直
             if(auto mdl = owner->GetComponent<ComponentModel>()) {
-                // "land" から "idle" (または "walk") に変更
-                mdl->PlayAnimationNoSame("idle", false);
+                mdl->PlayAnimationNoSame(is_holding_ ? "grab idle" : "idle", false);
             }
         }
-
-        // 着地硬直タイマーを減らす
-        landing_Timer_ -= GetDeltaTime();    // フレーム時間分減らす
-
-        if(landing_Timer_ <= 0.0f) {
-            if(is_cpu_) {
-                // CPUは歩きステートを自作しない(ComponentCPUState側でジャンプ消失を検知して再行動する)
-                owner->RemoveComponent(shared_from_this());
-                return;
-            }
-
-            // タイマーが終わったら ControllerWalk へ戻ります
-            auto walk = owner->AddComponent<ComponentStateControllerWalk>();
-            walk->SetKeys(key_up_, key_down_, key_left_, key_right_, key_jump_);
-            walk->SetIsHolding(is_holding_);
-            walk->SetFrontRotate(front_rot_);
-            // キャラ定義の移動速度で歩き直す
-            if(auto character = dynamic_cast<PoittersPoint::Player*>(owner)) {
-                walk->SetMoveSpeed(character->GetMoveSpeed());
-            }
-
-            owner->RemoveComponent(shared_from_this());
-            return;
-        }
+        return;
     }
+
+    // 着地硬直
+    landing_Timer_ -= dt;
+    if(landing_Timer_ <= 0.0f)
+        FinishJump();
 }
 
-ComponentStatePlayerJumpPtr ComponentStatePlayerJump::SetJumpPower(const float power)
+void ComponentStatePlayerJump::FinishJump()
 {
-    jump_power_ = power;
-    return std::dynamic_pointer_cast<ComponentStatePlayerJump>(shared_from_this());
+    auto owner = GetOwner();
+
+    if(is_cpu_) {
+        // CPUは歩きステートを自作しない(ComponentCPUState側でジャンプ消失を検知して再行動する)
+        owner->RemoveComponent(shared_from_this());
+        return;
+    }
+
+    // ControllerWalk へ戻る
+    auto walk = owner->AddComponent<ComponentStateControllerWalk>();
+    walk->SetKeys(key_up_, key_down_, key_left_, key_right_, key_jump_);
+    walk->SetIsHolding(is_holding_);
+    walk->SetFrontRotate(front_rot_);
+    // キャラ定義の移動速度で歩き直す
+    if(auto character = dynamic_cast<PoittersPoint::Player*>(owner)) {
+        walk->SetMoveSpeed(character->GetMoveSpeed());
+    }
+
+    owner->RemoveComponent(shared_from_this());
 }
 
-ComponentStatePlayerJumpPtr ComponentStatePlayerJump::SetGravity(const float gravity)
+ComponentStatePlayerJumpPtr ComponentStatePlayerJump::SetJumpSpeed(const float speed)
 {
-    gravity_ = gravity;
+    jump_speed_ = speed;
     return std::dynamic_pointer_cast<ComponentStatePlayerJump>(shared_from_this());
 }
 
@@ -150,21 +144,6 @@ ComponentStatePlayerJumpPtr ComponentStatePlayerJump::SetRotateSpeed(const float
 {
     rot_speed_ = speed;
     return std::dynamic_pointer_cast<ComponentStatePlayerJump>(shared_from_this());
-}
-
-float ComponentStatePlayerJump::GetJumpPower() const
-{
-    return jump_power_;
-}
-
-float ComponentStatePlayerJump::GetGravity() const
-{
-    return gravity_;
-}
-
-float ComponentStatePlayerJump::GetAirMoveSpeed() const
-{
-    return air_move_speed_;
 }
 
 ComponentStatePlayerJumpPtr ComponentStatePlayerJump::SetKeys(int up, int down, int left, int right, int jump)
@@ -196,8 +175,7 @@ void ComponentStatePlayerJump::GUI()
 
             // ジャンプパラメータ調整
             ImGui::DragFloat(u8"踏ん張り(溜め)時間", &startup_timer_, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat(u8"ジャンプ初速", &jump_power_, 0.05f);
-            ImGui::DragFloat(u8"重力", &gravity_, 0.005f);
+            ImGui::DragFloat(u8"ジャンプ初速(上向き)", &jump_speed_, 1.0f, 0.0f, 1000.0f);
             ImGui::DragFloat(u8"空中移動速度", &air_move_speed_, 0.1f);
             ImGui::DragFloat(u8"移動回転角度", &rot_speed_, 1.0f);
             ImGui::DragFloat(u8"オブジェクト オフセット回転", &front_rot_, 1.0f);

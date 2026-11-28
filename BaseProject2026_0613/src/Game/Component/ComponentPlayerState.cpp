@@ -1,5 +1,4 @@
-﻿#pragma once
-//---------------------------------------------------------------------------
+﻿//---------------------------------------------------------------------------
 //! @file   ComponentPlayerState.cpp
 //! @brief  プレイヤー状態制御コンポーネント
 //---------------------------------------------------------------------------
@@ -24,8 +23,6 @@ void ComponentPlayerState::Init()
     if(character_casted_owner) {
         owner->AddComponent<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
     }
-
-    can_grab_ = true;
 }
 
 //===========================================================================
@@ -35,73 +32,58 @@ void ComponentPlayerState::Update()
 {
     __super::Update();
 
-    auto owner                  = GetOwner();
-    auto character_casted_owner = dynamic_cast<PoittersPoint::Player*>(owner);
+    // ダウン中(掴まれている間も含む)は操作できない
+    if(IsDown())
+        return;
 
-    if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
-        if(GetGrabbing()) {
-            grabbable->SetCanGrab(false);
-        }
-        if(grabbable->GetIsGrabbed()) {
-            return;
-        }
-    }
+    auto owner = GetOwner();
+    auto walk  = owner->GetComponent<ComponentStateControllerWalk>();
+    auto jump  = owner->GetComponent<ComponentStatePlayerJump>();
 
-    // Eキーが押された時の処理
+    // Eキー：持っていれば投げる / 持っていなければ視線内の物を持ち上げる
     if(Input::IsKeyDown(KEY_INPUT_E)) {
-        // オブジェクトが近くにある、または持っている状態
-        if(!grabbing_object_ptr_.expired()) {
-            // 【投げ処理】すでにアイテムを持っているなら (can_throw_ が true)
-            if(can_throw_) {
-                bool is_walk = (owner->GetComponent<ComponentStateControllerWalk>() != nullptr);
-
-                // ジャンプステートの取得
-                auto jump_comp  = owner->GetComponent<ComponentStatePlayerJump>();
-                bool is_jumping = (jump_comp != nullptr);
-
-                // 地上(ControllerWalk) または 空中(PlayerJump) のどちらでも投げを許可
-                if(is_walk || is_jumping) {
-                    can_throw_ = false;
-                    can_grab_  = true;
-
-                    // Throwステートに変更
-                    auto state_throw = ChangeState<ComponentStateThrow>();
-                    state_throw->SetThrowObject(grabbing_object_ptr_);
-
-                    // ★空中投げ（ジャンプ中）の場合は is_in_air_ を true にして SetInAir を呼ぶ
-                    if(is_jumping) {
-                        float v_y      = jump_comp->GetVelocityY();
-                        float ground_y = jump_comp->GetGroundY();
-                        float gravity  = jump_comp->GetGravity();
-
-                        state_throw->SetInAir(true, v_y, ground_y, gravity);
-                    }
-
-                    grabbing_object_ptr_.reset();
-                }
-            }
-            // 【持ち上げ処理】まだアイテムを持っていない (地上 ControllerWalk のみ許可)
-            else if(owner->GetComponent<ComponentStateControllerWalk>()) {
-                StartGrab();
-            }
+        if(CanThrow()) {
+            // 地上(ControllerWalk) または 空中(PlayerJump) のどちらでも投げを許可
+            if(walk || jump)
+                StartThrow(jump != nullptr);
+        }
+        else if(walk) {
+            // 持ち上げは地上の歩き/待機中のみ
+            StartGrab();
         }
     }
 
-    // 掴みアニメーションが終了したら、掴み状態を完了させて歩きステートに戻る
+    // 持ち上げモーションが終了したら歩きステートに戻る
     if(FinishGrab()) {
-        if(character_casted_owner) {
-            ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed())->SetIsHolding(true);
-        }
+        ReturnToWalk();
+        return;
     }
 
-    // 投げアニメーションが終了したら歩きステートに戻る
+    // 投げモーションが終了したら歩きステートに戻る
     if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
-        if(component_throw->GetIsFinished()) {
-            if(character_casted_owner) {
-                ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(character_casted_owner->GetMoveSpeed());
-            }
-        }
+        if(component_throw->GetIsFinished())
+            ReturnToWalk();
     }
+}
+
+//===========================================================================
+// ダウンからの復帰
+//===========================================================================
+void ComponentPlayerState::OnRecover()
+{
+    ReturnToWalk();
+}
+
+//===========================================================================
+// 歩きステートへ戻す
+//===========================================================================
+void ComponentPlayerState::ReturnToWalk()
+{
+    float speed = 0.3f;
+    if(auto character = dynamic_cast<PoittersPoint::Player*>(GetOwner()))
+        speed = character->GetMoveSpeed();
+
+    ChangeState<ComponentStateControllerWalk>()->SetMoveSpeed(speed)->SetIsHolding(IsHolding());
 }
 
 //===========================================================================

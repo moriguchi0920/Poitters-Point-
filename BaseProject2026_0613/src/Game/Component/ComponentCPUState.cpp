@@ -64,7 +64,6 @@ void ComponentCPUState::Init()
     __super::Init();
     auto owner = GetOwner();
 
-    can_grab_  = true;
     can_throw_ = false;
 
     // 性格をランダムに決める
@@ -87,15 +86,10 @@ void ComponentCPUState::Update()
 
     auto owner = GetOwner();
 
-    if(auto grabbable = owner->GetComponent<ComponentGrabbable>()) {
-        if(GetGrabbing()) {
-            grabbable->SetCanGrab(false);
-        }
-
-        // 誰かに持たれている間は何もできない
-        if(grabbable->GetIsGrabbed()) {
-            return;
-        }
+    // ダウン中(吹き飛び中・誰かに掴まれている間も含む)は行動しない
+    // 復帰した時は OnRecover() で考え直す
+    if(IsDown()) {
+        return;
     }
 
     float dt = GetDeltaTime();
@@ -193,15 +187,14 @@ void ComponentCPUState::UpdateGrabAction()
         return;
     }
 
-    // 近くまで来たら掴む(視線で捉えた物が手の届く距離にある時だけ)
-    if(component_walk->GetNearby() || component_walk->GetStopped()) {
-        if(IsEyeSightTargetInReach() && StartGrab()) {
-            return;
-        }
-        // 止まってしまって掴めないなら考え直す
-        if(component_walk->GetStopped()) {
-            StartThink(RandomRange(0.2f, 0.5f));
-        }
+    // 体が触れて正面に来たら(=視線判定の掴み候補になったら)持ち上げる
+    // 物理で体と物がぶつかるため、歩きは物に触れるまで進み続ける
+    if(IsEyeSightTargetInReach() && StartGrab()) {
+        return;
+    }
+    // 触れたまま止まってしまって掴めないなら考え直す
+    if(component_walk->GetStopped()) {
+        StartThink(RandomRange(0.2f, 0.5f));
     }
 }
 
@@ -215,8 +208,6 @@ void ComponentCPUState::UpdateAttackAction()
     // 投げ終わったら手が空くので考え直す
     if(auto component_throw = owner->GetComponent<ComponentStateThrow>()) {
         if(component_throw->GetIsFinished()) {
-            grabbing_object_ptr_.reset();
-            can_grab_ = true;
             StartThink(RandomRange(0.1f, 0.5f));
         }
         return;
@@ -261,10 +252,7 @@ void ComponentCPUState::UpdateAttackAction()
             StartEvadeJump();
             return;
         }
-        if(auto state_throw = ChangeState<ComponentStateThrow>()) {
-            state_throw->SetThrowObject(grabbing_object_ptr_);
-            can_throw_ = false;
-        }
+        StartThrow(false);
     }
 }
 
@@ -574,8 +562,9 @@ void ComponentCPUState::StartEvadeJump()
 //===========================================================================
 bool ComponentCPUState::IsHolding() const
 {
-    // 持ち上げが終わると can_throw_ が true になる
-    return !grabbing_object_ptr_.expired() && !can_grab_ && can_throw_;
+    // 持ち上げが終わって手に持っている(=投げられる)時だけ true
+    // (基底の IsHolding() は持ち上げ中も含むため、CPU の判断では CanThrow() を使う)
+    return CanThrow();
 }
 
 ObjectPtr ComponentCPUState::GetThreat()
@@ -723,7 +712,8 @@ bool ComponentCPUState::IsGrabTargetValid(const ObjectPtr& target) const
         return false;
     }
     auto grabbable = target->GetComponent<ComponentGrabbable>();
-    if(!grabbable || grabbable->GetIsGrabbed() || !grabbable->GetCanGrab()) {
+    // 置かれて止まっていて、誰も持ち上げ始めていない物だけ
+    if(!grabbable || !grabbable->CanBeGrabbed()) {
         return false;
     }
     if(auto character = std::dynamic_pointer_cast<PoittersPoint::Player>(target)) {
@@ -766,11 +756,20 @@ bool ComponentCPUState::IsFacing(const ObjectPtr& target, float max_angle_deg) c
 
 bool ComponentCPUState::IsEyeSightTargetInReach() const
 {
-    auto object = grabbing_object_ptr_.lock();
-    if(!object) {
-        return false;
-    }
-    return DistanceXZ(object->GetTranslate(), GetOwner()->GetTranslate()) <= grab_reach_;
+    // 掴み候補は「体が触れていて正面にある物」だけが登録される(Player::OnEyeSight)ため、
+    // 候補があれば手が届いている。丸太のように長い物は中心までの距離が遠くても端に触れていれば掴める
+    return IsGrabTargetExist();
+}
+
+//===========================================================================
+// ダウンからの復帰
+//===========================================================================
+void ComponentCPUState::OnRecover()
+{
+    // ダウン中は持ち物を落とし、ステートも ComponentStateDown に置き換わっているため、
+    // 手ぶらの状態として思考ステートから始め直す
+    target_want_grab_.reset();
+    StartThink(RandomRange(0.2f, 0.6f));
 }
 
 //===========================================================================

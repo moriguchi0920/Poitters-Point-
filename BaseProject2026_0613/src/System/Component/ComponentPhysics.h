@@ -150,6 +150,14 @@ public:
         return hit_status_[id];
     }
 
+    //! @brief 指定オブジェクトとの物理接触を無視する (nullptrで解除)
+    //! @details 投げた本人・持っている本人と投げ物がぶつからないようにする用途。
+    //!          物理スレッドから比較のみ行うため、アドレス比較用の生ポインタで保持する(参照外しはしない)
+    inline void SetIgnoreObject(const Object* obj) { ignore_object_ = obj; }
+
+    //! @brief 指定オブジェクトとの接触を無視しているか
+    inline bool IsIgnoreObject(const Object* obj) const { return ignore_object_ != nullptr && ignore_object_ == obj; }
+
     inline void SetOverlapCollision(u16 hit) { overlap_status_ = hit; }
 
     inline const u16 GetOverlapCollision() const { return overlap_status_; }
@@ -202,6 +210,24 @@ public:
 
         return 0.0f;
     }
+
+    //! @brief 直線減衰(接地中の減速)を設定します
+    //! @details Jolt本体のダンピングは現状統合に効いていないため、PrePhysics側で
+    //!          速度に指数的減衰 dv/dt = -c*v を掛ける仕組み。0で無効(デフォルト)。
+    //!          GROUND と接触している間のみ掛かる（空中では掛からず勢いを殺さない）。
+    //! @param linear_damping 減衰係数(0.0f～、大きいほど早く止まる)
+    inline void SetLinearDamping(float linear_damping) { linear_damping_ = linear_damping; }
+
+    //! @brief 直線減衰を取得します
+    inline const float GetLinearDamping() const { return linear_damping_; }
+
+    //! @brief 角減衰(転がり摩擦・転がり抵抗相当)を設定します
+    //! @details 0で無効(デフォルト)。転がり続けすぎる物体の停止に使う。
+    //! @param angular_damping 減衰係数(0.0f～、大きいほど早く止まる)
+    inline void SetAngularDamping(float angular_damping) { angular_damping_ = angular_damping; }
+
+    //! @brief 角減衰を取得します
+    inline const float GetAngularDamping() const { return angular_damping_; }
 
     //! @brief 現実の物理にどれだけ近いかを設定する
     //! @param pow [ほぼ重力と当たりのみ(0.0)]～[完全に物理のみを使用する(1.0)]
@@ -265,11 +291,21 @@ private:
     // 重力係数
     float gravity_factor_ = 30.0f;
 
+    // 直線・角の速度減衰（PrePhysics適用。0で無効）
+    float linear_damping_  = 0.0f;
+    float angular_damping_ = 0.0f;
+
+    // 接地フラグ（前フレームの物理ステップで GROUND と接触していれば true）
+    bool contact_ground_ = false;
+
     // コリジョンのタイプ
     CollisionType type_ = CollisionType::ETC;
 
     // オーバーラップ情報
     u16 overlap_status_ = 0;
+
+    // 接触を無視するオブジェクト(アドレス比較専用)
+    const Object* ignore_object_ = nullptr;
 
     // コリジョンヒットの情報(共通)
     static u16 hit_status_[CollisionTypeSize];

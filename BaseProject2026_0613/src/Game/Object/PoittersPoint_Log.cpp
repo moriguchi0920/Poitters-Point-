@@ -1,17 +1,19 @@
 ﻿//---------------------------------------------------------------------------
 //! @file   PoittersPoint_Log.cpp
-//! @brief  PoittersPoint_Log
+//! @brief  PoittersPoint_Log (投げ物：丸太)
+//! @details 円柱の剛体として物理に乗せる。投げると軸が進行方向と直交する向きで
+//!          前転しながら飛ぶため、着地後はそのまま地面を転がっていく。
 //---------------------------------------------------------------------------
 #include "PoittersPoint_Log.h"
-#include "Game/Scene/PoittersPoint_Stage.h"
+#include "Game/Component/ComponentGrabbable.h"
+#include "Game/System/PoittersPoint_PhysicsHelper.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
-#include "Game/Component/ComponentGrabbable.h"
-#include <System/Component/ComponentCollisionCapsule.h>
+#include <System/Component/ComponentPhysics.h>
+#include <System/Physics/RigidBody.h>
 
 namespace PoittersPoint {
-// namespace PoittersPoint
 
 bool Log::Init()
 {
@@ -19,58 +21,37 @@ bool Log::Init()
     // これがなければabort()が呼ばれる
     Super::Init();
 
-    SetTranslate({10.0f, 10.0f, -20.0f});
-
     SetName("Log");
+
+    // 物理ボディは作成時の位置に置かれるため、先に位置を決めておく
+    SetTranslate({10.0f, 10.0f, -20.0f});
+    SetScaleAxisXYZ({1.0f});
+
     auto model = AddComponent<ComponentModel>("data/Game/Models/Log/Log.mv1");
-    if(model) {
-        // 丸太の物理軸（Y=+3.3 位置）をオブジェクト原点へ一致させるためモデルをローカルで -3.3 下げる
-        // カプセル側も同量移動させるため、見た目と当たり判定の相対配置は変わらない
-        model->SetTranslate({0.0f, -3.3f, 0.0f});
+
+    // 丸太の長軸に合わせた円柱(転がる形)。モデルが取得できない時は従来のカプセル寸法で作る
+    auto physics = AddComponent<ComponentPhysics>();
+    if(!PhysicsHelper::CreateCylinderFitModel(physics, model, density_, radius_, half_length_)) {
+        physics->CreateCylinder(half_length_, radius_, density_);
     }
-
-    // 丸太の形状に合致する単一カプセル(ComponentCollisionModelはリグなどがないのかアタッチ出来ない)
-    // カプセルは初期で縦向きだが、丸太は横向きなので回転させる
-    auto col = AddComponent<ComponentCollisionCapsule>();
-    if(col) {
-        col->SetRadius(6.0f);
-        col->SetHeight(46.33f);
-        // 軸をオブジェクト原点(Y=0)へ移す（モデルを -3.3 した分と相殺して見た目は不変）
-        // これにより X 軸回転が丸太の物理軸まわりの pure な転がりになり首振りが消える
-        col->SetTranslate({23.36f, 2.530f, 0.0f});
-
-        // カプセルを横向き（丸太の長軸に沿わせる）に回転
-        // 回転: {-90, 90, 0} (度)
-        float matrixT[3], matrixR[3], matrixS[3];
-        DecomposeMatrixToComponents(col->GetMatrixFloat(), matrixT, matrixR, matrixS);
-        matrixR[0] = -90.0f;
-        matrixR[1] = 90.0f;
-        matrixR[2] = 0.0f;
-        RecomposeMatrixFromComponents(matrixT, matrixR, matrixS, col->GetMatrixFloat());
-
-        // 重力を適用
-        col->UseGravity(true);
-        col->SetGravity(-0.2f);
-        col->SetCollisionGroup(ComponentCollision::CollisionGroup::LOG);
-        col->SetHitCollisionGroup((u32)ComponentCollision::CollisionGroup::ENEMY | (u32)ComponentCollision::CollisionGroup::GROUND |
-                                  (u32)ComponentCollision::CollisionGroup::ITEM | (u32)ComponentCollision::CollisionGroup::PLAYER);
-        col->SetMass(200.0f);
-    }
+    physics->SetPhysicsStatus(ComponentPhysics::PhysicsBit::Actived, true);
+    physics->SetPhysicsReal(1.0f);
+    physics->SetCollisionType(ComponentPhysics::CollisionType::ITEM);
+    physics->SetFriction(0.8f);           //!< 滑らずに転がるよう摩擦は高め
+    physics->SetRestitution(0.05f);       //!< 木なのでほとんど跳ねない
+    physics->SetLinearDamping(0.8f);     //!< 接地中の減速は弱め(岩よりずっとよく転がる)
+    physics->SetAngularDamping(0.6f);    //!< 転がり抵抗も弱め
 
     auto grabbable = AddComponent<ComponentGrabbable>();
-    if(grabbable) {
-        grabbable->SetBounceOffset(0.0f);    // 初期は跳ねを抑える
-        grabbable->SetLiftTime(1.0f);
-    }
+    grabbable->SetLiftTime(1.0f);
+    grabbable->SetDamage(2.0f);
+    grabbable->SetKnockbackPower(160.0f);    // 重いので大きく吹き飛ばす
+    grabbable->SetThrowSpeedScale(0.8f);     // 重いので少し遅い
+    grabbable->SetAlignRollAxisOnThrow(true);
+    grabbable->SetRollSpin(1.0f, radius_);    // 着地後そのまま転がる回転
 
-    //SE
-    se_handle_       = LoadSoundMem("data/Game/LogSE/Log1.mp3");
-    throw_cool_down_ = 0.0f;
-
-    // 転がり計算用に前フレームの位置を初期化
-    prev_pos_ = GetTranslate();
-
-    SetScaleAxisXYZ({1.0f});
+    // SE
+    se_handle_ = LoadSoundMem("data/Game/LogSE/Log1.mp3");
 
     return true;
 }
@@ -79,231 +60,63 @@ void Log::Update()
 {
     __super::Update();
 
-    // 物理演算前の位置を記録（PostPhysicsで転がり回転に使用）
-    prev_pos_ = GetTranslate();
-
-    auto grabbable = GetComponent<ComponentGrabbable>();
-    if(!grabbable)
-        return;
-
-    bool is_grabbed = grabbable->GetIsGrabbed();
-
-    // 投擲検出：掴まれた→離された の遷移
-    if(was_grabbed_prev_ && !is_grabbed) {
-        // ComponentStateThrow が設定した grabbable translation_ を水平速度として取得
-        // ComponentGrabbable::Update() は既に __super::Update() で移動を適用済みのため、
-        // just_thrown_ を立てて PrePhysics での速度適用をスキップする
-        float3 raw_velocity = grabbable->GetTranslation();
-        velocity_           = raw_velocity * k_throw_power_;
-        throw_velocity_     = velocity_;
-        // grabbable の translation_ をゼロにして二重移動を防ぐ
-        grabbable->SetTranslation({0, 0, 0});
-        // 既に適用済みで大きすぎる跳ね戻し（ホップ）の一部を水平方向だけ相殺する
-        float3 hop_cancel = {raw_velocity.x * k_hop_cancel_, 0.0f, raw_velocity.z * k_hop_cancel_};
-        if((float)length(hop_cancel) > 0.001f) {
-            AddTranslate(-hop_cancel, false, true);
-        }
-        // 上方向の衝動を一度だけ与える（重力は ComponentCollision が処理）
-        AddTranslate({0.0f, k_throw_up_, 0.0f});
-        just_thrown_ = true;
-    }
-    was_grabbed_prev_ = is_grabbed;
-
-    // 掴まれている時は速度をリセット
-    if(is_grabbed) {
-        velocity_       = {0, 0, 0};
-        throw_velocity_ = {0, 0, 0};
-        just_thrown_    = false;
-        is_on_ground_   = false;
-        was_on_ground_  = false;
-    }
-
-    // 接地中かつ静止中は跳ねを抑制
-    if(grabbable->IsGrounded() && !grabbable->IsMoving()) {
-        grabbable->SetBounceOffset(0.0f);
-    }
-
-    // 転がっている間は回転を適用（deve版より追加）
-    if(is_rolling_) {
-        float3 rot  = GetRotationAxisXYZ();
-        rot.x      += roll_speed_;
-        SetRotationAxisXYZ(rot);
-
-        roll_speed_ *= 0.98f;
-
-        if(std::abs(roll_speed_) < 0.01f) {
-            roll_speed_ = 0.0f;
-            is_rolling_ = false;
-        }
-    }
+    if(se_cool_down_ > 0.0f)
+        se_cool_down_ -= GetDeltaTime();
 }
 
-//! @brief 物理シミュレーション前処理
 void Log::PrePhysics()
 {
-    // gravity_ は LateUpdate で ComponentCollision が設定し、
-    // __super::PrePhysics で消費される。
-    // 接地中は重力変位が極め小さい（衝突でリセットされる）。
-    // 落下中は蓄積して大きくなる。
-    float gravity_mag = (float)length(gravity_);
-    is_on_ground_     = (gravity_mag < 0.05f);
-
     __super::PrePhysics();
 
-    auto grabbable = GetComponent<ComponentGrabbable>();
-    if(!grabbable)
-        return;
-
-    // 掴まれている場合は速度を適用しない
-    if(grabbable->GetIsGrabbed())
-        return;
-
-    // 投擲直後のフレームは速度適用をスキップ（投擲衝動は既に ComponentStateThrow が適用済み）
-    if(just_thrown_) {
-        just_thrown_ = false;
-        return;
-    }
-
-    // 速度を適用（水平成分のみ、鉛直は重力で処理）
-    float3 horiz_v = {velocity_.x, 0.0f, velocity_.z};
-    if((float)length(horiz_v) > 0.001f) {
-        AddTranslate(horiz_v);
+    // 着地の勢いを判定するため、物理ステップ前の速度を覚えておく
+    if(auto physics = GetComponent<ComponentPhysics>()) {
+        if(auto body = physics->GetRigidBody())
+            velocity_before_step_ = body->linearVelocity();
     }
 }
 
-void Log::PostPhysics()
+void Log::OnHitPhysics(const ComponentPhysics::HitInfo& hit_info)
 {
-    __super::PostPhysics();
+    __super::OnHitPhysics(hit_info);
 
-    auto grabbable = GetComponent<ComponentGrabbable>();
-    if(!grabbable)
+    if(!hit_info.hit_collision_ || se_cool_down_ > 0.0f || se_handle_ == -1)
         return;
 
-    // 物理演算による移動量を取得
-    float3 delta = GetTranslate() - prev_pos_;
-
-    // 落下中は接地状態をクリア
-    if(delta.y < -0.5f) {
-        is_on_ground_ = false;
-    }
-    // 衝突システムの接地判定を併用（1フレーム遅れの gravity_ 検出を補正）
-    if(grabbable->IsGrounded()) {
-        is_on_ground_ = true;
-    }
-
-    // 空中→接地の遷移を検出
-    bool landed_this_frame = (!was_on_ground_ && is_on_ground_);
-    was_on_ground_         = is_on_ground_;
-
-    // 未掴みの場合、空中・接地で異なる減衰を適用
-    if(!grabbable->GetIsGrabbed()) {
-        if(is_on_ground_) {
-            // 接地中：転がり摩擦
-            velocity_ *= k_friction_;
-            // 着地の瞬間: 水平速度の一部を失う
-            if(landed_this_frame) {
-                float3 horiz  = {velocity_.x, 0.0f, velocity_.z};
-                horiz        *= k_landing_loss_;
-                velocity_.x   = horiz.x;
-                velocity_.z   = horiz.z;
-            }
-            velocity_.y = 0.0f;
-        }
-        else {
-            // 空中：空気抵抗（軽減）
-            velocity_ *= k_air_drag_;
-        }
-
-        float3 horiz_v = {velocity_.x, 0.0f, velocity_.z};
-        if((float)length(horiz_v) < 0.01f) {
-            velocity_.x = 0.0f;
-            velocity_.z = 0.0f;
-        }
-    }
-
-    // 掴まれている間は手の動きが転がりにならないよう回転しない
-    if(grabbable->GetIsGrabbed())
+    // 地面・壁に勢いよくぶつかった時だけ鳴らす
+    auto type = hit_info.hit_collision_->GetCollisionType();
+    if(type != ComponentPhysics::CollisionType::GROUND && type != ComponentPhysics::CollisionType::WALL)
         return;
 
-    // 転がりは Z 方向の移動のみで適用（丸太の長軸 X 方向の滑りは回転しない）
-    // 原点が物理軸と一致したので空中でも同じ回転を続けて自然な転倒に見える
-    if((fabs(delta.z) > 0.001f) && (k_roll_radius_ > 0.001f)) {
-        // 水平移動量 / 半径 = 回転角（ラジアン）を度に変換
-        float angle_deg = (delta.z / k_roll_radius_) * 57.2957795f;
+    if((float)length(velocity_before_step_) < se_min_speed_)
+        return;
 
-        // X軸周りに累積回転（+Z 移動 → +X 回転）
-        float3 rot  = GetRotationAxisXYZ();
-        rot.x      += angle_deg;
-        SetRotationAxisXYZ(rot);
+    PlaySoundMem(se_handle_, DX_PLAYTYPE_BACK);
+    se_cool_down_ = 0.3f;    // 連続再生防止
+}
+
+void Log::Exit()
+{
+    if(se_handle_ != -1) {
+        DeleteSoundMem(se_handle_);
+        se_handle_ = -1;
     }
+    __super::Exit();
 }
 
 void Log::GUI()
 {
     __super::GUI();
 
-    ImGui::Begin("Log Physics");
-    ImGui::Text(u8"水平速度 : %.3f", (float)length(float3(velocity_.x, 0, velocity_.z)));
-    ImGui::Text(u8"鉛直速度 : %.3f", velocity_.y);
-    ImGui::Text(u8"接地中 : %s", is_on_ground_ ? u8"はい" : u8"いいえ");
-    ImGui::Separator();
-    ImGui::DragFloat(u8"空気抵抗", &k_air_drag_, 0.001f, 0.5f, 1.0f, "%.3f");
-    ImGui::DragFloat(u8"転がり摩擦", &k_friction_, 0.001f, 0.5f, 1.0f, "%.3f");
-    ImGui::DragFloat(u8"着地速度損失", &k_landing_loss_, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat(u8"投擲上方向速度", &k_throw_up_, 0.1f, 0.0f, 100.0f, "%.2f");
-    ImGui::DragFloat(u8"投擲出力", &k_throw_power_, 0.01f, 0.05f, 1.0f, "%.2f");
-    ImGui::DragFloat(u8"水平相殺", &k_hop_cancel_, 0.01f, 0.0f, 2.0f, "%.2f");
-    ImGui::DragFloat(u8"転がり半径", &k_roll_radius_, 0.1f, 0.1f, 100.0f, "%.2f");
-    ImGui::End();
-}
-
-void Log::OnHit(const ComponentCollision::HitInfo& hit_info)
-{
-    if(hit_info.hit_collision_->GetCollisionGroup() == ComponentCollision::CollisionGroup::GROUND) {
-        // SEクールダウンタイマーの更新（DeltaTimeで減算）
-        if(throw_cool_down_ > 0.0f) {
-            throw_cool_down_ -= GetDeltaTime();
-            if(throw_cool_down_ < 0.0f) {
-                throw_cool_down_ = 0.0f;
-            }
-        }
-
-        if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-            grabbable->SetCanGrab(true);
-
-            // クールダウンタイマーが終了している時のみ判定
-            if(throw_cool_down_ <= 0.0f) {
-                // 【着地した瞬間の判定】
-                // 落下・移動中で、かつまだ接地状態になっていない瞬間にSEを鳴らしバウンド
-                if(!grabbable->IsGrounded() && grabbable->IsMoving()) {
-                    if(se_handle_ != -1) {
-                        PlaySoundMem(se_handle_, DX_PLAYTYPE_BACK);
-                        throw_cool_down_ = 1.0f;    // 連打防止
-                    }
-                    grabbable->Bounce();
-                }
-            }
-
-            // 着地後の跳ね抑制処理
-            if(grabbable->IsGrounded()) {
-                grabbable->SetBounceOffset(0.0f);
-
-                // 地面に着いたら丸太を水平にし、転がり開始（deve版より追加）
-                if(!is_rolling_) {
-                    float3 rot = GetRotationAxisXYZ();
-                    rot.x      = 0.0f;
-                    rot.z      = 0.0f;
-                    SetRotationAxisXYZ(rot);
-
-                    is_rolling_ = true;
-                    roll_speed_ = 0.2f;
-                }
-            }
+    ImGui::Begin(GetName().data());
+    {
+        ImGui::Separator();
+        if(ImGui::TreeNode("Log")) {
+            ImGui::Text(u8"円柱 半径: %.2f / 長さ: %.2f", radius_, half_length_ * 2.0f);
+            ImGui::DragFloat(u8"SEが鳴る速さ", &se_min_speed_, 1.0f, 0.0f, 500.0f);
+            ImGui::TreePop();
         }
     }
-
-    // 最後にこれを入れてください。ここでめりこみの解消などの処理を行っています。
-    Super::OnHit(hit_info);
+    ImGui::End();
 }
 
 }    // namespace PoittersPoint

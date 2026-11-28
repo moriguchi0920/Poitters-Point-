@@ -1,4 +1,9 @@
 ﻿#pragma once
+//---------------------------------------------------------------------------
+//! @file   ComponentStatePlayerJump.h
+//! @brief  ジャンプステート(プレイヤー/CPU共通)
+//! @details 踏ん張り → 上向きの初速を与えて物理(重力)で放物線 → 着地(接地判定) → 硬直 の流れ。
+//---------------------------------------------------------------------------
 #include <System/Scene.h>
 #include <System/Component/Component.h>
 #include <Game/Component/ComponentState.h>
@@ -14,20 +19,14 @@ public:
 
     void Update() override;
 
-    ComponentStatePlayerJumpPtr SetJumpPower(float power);
-    ComponentStatePlayerJumpPtr SetGravity(float gravity);
+    ComponentStatePlayerJumpPtr SetJumpSpeed(float speed);
     ComponentStatePlayerJumpPtr SetAirMoveSpeed(float speed);
     ComponentStatePlayerJumpPtr SetRotateSpeed(float speed);
     // ジャンプ
     ComponentStatePlayerJumpPtr SetKeys(int up, int down, int left, int right, int jump = KEY_INPUT_SPACE);
 
-    float GetJumpPower() const;
-    float GetGravity() const;
-    float GetAirMoveSpeed() const;
-
-    // ComponentPlayerState からジャンプ状態を引き継ぐための Getter
-    float GetVelocityY() const { return current_jump_velocity_; }
-    float GetGroundY() const { return ground_y_; }
+    float GetJumpSpeed() const { return jump_speed_; }
+    float GetAirMoveSpeed() const { return air_move_speed_; }
 
     inline void  SetFrontRotate(float rotate) { front_rot_ = rotate; }
     inline float GetFrontRotate() const { return front_rot_; }
@@ -42,20 +41,22 @@ public:
     bool GetIsCPU() const { return is_cpu_; }
 
 private:
+    //! @brief 着地硬直が終わった後の処理(歩きへ戻る / CPUは自分を消すだけ)
+    void FinishJump();
+
     // ジャンプパラメータ
-    float jump_power_     = 3.2f;     // ジャンプの高さを出す
-    float gravity_        = 0.05f;    // 重力をかけることで僅かな滞空時間を作る
-    float air_move_speed_ = 0.4f;
-    float rot_speed_      = 20.0f;    // 回転速度
+    float jump_speed_     = 120.0f;    // 上向き初速(単位/秒)。重力 約294 で高さ約25(キャラの身長くらい)
+    float air_move_speed_ = 0.4f;      // 空中の水平移動(1/60秒あたり)
+    float rot_speed_      = 20.0f;     // 回転速度
 
     // 地上での踏ん張りタイマー
     float startup_timer_ = 0.25f;
 
     float3 jump_direction_{0, 0, 0};
-    float  current_jump_velocity_ = 0.0f;
-    float  ground_y_              = 0.0f;
-    bool   is_landing_            = false;
-    float  landing_Timer_         = 0.0f;
+    bool   is_jumped_     = false;    // 踏み切ったか
+    float  air_time_      = 0.0f;     // 踏み切ってからの時間
+    bool   is_landing_    = false;
+    float  landing_Timer_ = 0.0f;
 
     // キー設定（デフォルトでスペースキーを設定）
     int key_up_    = KEY_INPUT_W;
@@ -76,8 +77,7 @@ private:
     //! @brief セーブ/ロード
     CEREAL_SAVELOAD(arc, ver)
     {
-        arc(CEREAL_NVP(jump_power_),
-            CEREAL_NVP(gravity_),
+        arc(CEREAL_NVP(jump_speed_),
             CEREAL_NVP(air_move_speed_),
             CEREAL_NVP(rot_speed_),
             CEREAL_NVP(startup_timer_),

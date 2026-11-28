@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentStateDodge.h>
+﻿#include <Game/Component/ComponentStateDodge.h>
 #include "ComponentStateControllerWalk.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
 
@@ -7,10 +6,6 @@ void ComponentStateDodge::Init()
 {
     __super::Init();
     SetName<Component>("State Dodge");
-
-    // GetOnwer：オーナー(自分がAddComponentされたObject)を取得します
-    // 処理されるときは必ずOwnerは存在しますので基本的にnullptrチェックは必要ありません
-    auto owner = GetOwner();
 }
 
 void ComponentStateDodge::Update()

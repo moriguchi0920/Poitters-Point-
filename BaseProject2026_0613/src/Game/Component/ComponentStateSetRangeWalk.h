@@ -30,6 +30,8 @@ protected:
     // 移動距離
     float walk_distance_ = 0.0f;
 
+    float3      prev_pos_      = {0.0f, 0.0f, 0.0f};    //!< 前フレームの位置(実際に進んだ距離の計算用)
+    bool        has_prev_pos_  = false;
     float       stopping_time_ = 0.0f;
     const float stop_judge_time_ = 0.5f;
 

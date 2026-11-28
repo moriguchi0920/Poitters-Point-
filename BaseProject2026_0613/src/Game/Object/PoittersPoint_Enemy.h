@@ -20,11 +20,7 @@ public:
 
     //! @brief 更新
     //! プレイヤーに向かって移動し、状態に応じたアニメーションを再生する
-    void Update();
-
-    //! @brief 当たり判定のコールバック
-    //! 当たり判定が行われたときに自動で呼び出される関数
-    void OnHit(const ComponentCollision::HitInfo& hit_info) override;
+    void Update() override;
 
     bool is_dead    = false;    //!< 死亡済みかどうか
     bool is_down    = false;    //!< ダウン状態かどうか

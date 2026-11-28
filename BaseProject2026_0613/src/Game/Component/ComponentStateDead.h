@@ -8,8 +8,7 @@ USING_PTR(ComponentStateDead);
 //! @brief 死亡状態コンポーネント
 //!
 //! 死亡演出が終わったら以下の死亡処理を行い、自身を削除する
-//!  - オーナーの名前を"dead"にする
-//!  - カプセルコリジョンを削除する
+//!  - 物理ボディ(ComponentCharacterPhysics / ComponentPhysics)を外し、当たり判定を消す
 //!
 //! 死亡演出は2種類
 //!  - モデルに"dead"アニメーションがある場合(Enemy) : アニメーションを再生し、終了を待つ

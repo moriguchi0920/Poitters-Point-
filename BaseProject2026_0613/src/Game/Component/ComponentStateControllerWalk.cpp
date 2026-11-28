@@ -1,6 +1,6 @@
-﻿#pragma once
-#include <Game/Component/ComponentStateControllerWalk.h>
+﻿#include <Game/Component/ComponentStateControllerWalk.h>
 #include <Game/Component/ComponentStatePlayerJump.h>
+#include <Game/Component/ComponentCharacterPhysics.h>
 
 void ComponentStateControllerWalk::Init()
 {
@@ -15,8 +15,13 @@ void ComponentStateControllerWalk::Update()
     // オーナー(自分がAddComponentされたObject)を取得します
     auto owner = GetOwner();
 
-    // --- ジャンプキー(Jキー)が押されたらジャンプ状態へ遷移 ---
-    if(Input::IsKeyDown(key_jump_)) {
+    // 地面に立っている時だけジャンプできる
+    bool grounded = true;
+    if(auto mover = owner->GetComponent<ComponentCharacterPhysics>())
+        grounded = mover->IsGrounded();
+
+    // --- ジャンプキーが押されたらジャンプ状態へ遷移 ---
+    if(grounded && Input::IsKeyDown(key_jump_)) {
         auto jump = owner->AddComponent<ComponentStatePlayerJump>();
         jump->SetKeys(key_up_, key_down_, key_left_, key_right_, key_jump_);
         jump->SetIsHolding(is_holding_);
@@ -48,34 +53,11 @@ void ComponentStateControllerWalk::Update()
         // 斜めが押されていることを考慮し、
         // その方向の移動スピードを1とし、スピードを掛け合わせる
         dir = normalize(dir);
-
-        // キャラのローカル方向で移動をさせる
-        owner->AddTranslate(dir * move_speed_, true);
-
-        // モデルを移動の方向に向けます
-        if(auto mdl = owner->GetComponent<ComponentModel>()) {
-            auto rot = quaternion::rotation_axis({0, 1, 0}, front_rot_ * DegToRad);    //< Y軸1度回転
-
-            mdl->SetRotationToVectorWithLimit(mul(dir, rot), rot_speed_);
-            if(is_holding_) {
-                mdl->PlayAnimationNoSame("grab walk", true);
-            }
-            else {
-                mdl->PlayAnimationNoSame("walk", true);
-            }
-        }
+        MoveOwner(dir * move_speed_);
     }
-    else {
-        // モデルを移動の方向に向けます
-        if(auto mdl = owner->GetComponent<ComponentModel>()) {
-            if(is_holding_) {
-                mdl->PlayAnimationNoSame("grab idle", true);
-            }
-            else {
-                mdl->PlayAnimationNoSame("idle", true);
-            }
-        }
-    }
+
+    // モデルを移動の方向に向け、アニメーションを切り替える
+    UpdateModel(dir);
 }
 
 ComponentStateControllerWalkPtr ComponentStateControllerWalk::SetKeys(int up, int down, int left, int right, int jump)

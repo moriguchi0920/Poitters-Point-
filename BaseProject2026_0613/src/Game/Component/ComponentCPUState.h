@@ -137,8 +137,11 @@ private:
     //! @param max_angle_deg この角度以内なら向いているとみなす(度)
     bool IsFacing(const ObjectPtr& target, float max_angle_deg) const;
 
-    //! @brief 視線判定で捉えた掴み対象が手の届く距離にあるか(遠くの物を掴んでしまうのを防ぐ)
+    //! @brief 視線判定で捉えた掴み対象に手が届いているか(体が触れていて正面にある物だけが候補になる)
     bool IsEyeSightTargetInReach() const;
+
+    //! @brief ダウンから復帰した(ComponentStateMachine から呼ばれる)
+    void OnRecover() override;
 
     //! @brief 2点間のXZ平面上の距離
     static float DistanceXZ(const float3& a, const float3& b);

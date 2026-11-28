@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentHitPoints.h>
+﻿#include <Game/Component/ComponentHitPoints.h>
 
 void ComponentHitPoints::Init()
 {
@@ -12,7 +11,7 @@ void ComponentHitPoints::Init()
     }
 }
 
-float ComponentHitPoints::GetHitPoints()
+float ComponentHitPoints::GetHitPoints() const
 {
     return hit_points_;
 }

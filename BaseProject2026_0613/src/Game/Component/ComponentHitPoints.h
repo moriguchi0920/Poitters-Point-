@@ -14,7 +14,7 @@ public:
 
     //! @brief ヒットポイントを取得する
     //! @return ヒットポイント
-    float GetHitPoints();
+    float GetHitPoints() const;
 
     //! @brief 最大ヒットポイントを取得する
     //! @return 最大ヒットポイント

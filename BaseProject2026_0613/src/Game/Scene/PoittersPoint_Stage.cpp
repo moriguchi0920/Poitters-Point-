@@ -13,7 +13,7 @@
 #include "Game/System/PoittersPoint_Timer.h"
 #include "Game/Object/PoittersPoint_Slime.h"
 #include "Game/Object/PoittersPoint_Log.h"
-#include "Game/Object/PoittersPoint_Wall.h"
+#include "Game/System/PoittersPoint_PhysicsHelper.h"
 
 #include <System/Scene.h>
 #include <System/Component/Component.h>
@@ -25,7 +25,6 @@
 #include <Game/Component/ComponentPlayerState.h>
 #include <Game/Component/ComponentCPUState.h>
 
-#include <Game/Component/ComponentKnockBack.h>
 #include <Game/Component/ComponentStateMachine.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Component/ComponentHitPoints.h>
@@ -57,7 +56,8 @@ bool PoittersPoint_Stage::Init()
     timer_.Init();    // 残り時間を制限時間にする
 
 #if 1
-    Scene::Object::Create<Ground>();
+    // 地面(物理の静的メッシュ + 外周の壁)
+    ground_ = Scene::Object::Create<Ground>();
 #else
     // 地面生成(Component: モデル、モデルコリジョン)
     {
@@ -154,7 +154,8 @@ bool PoittersPoint_Stage::Init()
     //for(int i = 0; i < 5; i++) {
     //    Scene::Object::Create<Bullet>();
     //}
-    Scene::Object::Create<Wall>();
+    // 外周の壁は Ground が物理(Jolt)の静的ボディとして作る
+    // (以前の Wall は SetTranslate で押し戻す方式で、物理で動くキャラクターには効かなかったため使わない)
 
     Scene::Object::Create<Rock>();
     Scene::Object::Create<Log>();
@@ -166,6 +167,9 @@ bool PoittersPoint_Stage::Init()
 //! @brief 更新
 void PoittersPoint_Stage::Update()
 {
+    // ステージ外へ落ちた物・キャラクターを中央へ戻す
+    RespawnFallenObjects();
+
     //---------------------------------------------------------------
     // デバッグ操作
     //  F3 : 操作プレイヤーを倒す / F7 : CPUを追加 / F8 : CPUを1体倒す / F9 : カメラの図形・中心点表示切替
@@ -260,6 +264,25 @@ void PoittersPoint_Stage::Update()
     //        }
     //    }
     //}
+}
+
+//! @brief ステージ外へ落ちた物・キャラクターを中央へ戻す
+void PoittersPoint_Stage::RespawnFallenObjects()
+{
+    auto ground = ground_.lock();
+    if(!ground)
+        return;
+
+    const float fall_out_y = ground->GetFallOutHeight();
+    for(auto& obj : Scene::Object::GetArray<Object>()) {
+        // 物理で動く物(投げ物・キャラクター)だけが対象。持たれている物は持ち主が落ちれば一緒に戻る
+        auto grabbable = obj->GetComponent<ComponentGrabbable>();
+        if(!grabbable || grabbable->IsHeld())
+            continue;
+
+        if((float)obj->GetTranslate().y < fall_out_y)
+            PhysicsHelper::Warp(obj.get(), ground->GetRespawnPosition());
+    }
 }
 
 //! @brief GUI表示
@@ -440,7 +463,8 @@ void PoittersPoint_Stage::createCPU(const float3& position)
     auto cpu_character = Scene::Object::Create<Player>();
     cpu_character->SetName("CPU" + std::to_string(cpu_count_));
     cpu_character->SetCharacterStatus(cpu_data);
-    cpu_character->SetTranslate(position);
+    // 物理ボディを持つので SetTranslate ではなく Warp で位置を変える
+    PhysicsHelper::Warp(cpu_character.get(), position);
     // CPU用のステートマシンをここで付与する(Player::Initでは付与しない)
     cpu_character->AddComponent<ComponentCPUState>();
 }

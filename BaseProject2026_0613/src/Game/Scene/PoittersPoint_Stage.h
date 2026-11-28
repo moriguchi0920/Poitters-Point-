@@ -7,6 +7,8 @@
 #include "Game/System/PoittersPoint_Timer.h"
 
 namespace PoittersPoint {
+class Ground;
+
 //-----------------------------------------------------------------------
 // BPでは
 // Sceneクラスを作成する必要がある( Scene::Baseから継承する )
@@ -47,6 +49,11 @@ public:
 
 private:
     void createEnemy();
+
+    //! @brief ステージ外へ落ちた物・キャラクターを中央へ戻す
+    void RespawnFallenObjects();
+
+    std::weak_ptr<Ground> ground_;    //!< ステージ(範囲・地面の高さの取得用)
 
     //! @brief CPUキャラクターを生成する
     //! @param position 出現位置

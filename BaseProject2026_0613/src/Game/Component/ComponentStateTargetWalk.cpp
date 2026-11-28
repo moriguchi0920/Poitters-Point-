@@ -1,5 +1,4 @@
-﻿#pragma once
-#include <Game/Component/ComponentStateTargetWalk.h>
+﻿#include <Game/Component/ComponentStateTargetWalk.h>
 
 void ComponentStateTargetWalk::Init()
 {
@@ -9,6 +8,7 @@ void ComponentStateTargetWalk::Init()
     // AddComponent後にSetTargetPtr()した対象が消えてしまう
     // weak_ptrは生成時点で空なのでリセットは不要
     stopping_time_ = 0.0f;
+    prev_pos_      = GetOwner()->GetTranslate();
 }
 
 void ComponentStateTargetWalk::Update()
@@ -26,43 +26,32 @@ void ComponentStateTargetWalk::Update()
     // 移動方向
     float3 dir{0, 0, 0};
 
-    dir   = target_pos_ - owner->GetTranslate();
-    dir.y = 0.0f;
+    const float3 pos = owner->GetTranslate();
+    dir              = target_pos_ - pos;
+    dir.y            = 0.0f;
 
-    // 移動キーが押されているか?
+    // 前フレームから実際に進んだ距離(壁や物に引っかかって進めていないかの判定用)
+    float3 moved = pos - prev_pos_;
+    moved.y      = 0.0f;
+    prev_pos_    = pos;
+
     if((float)length(dir) > 0.1f) {
-        // 斜めが押されていることを考慮し、
-        // その方向の移動スピードを1とし、スピードを掛け合わせる
         dir = normalize(dir);
+        MoveOwner(dir * move_speed_);
 
-        // キャラのローカル方向で移動をさせる
-        owner->AddTranslate(dir * move_speed_, true);
-
-        // モデルを移動の方向に向けます
-        if(auto mdl = owner->GetComponent<ComponentModel>()) {
-            auto rot = quaternion::rotation_axis({0, 1, 0}, front_rot_ * DegToRad);    //< Y軸1度回転
-
-            mdl->SetRotationToVectorWithLimit(mul(dir, rot), rot_speed_);
-            if(is_holding_) {
-                mdl->PlayAnimationNoSame("grab walk", true);
-            }
-            else {
-                mdl->PlayAnimationNoSame("walk", true);
-            }
-        }
-        stopping_time_ = 0.0f;
+        // 歩こうとしているのにほとんど進めていなければ「止まっている」とみなす
+        const float expected = move_speed_ * GetDeltaTime() * 60.0f;
+        if((float)length(moved) < expected * 0.5f)
+            stopping_time_ += GetDeltaTime();
+        else
+            stopping_time_ = 0.0f;
     }
     else {
+        dir             = {0.0f, 0.0f, 0.0f};
         stopping_time_ += GetDeltaTime();
-        if(auto mdl = owner->GetComponent<ComponentModel>()) {
-            if(is_holding_) {
-                mdl->PlayAnimationNoSame("grab idle", true);
-            }
-            else {
-                mdl->PlayAnimationNoSame("idle", true);
-            }
-        }
     }
+
+    UpdateModel(dir);
 }
 
 ComponentStateTargetWalkPtr ComponentStateTargetWalk::SetTargetPos(const float3& position)
@@ -138,13 +127,9 @@ bool ComponentStateTargetWalk::GetStopped()
 
 bool ComponentStateTargetWalk::GetNearby()
 {
-    auto owner     = GetOwner();
-    auto translate = owner->GetTranslate();
-    float3 vec     = target_pos_ - translate;
-    float  dx      = vec.x;
-    float  dz      = vec.z;
-    // 高さの違い(相手がジャンプ中など)で判定がずれないようにXZ平面の距離で判定する
-    return (dx * dx + dz * dz) < nearby_distance_ * nearby_distance_;
+    auto vec = target_pos_ - GetOwner()->GetTranslate();
+    vec.y    = 0.0f;
+    return (float)length(vec) < nearby_distance_;
 }
 
 CEREAL_REGISTER_TYPE(ComponentStateTargetWalk)

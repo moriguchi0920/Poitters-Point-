@@ -1,19 +1,20 @@
-﻿#include "PoittersPoint_Player.h"
+﻿//---------------------------------------------------------------------------
+//! @file   PoittersPoint_Player.cpp
+//! @brief  キャラクター(プレイヤー/CPU共通)
+//---------------------------------------------------------------------------
+#include "PoittersPoint_Player.h"
 #include "Game/Scene/PoittersPoint_Stage.h"
-#include "Game/Component/ComponentCameraController.h"
-#include "Game/Component/ComponentStateControllerWalk.h"
-#include "Game/Component/ComponentStateThrow.h"
 #include "Game/Component/ComponentStateMachine.h"
+#include "Game/Component/ComponentGrabbable.h"
+#include "Game/Component/ComponentHitPoints.h"
+#include "Game/Component/ComponentCharacterPhysics.h"
 #include "Game/Component/ComponentStateGrab.h"
+#include "Game/Component/ComponentStateThrow.h"
+#include "Game/Component/ComponentStateDown.h"
 #include "Game/Component/ComponentStateDead.h"
 
 #include <System/Scene.h>
 #include <System/Component/ComponentModel.h>
-#include "Game/Component/ComponentGrabbable.h"
-#include <System/Component/ComponentObjectController.h>
-#include "Game/Component/ComponentHitPoints.h"
-
-#include <algorithm>
 
 namespace PoittersPoint {
 
@@ -23,41 +24,23 @@ bool Player::Init()
 
     SetName("Player");
 
-    AddComponent<ComponentModel>("data/Game/Models/Player/Player.mv1");
-    if(auto model = GetComponent<ComponentModel>()) {
-        model
-            ->SetAnimation({
-                {      "idle",        "data/Game/Models/Player/Anims/Idle.mv1", 1, 1.0f}, // Idle
-                {      "walk",        "data/Game/Models/Player/Anims/Walk.mv1", 1, 1.0f}, // Walk
-                {     "throw",  "data/Game/Models/Player/Anims/HandsThrow.mv1", 1, 1.0f}, // Throw
-                {"throw_fast",   "data/Game/Models/Player/Anims/ThrowFast.mv1", 1, 1.5f}, // ThrowFast
-                {   "lift up", "data/Game/Models/Player/Anims/HandsLiftup.mv1", 1, 1.0f}, // liftup
-                { "grab idle",    "data/Game/Models/Player/Anims/GrabIdle.mv1", 1, 1.0f}, // GrabIdle
-                { "grab walk",    "data/Game/Models/Player/Anims/GrabWalk.mv1", 1, 1.0f}, // GrabWalk
-                {      "jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // Jump
-                { "grab jump", "data/Game/Models/Player/Anims/Player_Jump.mv1", 1, 1.0f}, // GrabJump
-        })
-            ->SetScaleAxisXYZ({0.11f, 0.11f, 0.11f});
-    }
-
+    // 物理ボディは作成時の位置に置かれるため、先に位置を決めておく
+    // (生成後に位置を変える時は PhysicsHelper::Warp を使う)
     SetTranslate({0, 8, 0});
 
-    // ステートマシン(プレイヤー入力/CPU)は生成側のStageで付与する
+    // アニメーションは SetCharacterStatus で設定する
+    AddComponent<ComponentModel>(model_path_)->SetScaleAxisXYZ(local_scale_);
+
+    // 当たり判定・重力・移動は ComponentPhysics(カプセル)に一本化
+    AddComponent<ComponentCharacterPhysics>()->Setup(3.8f, 22.0f, ComponentPhysics::CollisionType::PLAYER);
+
     // 他者に掴まれて投げられるようにする
     AddComponent<ComponentGrabbable>()->SetLiftTime(0.5f);
 
     // 体力を管理するコンポーネントを追加
     AddComponent<ComponentHitPoints>()->SetMaxAndCurrentHP(5.0f);
 
-    // カプセルコリジョンのコンポーネントを追加
-    AddComponent<ComponentCollisionCapsule>();
-    if(auto collision = GetComponent<ComponentCollisionCapsule>()) {
-        collision->SetCollisionGroup(ComponentCollision::CollisionGroup::PLAYER);
-        collision->UseGravity();
-        collision->SetRadius(3.8f);
-        collision->SetHeight(22.0f);
-    }
-
+    // ステートマシン(プレイヤー入力/CPU)は生成側のStageで付与する
     return true;
 }
 
@@ -65,7 +48,7 @@ void Player::Update()
 {
     Super::Update();
 
-    // 脱落後は何もしない(倒れる演出はComponentStateDeadが行う)
+    // 脱落後は何もしない(倒れた姿勢は ComponentStateDown / ComponentStateDead が保つ)
     if(is_dead_) {
         return;
     }
@@ -89,27 +72,25 @@ void Player::UpdateDead()
 
     //-----------------------------------------------------------
     // 脱落を待つ条件
+    // (HPが0になった時点で ComponentStateMachine が持ち物を落としてダウンさせているので、
+    //  ここでは「安全に物理ボディを外せるか」だけを待つ)
     //-----------------------------------------------------------
-    // 誰かに持たれている間は待つ(投げられて手から離れた後に脱落)
+    // 誰かに持ち上げられている/持たれている間は待つ(投げられて手から離れた後に脱落)
     if(auto grabbable = GetComponent<ComponentGrabbable>()) {
-        if(grabbable->GetIsGrabbed()) {
+        auto state = grabbable->GetState();
+        if(state == ComponentGrabbable::State::Reserved || state == ComponentGrabbable::State::Held) {
             return;
-        }
-    }
-    // 誰かが自分を持ち上げている最中も待つ
-    for(auto& obj : Scene::Object::GetArray<Object>()) {
-        if(obj.get() == this) {
-            continue;
-        }
-        if(auto other = obj->GetComponent<ComponentStateMachine>()) {
-            if(other->IsGrabbingObject(SharedThis())) {
-                return;
-            }
         }
     }
     // 自分が持ち上げ中/投げ中なら終わるまで待つ(途中で止めると物が手に残るため)
     if(GetComponent<ComponentStateGrab>() || GetComponent<ComponentStateThrow>()) {
         return;
+    }
+    // 吹き飛んでいる最中は着地まで待つ(空中で物理ボディを外すとその場で止まってしまう)
+    if(auto mover = GetComponent<ComponentCharacterPhysics>()) {
+        if(!mover->IsGrounded()) {
+            return;
+        }
     }
 
     StartDead();
@@ -124,17 +105,35 @@ void Player::StartDead()
         state_machine->DropGrabbingObject();
         RemoveComponent(state_machine);
     }
-    // 歩き・ジャンプなどのステートを全て外す(外さないと入力やAIで動き続ける)
+
+    // 歩き・ジャンプなどのステートを外す(外さないと入力やAIで動き続ける)
+    // 脱落でダウンしている場合は、倒れた姿勢を保つためダウンだけ残す
+    bool lying = false;
     for(auto& state : GetComponents<ComponentState>()) {
+        if(std::dynamic_pointer_cast<ComponentStateDown>(state)) {
+            lying = true;
+            continue;
+        }
         RemoveComponent(state);
     }
+
     // 脱落したキャラクターは掴めないようにする
     if(auto grabbable = GetComponent<ComponentGrabbable>()) {
         RemoveComponent(grabbable);
     }
 
-    // 死亡状態へ(Playerには"dead"アニメーションが無いため、モデルを倒して演出する)
-    AddComponent<ComponentStateDead>()->SetUseAnimation(false);
+    if(lying) {
+        // 既に倒れているので、死体が他の物の邪魔をしないよう物理ボディだけ外す
+        if(GetComponent<ComponentCharacterPhysics>())
+            RemoveComponent<ComponentCharacterPhysics>();
+        if(GetComponent<ComponentPhysics>())
+            RemoveComponent<ComponentPhysics>();
+    }
+    else {
+        // ダウンしていない(ステートマシンが無い等)場合は、モデルを倒して演出してから物理ボディを外す
+        // (Playerには"dead"アニメーションが無いため SetUseAnimation(false))
+        AddComponent<ComponentStateDead>()->SetUseAnimation(false);
+    }
 }
 
 bool Player::IsAlive() const
@@ -142,131 +141,68 @@ bool Player::IsAlive() const
     return !is_dead_;
 }
 
-void Player::OnHit(const ComponentCollision::HitInfo& hit_info)
-{
-    // 脱落後はダメージを受けない
-    if(is_dead_) {
-        __super::OnHit(hit_info);
-        return;
-    }
-
-    auto hitter = hit_info.hit_collision_->GetOwner();
-
-    // ヒットした相手が掴めるもの(=投げられて移動中)か判定
-    if(auto grabbable = hitter->GetComponent<ComponentGrabbable>()) {
-        // 投げた本人自身の場合はダメージなし
-        if(grabbable->IsThrower(SharedThis())) {
-            __super::OnHit(hit_info);
-            return;
-        }
-
-        // 地面で停止中はダメージなし
-        if(!grabbable->IsMoving()) {
-            __super::OnHit(hit_info);
-            return;
-        }
-
-        // 既にこのターゲットをHit済みならスルー(連続ヒット防止)
-        if(grabbable->IsAlreadyHit(SharedThis())) {
-            __super::OnHit(hit_info);
-            return;
-        }
-
-        // 初Hitなら記録してダメージ処理へ
-        grabbable->AddHitTarget(SharedThis());
-    }
-    else {
-        // 弾などgrabbable以外は今まで通り
-        __super::OnHit(hit_info);
-        return;
-    }
-
-    // 投げ物ごとのダメージ値を適用
-    if(auto hp = GetComponent<ComponentHitPoints>()) {
-        hp->TakeDamage(hitter->GetComponent<ComponentGrabbable>()->GetDamage());
-    }
-    __super::OnHit(hit_info);
-}
-
 void Player::OnEyeSight()
 {
-    auto   ObjArray = Scene::Object::GetArray<Object>();
-    float3 vec;
+    auto state_machine = GetComponent<ComponentStateMachine>();
+    auto mover         = GetComponent<ComponentCharacterPhysics>();
+
+    float3 front = {0.0f, 0.0f, -1.0f};
     if(auto model = GetComponent<ComponentModel>()) {
-        vec = -model->GetWorldVectorAxisZ();
-        normalize(vec);
+        float3 v = -model->GetWorldVectorAxisZ();
+        v.y      = 0.0f;
+        if((float)length(v) > 0.0001f)
+            front = normalize(v);
     }
 
-    // 親から敵へのベクトル
-    float3 targetVec = {0, 0, 0};
-    // 一番近い敵への距離を保存する変数
-    float shortest = 1000.0f;
-    // 範囲for
-    for(auto& obj : ObjArray) {
-        if(obj == static_cast<ObjectPtr>(shared_from_this())) {
-            continue;
-        }
-        // 掴めない物(地面・カメラ・壁など)は最初に除外する
-        // ※以前は掴めない物でも「一番近い物」の距離を更新していたため、原点付近にある地面やカメラより
-        //   遠い物は視線で捉えられず、CPUがほとんど物を拾えなかった
-        // 誰かが持っている物も同じ理由で除外する
-        auto obj_grabbable = obj->GetComponent<ComponentGrabbable>();
-        if(!obj_grabbable || obj_grabbable->GetIsGrabbed()) {
-            continue;
-        }
+    const float  cos_limit = cosf(grab_half_angle_ * DegToRad);
+    const float3 center    = GetTranslate();
 
-        // 親の座標(斜めに当てたいので上に上げて判定)
-        float3 pos = GetTranslate() - vec * 0.5f + float3(0.0f, 1.0f, 0.0f);
-        // 敵の座標
-        float3 targetPos = obj->GetTranslate();
+    // 掴めるのは「体が触れていて」「向いている方向にある」物だけ
+    // (全オブジェクトを調べる必要がなく、触れている相手だけを見ればよい)
+    // 物を優先し、物が無い時だけキャラクターを対象にする
+    ObjectPtr nearest_item      = nullptr;
+    ObjectPtr nearest_character = nullptr;
+    float     item_distance     = FLT_MAX;
+    float     character_dist    = FLT_MAX;
 
-        // ベクトルを取得
-        targetVec = targetPos - pos;
-        // 親の正面ベクトルと敵へのベクトルの内積をとる
-        float targetDot = dot(normalize(vec), normalize(targetVec));
-        // 正規化ベクトル同士の内積なのでarccosで角度がとれる
-        // (誤差で±1を少し超えるとacosfがNaNになるため範囲内に収める)
-        float angle = acosf(std::clamp(targetDot, -1.0f, 1.0f));
-        // スカラー付きベクトルの長さは各要素の二乗を足したものの平方根でとれる
-        float distance = sqrtf(targetVec.x * targetVec.x + targetVec.y * targetVec.y + targetVec.z * targetVec.z);
-        // 内積と距離をかけて円錐の範囲にいるかをとる
-        float dotDis = distance * targetDot;
+    if(mover) {
+        for(auto& touch : mover->GetTouches()) {
+            auto obj = touch.object_.lock();
+            if(!obj)
+                continue;
 
-        // 最短距離なら
-        if(distance <= shortest) {
-            // 最短距離を更新
-            shortest = distance;
-            // 円錐の角度内か
-            bool isInAngle = angle <= 3.14f * 0.45 && -3.14f * 0.45 <= angle;
-            // 距離は円錐の範囲内か
-            bool isInDistance = dotDis <= 50.0f;
+            auto grabbable = obj->GetComponent<ComponentGrabbable>();
+            if(!grabbable || !grabbable->CanBeGrabbed())
+                continue;
 
-            // 両方満たしていたら
-            if(isInAngle && isInDistance) {
-                auto target = obj;
-                if(auto grabbable = target->GetComponent<ComponentGrabbable>()) {
-                    // 視線で捕らえた対象を保持する(プレイヤーとCPU共通)
-                    eyesight_target_ = target;
-                    // ステートマシンがあれば掴み対象として記録する
-                    // 人間はスペースキーでStartGrab、CPUはACTION_GRABの到達時にStartGrabする
-                    if(auto state_machine = GetComponent<ComponentStateMachine>()) {
-                        // プレイヤーよりもオブジェクトの持ち上げを優先
-                        if(std::dynamic_pointer_cast<PoittersPoint::Player>(target)) {
-                            // 判定内にオブジェクトがいない場合のみ
-                            if(!state_machine->IsGrabTargetExist()) {
-                                // 対象を持ち上げられるとして登録
-                                state_machine->GrabbableHit(target);
-                            }
-                        }
-                        // プレイヤー以外なら
-                        else {
-                            // そのまま登録
-                            state_machine->GrabbableHit(target);
-                        }
-                    }
+            // 接触点が正面の扇形の中にあるか(丸太の端に触れている時も、触れた場所で判定できる)
+            float3 to_point = touch.point_ - center;
+            to_point.y      = 0.0f;
+            float distance  = (float)length(to_point);
+            if(distance > 0.0001f && (float)dot(front, to_point / distance) < cos_limit)
+                continue;
+
+            if(std::dynamic_pointer_cast<Player>(obj)) {
+                if(distance < character_dist) {
+                    character_dist    = distance;
+                    nearest_character = obj;
                 }
             }
+            else if(distance < item_distance) {
+                item_distance = distance;
+                nearest_item  = obj;
+            }
         }
+    }
+
+    ObjectPtr target = nearest_item ? nearest_item : nearest_character;
+    eyesight_target_ = target;
+
+    // ステートマシンに掴み候補として登録する(触れていない・正面にない時は消す)
+    // 人間はEキーでStartGrab、CPUは対象に触れた時にStartGrabする
+    if(state_machine) {
+        if(!target || !state_machine->GrabbableHit(target))
+            state_machine->ClearGrabCandidate();
     }
 }
 
