@@ -28,6 +28,7 @@
 #include <Game/Component/ComponentStateMachine.h>
 #include <Game/Component/ComponentGrabbable.h>
 #include <Game/Component/ComponentHitPoints.h>
+#include <Game/Component/ComponentItemSpawner.h>
 
 #include <algorithm>
 
@@ -161,6 +162,21 @@ bool PoittersPoint_Stage::Init()
     Scene::Object::Create<Log>();
 
     Scene::Object::Create<Slime>();
+
+    // --------------------------------------------------
+    // アイテムスポナー(ドラゴン)の生成
+    //  ステージ上のマスを巡回して投げ物を補充する
+    // --------------------------------------------------
+    {
+        auto spawner_obj = Scene::Object::Create<Object>("ItemSpawner");
+        // スポナーを置く位置(Init で最初に向かうマスの上空へ移動する)
+        spawner_obj->SetTranslate({0.0f, 10.0f, 0.0f});
+        // のちにモデルの変更をする際に使います
+        // spawner_obj->AddComponent<ComponentModel>("data/Game/Models/UFO/.mv1");
+
+        // アイテムスポナーコンポーネントを追加
+        spawner_obj->AddComponent<ComponentItemSpawner>();
+    }
     return true;
 }
 
