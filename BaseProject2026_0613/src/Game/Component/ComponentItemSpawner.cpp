@@ -183,17 +183,15 @@ bool ComponentItemSpawner::ChooseDropPosition(float3& out_ground_pos)
     if(!ground)
         return false;
 
-    // ステージの範囲(外周の壁の内側)から、端に寄りすぎない範囲を使う
-    const auto& bounds = ground->GetStageBounds();
-    float       min_x  = (float)bounds.min_.x + edge_margin_;
-    float       max_x  = (float)bounds.max_.x - edge_margin_;
-    float       min_z  = (float)bounds.min_.z + edge_margin_;
-    float       max_z  = (float)bounds.max_.z - edge_margin_;
+    // フィールド(外周の壁の内側)を囲む四角形の中からランダムに選び、
+    // フィールドの境界から edge_margin_ 以上内側の場所だけを使う
+    float min_x, max_x, min_z, max_z;
+    ground->GetFieldRect(min_x, max_x, min_z, max_z);
     if(max_x <= min_x || max_z <= min_z)
         return false;
 
-    // ステージ中央の地面の高さ(段差の上に落とさないための基準)
-    float3 center   = bounds.Center();
+    // フィールド中央の地面の高さ(段差の上に落とさないための基準)
+    float3 center   = ground->GetFieldCenter();
     float  center_y = 0.0f;
     if(!ground->FindGroundHeight(center.x, center.z, center_y))
         center_y = 0.0f;
@@ -205,6 +203,8 @@ bool ComponentItemSpawner::ChooseDropPosition(float3& out_ground_pos)
     for(int attempt = 0; attempt < 30; ++attempt) {
         float x = rand_x(random_);
         float z = rand_z(random_);
+        if(!ground->IsInsideField(x, z, edge_margin_))
+            continue;
         float y = 0.0f;
         if(!ground->FindGroundHeight(x, z, y))
             continue;
@@ -284,7 +284,7 @@ void ComponentItemSpawner::GUI()
             ImGui::DragFloat(u8"向きを変える速さ", &turn_speed_, 0.1f, 0.1f, 60.0f);
             ImGui::DragFloat(u8"モデルの正面の補正(度)", &model_front_rot_, 1.0f, -180.0f, 180.0f);
             ImGui::DragFloat(u8"次に落としに行くまでの時間(秒)", &spawn_interval_, 0.1f, 0.0f, 60.0f);
-            ImGui::DragFloat(u8"ステージの端からの余白", &edge_margin_, 1.0f, 0.0f, 500.0f);
+            ImGui::DragFloat(u8"フィールドの境界からの余白", &edge_margin_, 1.0f, 0.0f, 500.0f);
             ImGui::DragFloat(u8"キャラ・アイテムとの最小間隔", &min_spacing_, 0.5f, 0.0f, 200.0f);
             ImGui::DragFloat(u8"落とせる高さの範囲(中央の地面から)", &height_tolerance_, 0.5f, 0.0f, 500.0f);
             ImGui::TreePop();

@@ -89,7 +89,7 @@ private:
     float drop_height_      = 34.0f;     //!< アイテムを落とす高さ(地面から)
     float drop_wait_time_   = 0.3f;      //!< 到着してから落とすまでの時間(秒)
     float spawn_interval_   = 2.0f;      //!< 1つ落としてから次に落としに行くまでの時間(秒)
-    float edge_margin_      = 30.0f;     //!< ステージの端(壁)からこれ以上内側に落とす
+    float edge_margin_      = 15.0f;     //!< フィールドの境界(壁)からこれ以上内側に落とす
     float min_spacing_      = 20.0f;     //!< キャラクターや他のアイテムからこれ以上離れた所に落とす
     float height_tolerance_ = 15.0f;     //!< ステージ中央の地面からこの高さ以内の場所にだけ落とす(段差の上を避ける)
 
