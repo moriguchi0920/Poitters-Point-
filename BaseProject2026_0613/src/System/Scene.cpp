@@ -590,6 +590,11 @@ void Scene::functionSerialize(ObjectPtr obj)
 
     // コンポーネントシグナル設定
     for(auto component : obj->GetComponents()) {
+        // 初期化前に削除されたコンポーネント(追加したフレームのうちに削除された等)は、
+        // 初期化も処理の登録もしない(しないと削除済みなのに Update などが動いてしまう)
+        if(component->GetStatus(Component::StatusBit::Exited))
+            continue;
+
         if(!component->GetStatus(Component::StatusBit::Initialized)) {
             for(ProcTiming i = ProcTiming::PreUpdate; (int)i <= (int)ProcTiming::PostDraw; i = (ProcTiming)((int)i + 1)) {
                 auto& proc = component->GetProc(GetProcTimingName(i), i);

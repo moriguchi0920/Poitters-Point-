@@ -43,12 +43,17 @@ public:
     // 関数の後置constはGet~関数やIs~のような数値を取得するだけの関数には必ずつける
 
     //! @brief 次のステートにする
+    //! @details ステートは常に1つだけにする。自分だけでなく、付いているステートを全て外してから新しいステートを付ける
+    //!          (何かの理由でステートが2つ残っていると、同じ型を AddComponent した時にアサートで止まったり、
+    //!           ダウンが残ったまま起き上がれなくなったりするため)
     template <class T>
     T* ChangeState()
     {
         static_assert(std::derived_from<T, ComponentState>, "ステートクラス以外のクラスは指定できません");
-        RemoveThisComponent();
-        return GetOwner()->AddComponent<T>().get();
+        auto owner = GetOwner();
+        for(auto& state : owner->GetComponents<ComponentState>())
+            owner->RemoveComponent(state);
+        return owner->AddComponent<T>().get();
     }
 
     //! @brief アニメーションが終わったら次のステートにする
