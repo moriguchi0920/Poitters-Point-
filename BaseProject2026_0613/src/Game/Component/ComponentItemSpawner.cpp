@@ -10,6 +10,7 @@
 #include "Game/Object/PoittersPoint_Player.h"
 #include "Game/Object/PoittersPoint_Ground.h"
 #include "Game/Component/ComponentGrabbable.h"
+#include "Game/Component/ComponentDropShadow.h"
 #include "Game/System/PoittersPoint_PhysicsHelper.h"
 
 #include <System/Scene.h>
@@ -22,6 +23,13 @@ void ComponentItemSpawner::Init()
     __super::Init();
 
     LoadModel();
+
+    // 落下地点の予告は、地面や物を描いた後に描く(先に描くと地面で上書きされる)
+    SetPriority(ProcTiming::Draw, ProcPriority::LOWEST);
+
+    // ドラゴンの真下にも影を出す(どこを飛んでいるか分かるように)
+    if(!GetOwner()->GetComponent<ComponentDropShadow>())
+        GetOwner()->AddComponent<ComponentDropShadow>();
 
     has_target_     = false;
     wait_timer_     = 0.0f;
@@ -49,6 +57,7 @@ void ComponentItemSpawner::Update()
     const float dt = GetDeltaTime();
     if(interval_timer_ > 0.0f)
         interval_timer_ -= dt;
+    marker_timer_ += dt;
 
     //-----------------------------------------------------------
     // 次に落とす物と場所を決める
@@ -58,6 +67,7 @@ void ComponentItemSpawner::Update()
         if(type != ItemType::None && ChooseDropPosition(target_ground_)) {
             target_type_ = type;
             has_target_  = true;
+            arrived_     = false;
             wait_timer_  = drop_wait_time_;
         }
     }
@@ -80,16 +90,98 @@ void ComponentItemSpawner::Update()
     // 落とす位置の上空まで飛んで、少し待ってから落とす
     //-----------------------------------------------------------
     float3 above = target_ground_ + float3(0.0f, flight_height_, 0.0f);
-    if(FlyTo(above, move_speed_)) {
+    if(arrived_ || FlyTo(above, move_speed_)) {
+        // 上空に着いたら、光を当てながら少し待ってから落とす
+        arrived_     = true;
         wait_timer_ -= dt;
         if(wait_timer_ <= 0.0f) {
             // 向かっている間に上限に達していたら(他の方法で増えた等)落とさない
             if(ChooseShortageType() != ItemType::None)
                 DropItem(target_type_, target_ground_);
             has_target_     = false;
+            arrived_        = false;
             interval_timer_ = spawn_interval_;
         }
     }
+}
+
+u32 ComponentItemSpawner::GetMarkerColor(ItemType type) const
+{
+    switch(type) {
+    case ItemType::Crate:
+        return GetColor(255, 230, 120);    // 岩: 黄色
+    case ItemType::Log:
+        return GetColor(255, 150, 60);     // 丸太: 橙色
+    case ItemType::Slime:
+        return GetColor(255, 80, 80);      // スライム: 赤
+    default:
+        return GetColor(255, 255, 255);
+    }
+}
+
+void ComponentItemSpawner::Draw()
+{
+    __super::Draw();
+
+    if(!show_marker_ || !has_target_)
+        return;
+
+    const u32   color = GetMarkerColor(target_type_);
+    const float y     = (float)target_ground_.y + 0.4f;    // 床とのちらつき防止
+    const float cx    = (float)target_ground_.x;
+    const float cz    = (float)target_ground_.z;
+
+    // 落とす直前ほど速く点滅させる(上空に着いたら残り時間に合わせて加速)
+    float speed = 4.0f;
+    if(arrived_ && drop_wait_time_ > 0.0f)
+        speed = 4.0f + 16.0f * (1.0f - std::clamp(wait_timer_ / drop_wait_time_, 0.0f, 1.0f));
+    float pulse = 0.5f + 0.5f * std::sin(marker_timer_ * speed);
+
+    // 半透明で、Zバッファは参照するが書き込まない
+    SetWriteZBuffer3D(FALSE);
+    SetUseLighting(FALSE);
+    const int cull = GetUseBackCulling();
+    SetUseBackCulling(DX_CULLING_NONE);
+
+    //-----------------------------------------------------------
+    // 地面の円(内側をうっすら塗り、外周の輪を点滅させる)
+    //-----------------------------------------------------------
+    const int   segments = 32;
+    const float r_out    = marker_radius_;
+    const float r_in     = marker_radius_ * 0.8f;
+    for(int i = 0; i < segments; ++i) {
+        float a0 = TAU * static_cast<float>(i) / segments;
+        float a1 = TAU * static_cast<float>(i + 1) / segments;
+        float c0 = cosf(a0), s0 = sinf(a0), c1 = cosf(a1), s1 = sinf(a1);
+
+        // 内側の塗り
+        SetDrawBlendMode(DX_BLENDMODE_ALPHA, 50);
+        DrawTriangle3D(VGet(cx, y, cz), VGet(cx + c0 * r_in, y, cz + s0 * r_in), VGet(cx + c1 * r_in, y, cz + s1 * r_in), color, TRUE);
+
+        // 外周の輪
+        SetDrawBlendMode(DX_BLENDMODE_ALPHA, static_cast<int>(120 + 120 * pulse));
+        VECTOR o0 = VGet(cx + c0 * r_out, y, cz + s0 * r_out);
+        VECTOR o1 = VGet(cx + c1 * r_out, y, cz + s1 * r_out);
+        VECTOR i0 = VGet(cx + c0 * r_in, y, cz + s0 * r_in);
+        VECTOR i1 = VGet(cx + c1 * r_in, y, cz + s1 * r_in);
+        DrawTriangle3D(i0, o0, o1, color, TRUE);
+        DrawTriangle3D(i0, o1, i1, color, TRUE);
+    }
+
+    //-----------------------------------------------------------
+    // 上空に着いて落とすのを待っている間は、ドラゴンから地面へ光を当てる
+    //-----------------------------------------------------------
+    if(arrived_) {
+        float3 top = GetOwner()->GetTranslate();
+        SetDrawBlendMode(DX_BLENDMODE_ADD, static_cast<int>(60 + 60 * pulse));
+        DrawCone3D(VGet((float)top.x, (float)top.y, (float)top.z), VGet(cx, y, cz), r_in, 24, color, color, TRUE);
+    }
+
+    // 描画設定を元に戻す
+    SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+    SetUseBackCulling(cull);
+    SetUseLighting(TRUE);
+    SetWriteZBuffer3D(TRUE);
 }
 
 bool ComponentItemSpawner::FlyTo(const float3& target, float speed)
@@ -277,7 +369,10 @@ void ComponentItemSpawner::GUI()
                 ImGui::DragInt(u8"上限", &rule.max_count, 0.1f, 0, 30);
                 ImGui::PopID();
             }
-            ImGui::Text(u8"状態: %s", has_target_ ? u8"落としに向かっている" : u8"待機中");
+            ImGui::Text(u8"状態: %s", !has_target_ ? u8"待機中" : (arrived_ ? u8"上空で落とす準備中" : u8"落としに向かっている"));
+            ImGui::Checkbox(u8"落下地点の予告を表示", &show_marker_);
+            ImGui::DragFloat(u8"予告の円の半径", &marker_radius_, 0.1f, 1.0f, 50.0f);
+            ImGui::DragFloat(u8"上空で落とすまでの時間(秒)", &drop_wait_time_, 0.05f, 0.0f, 5.0f);
 
             ImGui::Separator();
             ImGui::DragFloat(u8"移動速度", &move_speed_, 1.0f, 1.0f, 500.0f);

@@ -30,6 +30,10 @@ public:
 
     void Init() override;
     void Update() override;
+
+    //! @brief 落下地点の予告(地面の円と、ドラゴンからの光)を描く
+    void Draw() override;
+
     void GUI() override;
 
     //! @brief ドラゴンのモデルを読み込む
@@ -69,6 +73,9 @@ private:
     //! @brief アイテムを落とす
     void DropItem(ItemType type, const float3& ground_pos);
 
+    //! @brief 予告の色(アイテムの種類ごと)
+    u32 GetMarkerColor(ItemType type) const;
+
 private:
     //! 種類ごとのステージ上の上限数(GUI / SetMaxCount で変更できる)
     std::vector<ItemRule> rules_ = {
@@ -79,15 +86,21 @@ private:
 
     //! 今向かっている落下位置
     bool     has_target_      = false;
+    bool     arrived_         = false;    //!< 落とす位置の上空に着いて、落とすのを待っているか
     ItemType target_type_     = ItemType::None;
     float3   target_ground_   = {0.0f, 0.0f, 0.0f};
+
+    //! 落下地点の予告
+    bool  show_marker_    = true;     //!< 予告を表示するか
+    float marker_radius_  = 9.0f;     //!< 地面の円の半径
+    float marker_timer_   = 0.0f;     //!< 点滅用のタイマー
 
     float move_speed_       = 90.0f;     //!< ドラゴンの移動速度(単位/秒)
     float turn_speed_       = 6.0f;      //!< 向きを変える速さ(1/60秒あたりの最大角度)
     float model_front_rot_  = 0.0f;      //!< モデルの正面方向の補正(度)
     float flight_height_    = 35.0f;     //!< ドラゴンが飛ぶ高さ(地面から)
     float drop_height_      = 34.0f;     //!< アイテムを落とす高さ(地面から)
-    float drop_wait_time_   = 0.3f;      //!< 到着してから落とすまでの時間(秒)
+    float drop_wait_time_   = 0.8f;      //!< 到着してから落とすまでの時間(秒)。この間ドラゴンから光を当てて予告する
     float spawn_interval_   = 2.0f;      //!< 1つ落としてから次に落としに行くまでの時間(秒)
     float edge_margin_      = 15.0f;     //!< フィールドの境界(壁)からこれ以上内側に落とす
     float min_spacing_      = 20.0f;     //!< キャラクターや他のアイテムからこれ以上離れた所に落とす

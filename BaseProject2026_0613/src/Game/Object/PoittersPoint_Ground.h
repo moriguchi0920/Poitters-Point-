@@ -46,6 +46,11 @@ public:
 
     //! @brief フィールドを囲む四角形(XZ)
     void GetFieldRect(float& min_x, float& max_x, float& min_z, float& max_z) const;
+
+    //! @brief フィールドの床の高さ(フィールド内は平ら)
+    //! @details 最初に呼ばれた時にフィールド内の何か所かをレイキャストで調べ、一番低い高さを床とする
+    //!          (レイはキャラクターや物にも当たるため、一番低い所を床とみなす)
+    float GetFieldFloorHeight() const;
     //@}
 
     //! @brief 指定XZ位置の地面の高さを調べる(物理のレイキャスト)
@@ -82,6 +87,9 @@ private:
     int    field_segments_ = 32;                    //!< 多角形の辺の数
 
     std::vector<float3> field_vertices_;    //!< フィールドの頂点
+
+    mutable float field_floor_y_   = 0.0f;     //!< フィールドの床の高さ(GetFieldFloorHeight で求める)
+    mutable bool  has_field_floor_ = false;    //!< 床の高さを求め済みか
 
     float wall_thickness_ = 10.0f;     //!< 壁の厚さ
     float wall_bottom_    = -50.0f;    //!< 壁の下端の高さ

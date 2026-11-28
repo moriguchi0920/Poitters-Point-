@@ -6,6 +6,7 @@
 #include <Game/Component/ComponentStateMachine.h>
 #include <Game/Component/ComponentCharacterPhysics.h>
 #include <Game/Component/ComponentHitPoints.h>
+#include <Game/Component/ComponentDropShadow.h>
 #include <System/Component/ComponentAttachModel.h>    // 掴み中の追従（手の位置）取得用
 #include <System/Component/ComponentHitInfo.h>
 #include <System/Physics/RigidBody.h>
@@ -35,6 +36,10 @@ void ComponentGrabbable::Init()
 
     // 物理の接触を ComponentPhysics 以外のコンポーネント(このクラス)にも通知してもらう
     GetOwner()->SetStatus(Object::StatusBit::OnHitAllComponent, true);
+
+    // 空中にある時に真下へ影を出す(投げ物・キャラクター共通。落ちる場所を分かりやすくする)
+    if(!GetOwner()->GetComponent<ComponentDropShadow>())
+        GetOwner()->AddComponent<ComponentDropShadow>();
 }
 
 //============================================================================
