@@ -21,3 +21,6 @@ imgui.ini
 data/Game.ini
 src/.clang-format
 tools/Setting.ini
+
+# FBXを読み込んだ時に自動で作られるアニメ用テクスチャ展開フォルダ(アニメの.mv1は使わない)
+data/Game/Models/*/Anims/*.fbm/
