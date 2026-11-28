@@ -393,7 +393,19 @@ void Object::RemoveComponent(ComponentPtr component)
 
         if(c == component) {
             c->Exit();
-            break;
+            return;
+        }
+    }
+
+    // 同じフレームで AddComponent されたばかりのコンポーネントは、まだ仮登録(pre_components_)にある。
+    // ここを探さないと削除できず、ステートの切り替え(削除→追加)を同じフレームで2回行うと
+    // 古いステートが残って2つ同時に動いてしまう
+    for(int i = (int)pre_components_.size() - 1; i >= 0; --i) {
+        auto& c = pre_components_[i];
+
+        if(c == component) {
+            c->Exit();
+            return;
         }
     }
 }

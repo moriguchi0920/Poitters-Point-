@@ -648,9 +648,13 @@ void Object::RemoveComponent()
     assert(this != nullptr && "実行しているオブジェクト(this)"
                               "がありません。「再試行」をおして、「呼び出し履歴」からどこでemptyになったのかを確認してください。");
 
+    // ※削除済み(Exited)で、フレーム終わりの片付けを待っているものは飛ばす
+    //   (飛ばさないと、削除済みのものをもう一度「削除」しただけで終わり、本当に消したいものが残る)
     for(int i = static_cast<int>(components_.size()) - 1; i >= 0; --i) {
         auto& c = components_[i];
 
+        if(c->status_.is(Component::StatusBit::Exited))
+            continue;
         if(std::dynamic_pointer_cast<_Type>(c)) {
             c->Exit();
             break;
@@ -660,6 +664,8 @@ void Object::RemoveComponent()
     for(int i = static_cast<int>(pre_components_.size()) - 1; i >= 0; --i) {
         auto& c = pre_components_[i];
 
+        if(c->status_.is(Component::StatusBit::Exited))
+            continue;
         if(std::dynamic_pointer_cast<_Type>(c)) {
             c->Exit();
             break;
