@@ -90,6 +90,11 @@ public:
 
     //! @brief 投げた本人か
     bool IsThrower(const ObjectPtr& target) const;
+
+    //! @brief 地面(または置き物)に支えられているか(最近触れているか)
+    //! @details 物理ステップが無いフレームでもちらつかないよう、少しの間は触れているとみなす。
+    //!          置かれて止まった物(Kinematic)は地面との接触通知が来ないため、常に支えられているとみなす
+    bool IsSupported() const { return is_resting_ || time_since_support_ <= 0.15f; }
     //@}
 
     //------------------------------------------------------------------

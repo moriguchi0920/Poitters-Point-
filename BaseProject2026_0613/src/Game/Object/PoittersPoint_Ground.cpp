@@ -108,6 +108,31 @@ void Ground::GetFieldRect(float& min_x, float& max_x, float& min_z, float& max_z
     }
 }
 
+float Ground::GetFieldFloorHeight() const
+{
+    if(has_field_floor_)
+        return field_floor_y_;
+
+    // 中心と、中心から境界までの半分の位置(8方向)を調べ、一番低い高さを床とする
+    float lowest = FLT_MAX;
+    auto  probe  = [&](float x, float z) {
+        float y = 0.0f;
+        if(FindGroundHeight(x, z, y))
+            lowest = std::min(lowest, y);
+    };
+    probe((float)field_center_.x, (float)field_center_.z);
+    for(auto& v : field_vertices_) {
+        probe(((float)field_center_.x + (float)v.x) * 0.5f, ((float)field_center_.z + (float)v.z) * 0.5f);
+    }
+
+    if(lowest == FLT_MAX)
+        return (float)field_center_.y;    // まだ物理が準備できていない等。次回また調べる
+
+    field_floor_y_   = lowest;
+    has_field_floor_ = true;
+    return field_floor_y_;
+}
+
 void Ground::BuildWalls()
 {
     // 作り直す場合は古い壁を消す
